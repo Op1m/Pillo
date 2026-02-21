@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <title>Medicine Reminder</title>
     <style>
         * {
@@ -22,19 +24,21 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 16px;
         }
 
-        @media (min-width: 1024px) {
+        @media (max-width: 768px) {
             body {
                 padding: 0;
+                background: white; 
             }
             
             .app-container {
                 max-width: 100%;
+                width: 100%;
                 height: 100vh;
                 border-radius: 0;
                 box-shadow: none;
+                background: white;
                 display: flex;
                 flex-direction: column;
             }
@@ -42,21 +46,48 @@
             .content {
                 flex: 1;
                 overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .top-panel {
+                border-bottom-left-radius: 0;
+                border-bottom-right-radius: 0;
             }
         }
 
-        @media (max-width: 768px) {
+        @media (min-width: 1024px) {
             body {
-                padding: 12px;
+                padding: 0;
                 background: linear-gradient(135deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
             }
-
+            
             .app-container {
-                max-width: 400px;
-                border-radius: 32px;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-                min-height: 700px;
-                height: auto;
+                max-width: 100%;
+                width: 100%;
+                height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+                display: flex;
+                flex-direction: column;
+                background: white;
+            }
+
+            .content {
+                flex: 1;
+                overflow-y: auto;
+                max-width: 1200px;
+                margin: 0 auto;
+                width: 100%;
+                padding: 40px;
+            }
+
+            .bottom-nav {
+                max-width: 600px;
+                margin: 0 auto;
+                left: 50%;
+                transform: translateX(-50%);
+                width: auto;
+                min-width: 400px;
             }
         }
 
@@ -65,7 +96,6 @@
             background: white;
             overflow: hidden;
             position: relative;
-            transition: all 0.3s ease;
         }
 
         .top-panel {
@@ -124,41 +154,6 @@
         .content {
             padding: 24px 20px;
             transition: all 0.3s ease;
-            min-height: calc(100vh - 220px);
-        }
-
-        @media (min-width: 1024px) {
-            .content {
-                padding: 40px;
-                max-width: 1200px;
-                margin: 0 auto;
-                width: 100%;
-                min-height: calc(100vh - 180px);
-            }
-
-            .medicines-list {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                gap: 20px;
-            }
-
-            .form-container {
-                max-width: 600px;
-                margin: 0 auto;
-                padding: 40px;
-                background: rgba(255, 255, 255, 0.9);
-                border-radius: 32px;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            }
-
-            .bottom-nav {
-                max-width: 600px;
-                margin: 0 auto;
-                left: 50%;
-                transform: translateX(-50%);
-                width: auto;
-                min-width: 400px;
-            }
         }
 
         .create-screen {
@@ -211,12 +206,6 @@
             box-shadow: 0 4px 12px rgba(63, 161, 255, 0.1);
         }
 
-        .date-hint {
-            color: #9AA7B2;
-            font-size: 12px;
-            margin-top: 6px;
-        }
-
         .btn-create {
             width: 100%;
             padding: 16px;
@@ -230,15 +219,6 @@
             transition: all 0.3s ease;
             box-shadow: 0 8px 20px rgba(63, 161, 255, 0.3);
             margin-top: 16px;
-        }
-
-        .btn-create:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(63, 161, 255, 0.4);
-        }
-
-        .btn-create:active {
-            transform: translateY(0);
         }
 
         .main-menu {
@@ -271,12 +251,6 @@
             justify-content: space-between;
             align-items: center;
             border: 1px solid #E0E7E9;
-            transition: all 0.2s ease;
-        }
-
-        .medicine-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
         }
 
         .medicine-info h4 {
@@ -300,43 +274,6 @@
             border: 1px solid #E0E7E9;
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            background: #F8FAFC;
-            border-radius: 24px;
-            color: #9AA7B2;
-        }
-
-        .empty-state-emoji {
-            font-size: 64px;
-            margin-bottom: 16px;
-        }
-
-        .empty-state-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #263238;
-            margin-bottom: 8px;
-        }
-
-        .empty-state-text {
-            color: #9AA7B2;
-            margin-bottom: 24px;
-        }
-
-        .btn-add-first {
-            padding: 12px 24px;
-            background: linear-gradient(90deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
         .bottom-nav {
             position: absolute;
             bottom: 25px;
@@ -345,17 +282,6 @@
             display: flex;
             align-items: center;
             gap: 20px;
-        }
-
-        @media (min-width: 1024px) {
-            .bottom-nav {
-                left: 50%;
-                transform: translateX(-50%);
-                right: auto;
-                width: auto;
-                min-width: 400px;
-                justify-content: center;
-            }
         }
 
         .nav-left {
@@ -382,11 +308,6 @@
             color: #9AA7B2;
         }
 
-        .nav-item:hover {
-            background: #F0F4F8;
-            color: #3FA1FF;
-        }
-
         .nav-item.active {
             background: linear-gradient(90deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
             color: white;
@@ -407,56 +328,10 @@
             transition: all 0.3s ease;
             border: none;
         }
-
-        .btn-add:hover {
-            transform: scale(1.05) rotate(90deg);
-            box-shadow: 0 12px 24px rgba(63, 161, 255, 0.2);
-        }
-
-        .btn-add:active {
-            transform: scale(0.95);
-        }
-
-        body.dark-theme .app-container {
-            background: #1f1f1f;
-        }
-
-        body.dark-theme .form-title,
-        body.dark-theme .user-name,
-        body.dark-theme .menu-title,
-        body.dark-theme .medicine-info h4,
-        body.dark-theme .empty-state-title {
-            color: #ffffff;
-        }
-
-        body.dark-theme .input-field {
-            background: #2d2d2d;
-            border-color: #404040;
-            color: white;
-        }
-
-        body.dark-theme .medicine-card,
-        body.dark-theme .empty-state {
-            background: #2d2d2d;
-            border-color: #404040;
-        }
-
-        body.dark-theme .nav-left {
-            background: #2d2d2d;
-        }
-
-        body.dark-theme .nav-item {
-            color: #9AA7B2;
-        }
-
-        body.dark-theme .nav-item:hover {
-            background: #404040;
-        }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <!-- ТОП ПАНЕЛЬ -->
         <div class="top-panel">
             <div class="user-info">
                 <div class="avatar-preview" id="avatarPreview">
@@ -469,37 +344,30 @@
             </div>
         </div>
 
-        <!-- КОНТЕНТ -->
         <div class="content">
-            <!-- ЭКРАН СОЗДАНИЯ ПОЛЬЗОВАТЕЛЯ -->
             <div id="createScreen" class="create-screen">
-                <div class="form-container">
-                    <div class="form-title">Добро пожаловать! 👋</div>
-                    <div class="form-subtitle">Расскажи немного о себе, чтобы мы могли заботиться о тебе</div>
-                    
-                    <div class="input-group">
-                        <label class="input-label">Как тебя зовут?</label>
-                        <input type="text" class="input-field" id="userName" placeholder="Введите имя" autocomplete="off">
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Твоя дата рождения</label>
-                        <input type="date" class="input-field" id="userBirthday" value="1990-01-01">
-                        <div class="date-hint">Это поможет нам лучше заботиться о тебе 💚</div>
-                    </div>
-
-                    <button class="btn-create" onclick="createUser()">
-                        ✨ Создать профиль
-                    </button>
+                <div class="form-title">Добро пожаловать! 👋</div>
+                <div class="form-subtitle">Расскажи немного о себе</div>
+                
+                <div class="input-group">
+                    <label class="input-label">Как тебя зовут?</label>
+                    <input type="text" class="input-field" id="userName" placeholder="Введите имя" autocomplete="off">
                 </div>
+
+                <div class="input-group">
+                    <label class="input-label">Твоя дата рождения</label>
+                    <input type="date" class="input-field" id="userBirthday" value="1990-01-01">
+                </div>
+
+                <button class="btn-create" onclick="createUser()">
+                    ✨ Создать профиль
+                </button>
             </div>
 
-            <!-- ОСНОВНОЕ МЕНЮ -->
             <div id="mainMenu" class="main-menu">
                 <div class="menu-title">Сегодня нужно принять</div>
                 
                 <div class="medicines-list" id="medicinesList">
-                    <!-- Примеры карточек -->
                     <div class="medicine-card">
                         <div class="medicine-info">
                             <h4>Аспирин</h4>
@@ -507,34 +375,10 @@
                         </div>
                         <div class="medicine-time">09:00</div>
                     </div>
-                    
-                    <div class="medicine-card">
-                        <div class="medicine-info">
-                            <h4>Витамин D</h4>
-                            <p>2000 МЕ · Утром</p>
-                        </div>
-                        <div class="medicine-time">10:30</div>
-                    </div>
-
-                    <div class="medicine-card">
-                        <div class="medicine-info">
-                            <h4>Магний B6</h4>
-                            <p>1 таблетка · Вечером</p>
-                        </div>
-                        <div class="medicine-time">20:00</div>
-                    </div>
-                </div>
-
-                <div id="emptyState" class="empty-state" style="display: none;">
-                    <div class="empty-state-emoji">💊</div>
-                    <div class="empty-state-title">У тебя пока нет лекарств</div>
-                    <div class="empty-state-text">Начни с добавления первого препарата</div>
-                    <button class="btn-add-first" onclick="addMedicine()">➕ Добавить лекарство</button>
                 </div>
             </div>
         </div>
 
-        <!-- НИЖНЯЯ НАВИГАЦИЯ -->
         <div class="bottom-nav">
             <div class="nav-left">
                 <div class="nav-item active" onclick="navigateTo('home', event)">🏠</div>
@@ -547,45 +391,42 @@
     </div>
 
     <script>
-        // Telegram Web App
         const tg = window.Telegram?.WebApp;
+        let tgUser = null;
+        
         if (tg) {
             tg.ready();
             tg.expand();
+            
+            tgUser = tg.initDataUnsafe?.user;
             
             if (tg.colorScheme === 'dark') {
                 document.body.classList.add('dark-theme');
             }
         }
 
-        // Состояние
-        let appState = {
-            userCreated: false,
-            userName: '',
-            userBirthday: ''
-        };
+        function getUserId() {
+            if (tgUser?.id) {
+                return `tg_${tgUser.id}`;
+            }
+            return 'local_user';
+        }
 
-        // Загрузка
         document.addEventListener('DOMContentLoaded', function() {
-            const savedUser = localStorage.getItem('medrem_user');
+            const userId = getUserId();
+            const savedUser = localStorage.getItem(`medrem_user_${userId}`);
+            
             if (savedUser) {
                 const user = JSON.parse(savedUser);
-                appState.userCreated = true;
-                appState.userName = user.name;
-                appState.userBirthday = user.birthday;
                 showMainMenu(user.name);
-            }
-
-            // Для демонстрации показываем примеры лекарств
-            setTimeout(() => {
-                if (appState.userCreated) {
-                    document.getElementById('medicinesList').style.display = 'block';
-                    document.getElementById('emptyState').style.display = 'none';
+            } else if (tgUser?.first_name) {
+                document.getElementById('userName').value = tgUser.first_name;
+                if (tgUser.last_name) {
+                    document.getElementById('userName').value += ' ' + tgUser.last_name;
                 }
-            }, 500);
+            }
         });
 
-        // Создание пользователя
         function createUser() {
             const nameInput = document.getElementById('userName');
             const birthdayInput = document.getElementById('userBirthday');
@@ -604,69 +445,63 @@
                 return;
             }
 
+            const userId = getUserId();
             const user = {
                 name: name,
                 birthday: birthday,
+                tgId: tgUser?.id,
+                tgUsername: tgUser?.username,
                 createdAt: new Date().toISOString()
             };
             
-            localStorage.setItem('medrem_user', JSON.stringify(user));
-            
-            appState.userCreated = true;
-            appState.userName = name;
-            appState.userBirthday = birthday;
+            localStorage.setItem(`medrem_user_${userId}`, JSON.stringify(user));
             
             showMainMenu(name);
         }
 
-        // Показать основное меню
         function showMainMenu(userName) {
             document.getElementById('createScreen').classList.add('hidden');
             document.getElementById('mainMenu').classList.add('visible');
             document.getElementById('displayName').textContent = userName;
             
-            // Выбираем аватар
             const avatars = ['👤', '👨', '👩', '🧑', '👶', '🧔', '👧', '👦'];
             const avatarIndex = (userName.length + userName.charCodeAt(0)) % avatars.length;
             document.getElementById('avatarEmoji').textContent = avatars[avatarIndex];
         }
 
-        // Сброс
         function resetToCreate() {
-            localStorage.removeItem('medrem_user');
-            
-            appState.userCreated = false;
-            appState.userName = '';
-            appState.userBirthday = '';
-            
-            document.getElementById('userName').value = '';
-            document.getElementById('userBirthday').value = '1990-01-01';
+            const userId = getUserId();
+            localStorage.removeItem(`medrem_user_${userId}`);
             
             document.getElementById('createScreen').classList.remove('hidden');
             document.getElementById('mainMenu').classList.remove('visible');
             document.getElementById('displayName').textContent = 'Новый пользователь';
             document.getElementById('avatarEmoji').textContent = '👤';
+            
+            if (tgUser?.first_name) {
+                document.getElementById('userName').value = tgUser.first_name;
+                if (tgUser.last_name) {
+                    document.getElementById('userName').value += ' ' + tgUser.last_name;
+                }
+            } else {
+                document.getElementById('userName').value = '';
+            }
         }
 
-        // Навигация
         function navigateTo(page, event) {
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
-            
             event.target.classList.add('active');
-            console.log('Навигация на:', page);
         }
 
-        // Добавление лекарства
         function addMedicine() {
-            if (!appState.userCreated) {
+            if (!document.getElementById('mainMenu').classList.contains('visible')) {
                 alert('Сначала создайте профиль');
                 resetToCreate();
                 return;
             }
-            console.log('Добавить лекарство');
-            alert('Функция добавления лекарства будет доступна позже');
+            alert('Добавление лекарства');
         }
     </script>
 </body>
