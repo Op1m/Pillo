@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Medicine Reminder</title>
@@ -9,191 +12,661 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         body {
             min-height: 100vh;
+            background: linear-gradient(135deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        @media (min-width: 1024px) {
+            body {
+                padding: 0;
+            }
+            
+            .app-container {
+                max-width: 100%;
+                height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .content {
+                flex: 1;
+                overflow-y: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+                background: linear-gradient(135deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
+            }
+
+            .app-container {
+                max-width: 400px;
+                border-radius: 32px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+                min-height: 700px;
+                height: auto;
+            }
+        }
+
+        .app-container {
+            width: 100%;
+            background: white;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .top-panel {
+            background: linear-gradient(90deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
+            height: 110px;
+            margin-top: -25px;
+            border-bottom-left-radius: 24px;
+            border-bottom-right-radius: 24px;
+            padding: 44px 20px 0 20px;
+            position: relative;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar-preview {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            
-            background: linear-gradient(90deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
-            
-            background-attachment: fixed;
+            font-size: 28px;
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        .container {
-            text-align: center;
-            padding: 20px;
-            width: 100%;
-            max-width: 400px;
+        .user-text {
+            flex: 1;
         }
 
-        .logo-container {
-            margin-bottom: 40px;
-            animation: fadeIn 1s ease-in-out;
+        .user-name {
+            font-weight: bold;
+            color: #263238;
+            font-size: 16px;
+            margin-bottom: 4px;
         }
 
-        .logo {
-            max-width: 180px;
-            width: 100%;
-            height: auto;
-            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-        }
-
-        h1 {
-            color: white;
-            font-size: 2rem;
-            margin-bottom: 10px;
-            font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .subtitle {
-            color: rgba(255, 255, 255, 0.95);
-            font-size: 1.1rem;
-            margin-bottom: 40px;
-            font-weight: 400;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        }
-
-        .buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            animation: slideUp 0.8s ease-in-out;
-        }
-
-        .btn {
-            padding: 16px 24px;
-            border-radius: 16px;
+        .change-user {
+            color: #9AA7B2;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            background: none;
             border: none;
-            font-size: 1.1rem;
+            padding: 0;
+        }
+
+        .change-user:hover {
+            text-decoration: underline;
+        }
+
+        .content {
+            padding: 24px 20px;
+            transition: all 0.3s ease;
+            min-height: calc(100vh - 220px);
+        }
+
+        @media (min-width: 1024px) {
+            .content {
+                padding: 40px;
+                max-width: 1200px;
+                margin: 0 auto;
+                width: 100%;
+                min-height: calc(100vh - 180px);
+            }
+
+            .medicines-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 20px;
+            }
+
+            .form-container {
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 40px;
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 32px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            }
+
+            .bottom-nav {
+                max-width: 600px;
+                margin: 0 auto;
+                left: 50%;
+                transform: translateX(-50%);
+                width: auto;
+                min-width: 400px;
+            }
+        }
+
+        .create-screen {
+            display: block;
+        }
+
+        .create-screen.hidden {
+            display: none;
+        }
+
+        .form-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #263238;
+            margin-bottom: 8px;
+        }
+
+        .form-subtitle {
+            color: #9AA7B2;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .input-label {
+            color: #263238;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid #E0E7E9;
+            border-radius: 16px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #F8FAFC;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #3FA1FF;
+            background: white;
+            box-shadow: 0 4px 12px rgba(63, 161, 255, 0.1);
+        }
+
+        .date-hint {
+            color: #9AA7B2;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        .btn-create {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(90deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 18px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            text-decoration: none;
-            display: block;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 20px rgba(63, 161, 255, 0.3);
+            margin-top: 16px;
         }
 
-        .btn-primary {
+        .btn-create:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(63, 161, 255, 0.4);
+        }
+
+        .btn-create:active {
+            transform: translateY(0);
+        }
+
+        .main-menu {
+            display: none;
+        }
+
+        .main-menu.visible {
+            display: block;
+        }
+
+        .menu-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #263238;
+            margin-bottom: 20px;
+        }
+
+        .medicines-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .medicine-card {
+            background: #F8FAFC;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #E0E7E9;
+            transition: all 0.2s ease;
+        }
+
+        .medicine-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .medicine-info h4 {
+            color: #263238;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .medicine-info p {
+            color: #9AA7B2;
+            font-size: 14px;
+        }
+
+        .medicine-time {
             background: white;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: 500;
+            color: #3FA1FF;
+            border: 1px solid #E0E7E9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: #F8FAFC;
+            border-radius: 24px;
+            color: #9AA7B2;
+        }
+
+        .empty-state-emoji {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #263238;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-text {
+            color: #9AA7B2;
+            margin-bottom: 24px;
+        }
+
+        .btn-add-first {
+            padding: 12px 24px;
+            background: linear-gradient(90deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+            right: 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        @media (min-width: 1024px) {
+            .bottom-nav {
+                left: 50%;
+                transform: translateX(-50%);
+                right: auto;
+                width: auto;
+                min-width: 400px;
+                justify-content: center;
+            }
+        }
+
+        .nav-left {
+            display: flex;
+            gap: 12px;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            flex: 1;
+            justify-content: center;
+        }
+
+        .nav-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s ease;
+            color: #9AA7B2;
+        }
+
+        .nav-item:hover {
+            background: #F0F4F8;
             color: #3FA1FF;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.2);
+        .nav-item.active {
+            background: linear-gradient(90deg, #7FEEDB 0%, #6CC9FF 50%, #3FA1FF 100%);
             color: white;
-            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
+        .btn-add {
+            width: 56px;
+            height: 56px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: #3FA1FF;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
         }
 
-        .footer {
-            margin-top: 60px;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.9rem;
+        .btn-add:hover {
+            transform: scale(1.05) rotate(90deg);
+            box-shadow: 0 12px 24px rgba(63, 161, 255, 0.2);
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .btn-add:active {
+            transform: scale(0.95);
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        body.dark-theme .app-container {
+            background: #1f1f1f;
         }
 
-        @media (max-width: 480px) {
-            .logo {
-                max-width: 150px;
-            }
-            
-            h1 {
-                font-size: 1.8rem;
-            }
-            
-            .subtitle {
-                font-size: 1rem;
-            }
-            
-            .btn {
-                padding: 14px 20px;
-                font-size: 1rem;
-            }
+        body.dark-theme .form-title,
+        body.dark-theme .user-name,
+        body.dark-theme .menu-title,
+        body.dark-theme .medicine-info h4,
+        body.dark-theme .empty-state-title {
+            color: #ffffff;
+        }
+
+        body.dark-theme .input-field {
+            background: #2d2d2d;
+            border-color: #404040;
+            color: white;
+        }
+
+        body.dark-theme .medicine-card,
+        body.dark-theme .empty-state {
+            background: #2d2d2d;
+            border-color: #404040;
+        }
+
+        body.dark-theme .nav-left {
+            background: #2d2d2d;
+        }
+
+        body.dark-theme .nav-item {
+            color: #9AA7B2;
+        }
+
+        body.dark-theme .nav-item:hover {
+            background: #404040;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="logo-container">
-            <img src="logo.png" alt="Medicine Reminder Logo" class="logo" onerror="this.style.display='none'">
-            
-            <div class="logo-placeholder" style="display: none;">💊</div>
-            
-            <h1>Medicine Reminder</h1>
-            <div class="subtitle">Твой персональный помощник</div>
+    <div class="app-container">
+        <!-- ТОП ПАНЕЛЬ -->
+        <div class="top-panel">
+            <div class="user-info">
+                <div class="avatar-preview" id="avatarPreview">
+                    <span id="avatarEmoji">👤</span>
+                </div>
+                <div class="user-text">
+                    <div class="user-name" id="displayName">Новый пользователь</div>
+                    <button class="change-user" id="changeUserBtn" onclick="resetToCreate()">Сменить пользователя</button>
+                </div>
+            </div>
         </div>
 
-        <div class="buttons">
-            <a href="/login" class="btn btn-primary">🔐 Войти</a>
-            <a href="/register" class="btn btn-secondary">📝 Регистрация</a>
+        <!-- КОНТЕНТ -->
+        <div class="content">
+            <!-- ЭКРАН СОЗДАНИЯ ПОЛЬЗОВАТЕЛЯ -->
+            <div id="createScreen" class="create-screen">
+                <div class="form-container">
+                    <div class="form-title">Добро пожаловать! 👋</div>
+                    <div class="form-subtitle">Расскажи немного о себе, чтобы мы могли заботиться о тебе</div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Как тебя зовут?</label>
+                        <input type="text" class="input-field" id="userName" placeholder="Введите имя" autocomplete="off">
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Твоя дата рождения</label>
+                        <input type="date" class="input-field" id="userBirthday" value="1990-01-01">
+                        <div class="date-hint">Это поможет нам лучше заботиться о тебе 💚</div>
+                    </div>
+
+                    <button class="btn-create" onclick="createUser()">
+                        ✨ Создать профиль
+                    </button>
+                </div>
+            </div>
+
+            <!-- ОСНОВНОЕ МЕНЮ -->
+            <div id="mainMenu" class="main-menu">
+                <div class="menu-title">Сегодня нужно принять</div>
+                
+                <div class="medicines-list" id="medicinesList">
+                    <!-- Примеры карточек -->
+                    <div class="medicine-card">
+                        <div class="medicine-info">
+                            <h4>Аспирин</h4>
+                            <p>500 мг · После еды</p>
+                        </div>
+                        <div class="medicine-time">09:00</div>
+                    </div>
+                    
+                    <div class="medicine-card">
+                        <div class="medicine-info">
+                            <h4>Витамин D</h4>
+                            <p>2000 МЕ · Утром</p>
+                        </div>
+                        <div class="medicine-time">10:30</div>
+                    </div>
+
+                    <div class="medicine-card">
+                        <div class="medicine-info">
+                            <h4>Магний B6</h4>
+                            <p>1 таблетка · Вечером</p>
+                        </div>
+                        <div class="medicine-time">20:00</div>
+                    </div>
+                </div>
+
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-state-emoji">💊</div>
+                    <div class="empty-state-title">У тебя пока нет лекарств</div>
+                    <div class="empty-state-text">Начни с добавления первого препарата</div>
+                    <button class="btn-add-first" onclick="addMedicine()">➕ Добавить лекарство</button>
+                </div>
+            </div>
         </div>
 
-        <div class="footer">
-            <p>Заботься о здоровье легко и вовремя ✨</p>
+        <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+        <div class="bottom-nav">
+            <div class="nav-left">
+                <div class="nav-item active" onclick="navigateTo('home', event)">🏠</div>
+                <div class="nav-item" onclick="navigateTo('history', event)">📊</div>
+                <div class="nav-item" onclick="navigateTo('stats', event)">📈</div>
+                <div class="nav-item" onclick="navigateTo('profile', event)">👤</div>
+            </div>
+            <button class="btn-add" onclick="addMedicine()">+</button>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Medicine Reminder App loaded');
+        // Telegram Web App
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
             
-            const logo = document.querySelector('.logo');
-            const placeholder = document.querySelector('.logo-placeholder');
-            
-            if (logo) {
-                logo.onerror = function() {
-                    this.style.display = 'none';
-                    placeholder.style.display = 'block';
-                    placeholder.style.fontSize = '80px';
-                    placeholder.style.marginBottom = '20px';
-                };
+            if (tg.colorScheme === 'dark') {
+                document.body.classList.add('dark-theme');
             }
+        }
+
+        // Состояние
+        let appState = {
+            userCreated: false,
+            userName: '',
+            userBirthday: ''
+        };
+
+        // Загрузка
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedUser = localStorage.getItem('medrem_user');
+            if (savedUser) {
+                const user = JSON.parse(savedUser);
+                appState.userCreated = true;
+                appState.userName = user.name;
+                appState.userBirthday = user.birthday;
+                showMainMenu(user.name);
+            }
+
+            // Для демонстрации показываем примеры лекарств
+            setTimeout(() => {
+                if (appState.userCreated) {
+                    document.getElementById('medicinesList').style.display = 'block';
+                    document.getElementById('emptyState').style.display = 'none';
+                }
+            }, 500);
         });
 
-        if (window.Telegram && Telegram.WebApp) {
-            Telegram.WebApp.ready();
-            Telegram.WebApp.expand();
+        // Создание пользователя
+        function createUser() {
+            const nameInput = document.getElementById('userName');
+            const birthdayInput = document.getElementById('userBirthday');
             
-            const tg = Telegram.WebApp;
-            if (tg.colorScheme === 'dark') {
-                document.body.style.background = 'linear-gradient(90deg, #2C3E50 0%, #3498DB 100%)';
+            const name = nameInput.value.trim();
+            const birthday = birthdayInput.value;
+            
+            if (!name) {
+                alert('Пожалуйста, введите имя');
+                nameInput.focus();
+                return;
             }
+            
+            if (!birthday) {
+                alert('Пожалуйста, выберите дату рождения');
+                return;
+            }
+
+            const user = {
+                name: name,
+                birthday: birthday,
+                createdAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem('medrem_user', JSON.stringify(user));
+            
+            appState.userCreated = true;
+            appState.userName = name;
+            appState.userBirthday = birthday;
+            
+            showMainMenu(name);
+        }
+
+        // Показать основное меню
+        function showMainMenu(userName) {
+            document.getElementById('createScreen').classList.add('hidden');
+            document.getElementById('mainMenu').classList.add('visible');
+            document.getElementById('displayName').textContent = userName;
+            
+            // Выбираем аватар
+            const avatars = ['👤', '👨', '👩', '🧑', '👶', '🧔', '👧', '👦'];
+            const avatarIndex = (userName.length + userName.charCodeAt(0)) % avatars.length;
+            document.getElementById('avatarEmoji').textContent = avatars[avatarIndex];
+        }
+
+        // Сброс
+        function resetToCreate() {
+            localStorage.removeItem('medrem_user');
+            
+            appState.userCreated = false;
+            appState.userName = '';
+            appState.userBirthday = '';
+            
+            document.getElementById('userName').value = '';
+            document.getElementById('userBirthday').value = '1990-01-01';
+            
+            document.getElementById('createScreen').classList.remove('hidden');
+            document.getElementById('mainMenu').classList.remove('visible');
+            document.getElementById('displayName').textContent = 'Новый пользователь';
+            document.getElementById('avatarEmoji').textContent = '👤';
+        }
+
+        // Навигация
+        function navigateTo(page, event) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            event.target.classList.add('active');
+            console.log('Навигация на:', page);
+        }
+
+        // Добавление лекарства
+        function addMedicine() {
+            if (!appState.userCreated) {
+                alert('Сначала создайте профиль');
+                resetToCreate();
+                return;
+            }
+            console.log('Добавить лекарство');
+            alert('Функция добавления лекарства будет доступна позже');
         }
     </script>
 </body>
