@@ -519,9 +519,7 @@
             window.location.hostname === '127.0.0.1'
     };
 
-    const API_BASE_URL = CONFIG.isDev
-        ? 'http://localhost:8080/api'
-        : `${CONFIG.SERVER_URL}/api`;
+    const API_BASE_URL = 'https://mirtha-durable-semipneumatically.ngrok-free.dev/api';
 
     console.log('🌍 Режим:', CONFIG.isDev ? 'Локальный' : 'GitHub Pages');
     console.log('🔗 API URL:', API_BASE_URL);
