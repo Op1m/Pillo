@@ -1,887 +1,121 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Medicine Reminder — Telegram Login</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-    <title>Medicine Reminder</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-
-        :root {
-            --gradient-start: #7FEEDB;
-            --gradient-mid: #6CC9FF;
-            --gradient-end: #3FA1FF;
-            --text-dark: #263238;
-            --text-light: #9AA7B2;
-            --bg-light: #F8FAFC;
-            --border-light: #E0E7E9;
-            --white: #FFFFFF;
-        }
-
-        body {
-            min-height: 100vh;
-            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 0;
-                background: var(--white);
-            }
-
-            .app-container {
-                width: 100%;
-                height: 100vh;
-                border-radius: 0;
-                box-shadow: none;
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .app-container {
-                width: 400px;
-                height: 800px;
-                border-radius: 32px;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            }
-        }
-
-        .app-container {
-            background: var(--white);
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
-
-        .top-panel {
-            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
-            height: 110px;
-            margin-top: -25px;
-            border-bottom-left-radius: 24px;
-            border-bottom-right-radius: 24px;
-            padding: 44px 20px 0 20px;
-            position: relative;
-            flex-shrink: 0;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .avatar-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-        }
-
-        .user-text {
-            flex: 1;
-        }
-
-        .user-name {
-            font-weight: bold;
-            color: var(--text-dark);
-            font-size: 16px;
-            margin-bottom: 4px;
-        }
-
-        .change-user {
-            color: var(--text-light);
-            font-size: 12px;
-            cursor: pointer;
-            text-decoration: none;
-            background: none;
-            border: none;
-            padding: 0;
-        }
-
-        .content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px 20px;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .loading-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            gap: 20px;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--bg-light);
-            border-top: 4px solid var(--gradient-end);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .screen {
-            display: none;
-        }
-
-        .screen.active {
-            display: block;
-        }
-
-        .login-screen {
-            padding: 20px 0;
-        }
-
-        .login-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 8px;
-        }
-
-        .login-subtitle {
-            color: var(--text-light);
-            font-size: 14px;
-            margin-bottom: 32px;
-        }
-
-        .input-group {
-            margin-bottom: 24px;
-        }
-
-        .input-label {
-            color: var(--text-dark);
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 8px;
-            display: block;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 16px;
-            border: 1px solid var(--border-light);
-            border-radius: 16px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            background: var(--bg-light);
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--gradient-end);
-            background: var(--white);
-            box-shadow: 0 4px 12px rgba(63, 161, 255, 0.1);
-        }
-
-        .btn-primary {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
-            border: none;
-            border-radius: 16px;
-            color: white;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 8px 20px rgba(63, 161, 255, 0.3);
-            margin-top: 16px;
-        }
-
-        .btn-primary:active {
-            transform: scale(0.98);
-        }
-
-        .btn-link {
-            background: none;
-            border: none;
-            color: var(--gradient-end);
-            font-size: 14px;
-            margin-top: 16px;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        .menu-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 20px;
-        }
-
-        .medicines-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-
-        .medicine-card {
-            background: var(--bg-light);
-            border-radius: 16px;
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid var(--border-light);
-        }
-
-        .medicine-info h4 {
-            color: var(--text-dark);
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .medicine-info p {
-            color: var(--text-light);
-            font-size: 14px;
-        }
-
-        .medicine-time {
-            background: var(--white);
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-weight: 500;
-            color: var(--gradient-end);
-            border: 1px solid var(--border-light);
-        }
-
-        .medicine-taken {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--gradient-end);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            cursor: pointer;
-            border: none;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            background: var(--bg-light);
-            border-radius: 24px;
-            color: var(--text-light);
-        }
-
-        .empty-state-emoji {
-            font-size: 64px;
-            margin-bottom: 16px;
-        }
-
-        .bottom-nav {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            padding: 12px 20px;
-            background: var(--white);
-            border-top: 1px solid var(--border-light);
-            flex-shrink: 0;
-        }
-
-        .nav-left {
-            display: flex;
-            gap: 8px;
-            background: var(--bg-light);
-            padding: 4px;
-            border-radius: 30px;
-        }
-
-        .nav-item {
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 20px;
-            transition: all 0.2s ease;
-            color: var(--text-light);
-            border: none;
-            background: none;
-        }
-
-        .nav-item.active {
-            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
-            color: white;
-        }
-
-        .btn-add {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            color: white;
-            box-shadow: 0 8px 16px rgba(63, 161, 255, 0.3);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-        }
-
-        .btn-add:active {
-            transform: scale(0.95);
-        }
-
-        .error-message {
-            color: #ff3b30;
-            font-size: 14px;
-            margin-top: 8px;
-            text-align: center;
-        }
-
-        .hidden {
-            display: none !important;
-        }
+        body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f4f7fb; }
+        .card { width: 360px; background:white; border-radius:12px; box-shadow:0 6px 20px rgba(30,40,60,0.08); padding:20px; text-align:center; }
+        h1 { font-size:18px; margin:0 0 8px; }
+        p { color:#555; margin:0 0 16px; font-size:14px; }
+        .btn { display:inline-block;padding:10px 16px;border-radius:10px;background:#3AA0FF;color:white;border:none;font-weight:600;cursor:pointer;margin:8px 4px; }
+        .btn.secondary { background:#F0F4FF;color:#223; }
+        .status { margin-top:12px;color:#333;font-weight:600; }
+        .small { font-size:13px;color:#777;margin-top:8px; }
+        img.avatar { width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:8px; }
     </style>
 </head>
 <body>
-<div class="app-container">
-    <div class="top-panel">
-        <div class="user-info">
-            <div class="avatar">
-                <img id="userAvatar" src="" alt="Avatar" style="display: none;">
-                <div id="avatarPlaceholder" class="avatar-placeholder">👤</div>
-            </div>
-            <div class="user-text">
-                <div class="user-name" id="displayName">Загрузка...</div>
-                <button class="change-user" id="changeUserBtn" onclick="logout()">Выйти</button>
-            </div>
-        </div>
+<div class="card">
+    <h1>Medicine Reminder</h1>
+    <p>Войдите через Telegram, чтобы видеть напоминания о приёме таблеток.</p>
+
+    <div id="userBlock" style="display:none">
+        <img id="avatar" class="avatar" src="" alt="avatar" />
+        <div id="username" style="font-weight:700"></div>
+        <div id="fullname" class="small"></div>
+        <button id="logoutBtn" class="btn secondary">Выйти</button>
     </div>
 
-    <div class="content">
-        <div id="loadingScreen" class="loading-screen active">
-            <div class="spinner"></div>
-            <div id="loadingText">Подключение к серверу...</div>
-        </div>
-
-        <div id="loginScreen" class="screen login-screen">
-            <div class="login-title">Вход в систему</div>
-            <div class="login-subtitle">Введите свои данные</div>
-
-            <div class="input-group">
-                <label class="input-label">Имя пользователя</label>
-                <input type="text" class="input-field" id="loginUsername" placeholder="username" autocomplete="off">
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Пароль</label>
-                <input type="password" class="input-field" id="loginPassword" placeholder="••••••••">
-            </div>
-
-            <button class="btn-primary" onclick="login()">
-                🔐 Войти
-            </button>
-
-            <button class="btn-link" onclick="showRegisterScreen()">
-                Нет аккаунта? Зарегистрироваться
-            </button>
-            <div id="loginError" class="error-message hidden"></div>
-        </div>
-
-        <div id="registerScreen" class="screen">
-            <div class="form-title">Регистрация 📝</div>
-            <div class="form-subtitle">Создайте новый аккаунт</div>
-
-            <div class="input-group">
-                <label class="input-label">Имя пользователя</label>
-                <input type="text" class="input-field" id="regUsername" placeholder="username">
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Email</label>
-                <input type="email" class="input-field" id="regEmail" placeholder="email@example.com">
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Пароль</label>
-                <input type="password" class="input-field" id="regPassword" placeholder="••••••••">
-            </div>
-
-            <button class="btn-primary" onclick="register()">
-                ✨ Зарегистрироваться
-            </button>
-
-            <button class="btn-link" onclick="showLoginScreen()">
-                Уже есть аккаунт? Войти
-            </button>
-            <div id="registerError" class="error-message hidden"></div>
-        </div>
-
-        <div id="mainScreen" class="screen">
-            <div class="menu-title">Сегодня нужно принять</div>
-
-            <div id="medicinesList" class="medicines-list">
-            </div>
-
-            <div id="emptyState" class="empty-state hidden">
-                <div class="empty-state-emoji">💊</div>
-                <div>У тебя пока нет лекарств</div>
-                <div style="font-size: 14px; margin-top: 8px;">Нажми + чтобы добавить</div>
-            </div>
-        </div>
-
-        <div id="addMedicineScreen" class="screen">
-            <div class="form-title">Добавить лекарство</div>
-            <div class="form-subtitle">Заполните информацию</div>
-
-            <div class="input-group">
-                <label class="input-label">Название</label>
-                <input type="text" class="input-field" id="medicineName" placeholder="Например: Аспирин">
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Дозировка</label>
-                <input type="text" class="input-field" id="medicineDosage" placeholder="Например: 500 мг">
-            </div>
-
-            <div class="input-group">
-                <label class="input-label">Время приема</label>
-                <input type="time" class="input-field" id="medicineTime" value="09:00">
-            </div>
-
-            <button class="btn-primary" onclick="addMedicine()">
-                💊 Добавить
-            </button>
-            <button class="btn-primary" style="background: #9AA7B2; margin-top: 12px;" onclick="showMainScreen()">
-                Отмена
-            </button>
-            <div id="addError" class="error-message hidden"></div>
-        </div>
+    <div id="loginBlock">
+        <button id="loginBtn" class="btn">Войти через Telegram</button>
+        <div class="small" id="hint">Открой это в Telegram WebApp для автологина.</div>
     </div>
 
-    <div class="bottom-nav">
-        <div class="nav-left">
-            <button class="nav-item active" onclick="navigateTo('main', event)">🏠</button>
-            <button class="nav-item" onclick="navigateTo('history', event)">📊</button>
-            <button class="nav-item" onclick="navigateTo('stats', event)">📈</button>
-            <button class="nav-item" onclick="navigateTo('profile', event)">👤</button>
-        </div>
-        <button class="btn-add" onclick="showAddMedicineScreen()">+</button>
-    </div>
+    <div id="status" class="status"></div>
 </div>
 
 <script>
-    const CONFIG = {
-        SERVER_URL: 'https://mirtha-durable-semipneumatically.ngrok-free.dev',
-        isDev: window.location.hostname === 'localhost' ||
-            window.location.hostname === '127.0.0.1'
-    };
+    const BACKEND = 'https://medicine-reminder-app-t3u9.onrender.com';
+    const tokenKey = 'medrem_token';
 
-    const API_BASE_URL = 'https://mirtha-durable-semipneumatically.ngrok-free.dev/api';
+    function showStatus(text) { document.getElementById('status').innerText = text; }
 
-    console.log('🌍 Режим:', CONFIG.isDev ? 'Локальный' : 'GitHub Pages');
-    console.log('🔗 API URL:', API_BASE_URL);
-
-    const tg = window.Telegram?.WebApp;
-    let tgUser = null;
-
-    if (tg) {
-        tg.ready();
-        tg.expand();
-        tgUser = tg.initDataUnsafe?.user;
-        console.log('📱 Telegram пользователь:', tgUser);
+    async function loginTelegram(initData) {
+        showStatus('Авторизация...');
+        try {
+            const resp = await fetch(BACKEND + '/auth/telegram', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ initData })
+            });
+            const json = await resp.json();
+            if (resp.ok) {
+                localStorage.setItem(tokenKey, json.token);
+                const user = json.user;
+                showUser(user);
+                showStatus('Успешно: ' + (user.username || user.firstName || 'user'));
+                if (window.Telegram && Telegram.WebApp) {
+                }
+            } else {
+                console.error('Auth failed', json);
+                showStatus('Auth failed: ' + (json.error || JSON.stringify(json)));
+            }
+        } catch (e) {
+            console.error(e);
+            showStatus('Ошибка сети при auth');
+        }
     }
 
-    let currentUser = null;
-    let authToken = localStorage.getItem('token');
+    function showUser(user) {
+        if (!user) return;
+        document.getElementById('loginBlock').style.display = 'none';
+        document.getElementById('userBlock').style.display = 'block';
+        document.getElementById('username').innerText = user.username || ('tg:' + user.telegramId);
+        document.getElementById('fullname').innerText = (user.firstName || '') + (user.lastName? ' ' + user.lastName : '');
+        if (user.photoUrl) document.getElementById('avatar').src = user.photoUrl;
+        else document.getElementById('avatar').style.display = 'none';
+    }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        console.log('Приложение загружено');
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem(tokenKey);
+        document.getElementById('userBlock').style.display = 'none';
+        document.getElementById('loginBlock').style.display = 'block';
+        showStatus('Выход выполнен');
+    });
 
-        try {
-            await fetch(`${API_BASE_URL}/medicines`, { method: 'HEAD' });
-            console.log('✅ API доступен');
-        } catch (e) {
-            console.error('❌ API недоступен:', e);
-            document.getElementById('loadingText').textContent = 'Сервер не отвечает';
-            return;
-        }
-
-        if (authToken) {
-            console.log('Есть токен, пробуем загрузить пользователя');
-            await loadUserByToken();
-        } else if (tgUser) {
-            console.log('Нет токена, но есть Telegram, авторизуемся');
-            await loginWithTelegram();
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+        if (window.Telegram && Telegram.WebApp) {
+            const initData = Telegram.WebApp.initData;
+            if (!initData) {
+                showStatus('initData не найден. Откройте этот сайт внутри Telegram WebApp.');
+                return;
+            }
+            await loginTelegram(initData);
         } else {
-            console.log('Показываем экран входа');
-            showLoginScreen();
+            showStatus('Откройте этот сайт ВНУТРИ Telegram (через кнопку Web App у бота).');
         }
     });
 
-
-    async function loginWithTelegram() {
-        showLoading('Авторизация через Telegram...');
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth/telegram`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: tgUser.id,
-                    first_name: tgUser.first_name,
-                    last_name: tgUser.last_name || '',
-                    username: tgUser.username || '',
-                    photo_url: tgUser.photo_url,
-                    language_code: tgUser.language_code
-                })
-            });
-
-            if (!response.ok) throw new Error('Ошибка авторизации');
-            const data = await response.json();
-
-            authToken = data.token;
-            localStorage.setItem('token', authToken);
-            currentUser = data.user;
-
-            updateUserInfo();
-            await loadMedicines();
-            showMainScreen();
-
-        } catch (error) {
-            console.error('Telegram auth error:', error);
-            showLoginScreen();
+    window.addEventListener('load', async () => {
+        const token = localStorage.getItem(tokenKey);
+        if (token) {
+            showStatus('Вход уже выполнен');
         }
-    }
-
-    async function login() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value;
-
-        if (!username || !password) {
-            showError('loginError', 'Заполните все поля');
-            return;
-        }
-
-        try {
-            showLoading('Вход...');
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-
-            if (!response.ok) throw new Error('Неверные данные');
-            const data = await response.json();
-
-            authToken = data.token;
-            localStorage.setItem('token', authToken);
-            currentUser = data.user;
-
-            updateUserInfo();
-            await loadMedicines();
-            showMainScreen();
-
-        } catch (error) {
-            console.error('Login error:', error);
-            showError('loginError', 'Ошибка входа');
-            hideLoading();
-        }
-    }
-
-    async function register() {
-        const username = document.getElementById('regUsername').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
-        const password = document.getElementById('regPassword').value;
-
-        if (!username || !email || !password) {
-            showError('registerError', 'Заполните все поля');
-            return;
-        }
-
-        try {
-            showLoading('Регистрация...');
-            const response = await fetch(`${API_BASE_URL}/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, email, password })
-            });
-
-            if (!response.ok) throw new Error('Ошибка регистрации');
-            const user = await response.json();
-
-            // Автоматический вход
-            await loginAfterRegister(username, password);
-
-        } catch (error) {
-            console.error('Register error:', error);
-            showError('registerError', 'Ошибка регистрации');
-            hideLoading();
-        }
-    }
-
-    async function loginAfterRegister(username, password) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-
-            const data = await response.json();
-            authToken = data.token;
-            localStorage.setItem('token', authToken);
-            currentUser = data.user;
-
-            updateUserInfo();
-            await loadMedicines();
-            showMainScreen();
-
-        } catch (error) {
-            console.error('Auto-login error:', error);
-            showLoginScreen();
-        }
-    }
-
-    async function loadUserByToken() {
-        showLoading('Загрузка профиля...');
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/users/me`, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-
-            if (!response.ok) throw new Error('Токен недействителен');
-            currentUser = await response.json();
-
-            updateUserInfo();
-            await loadMedicines();
-            showMainScreen();
-
-        } catch (error) {
-            console.error('Token auth error:', error);
-            localStorage.removeItem('token');
-            authToken = null;
-            showLoginScreen();
-        }
-    }
-
-    async function loadMedicines() {
-        if (!currentUser) return;
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/medicines`, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-
-            if (!response.ok) throw new Error('Ошибка загрузки лекарств');
-            const medicines = await response.json();
-
-            const medicinesList = document.getElementById('medicinesList');
-            const emptyState = document.getElementById('emptyState');
-
-            if (medicines.length === 0) {
-                medicinesList.innerHTML = '';
-                emptyState.classList.remove('hidden');
+        if (window.Telegram && Telegram.WebApp) {
+            showStatus('Открыт в Telegram WebApp');
+            const initData = Telegram.WebApp.initData;
+            if (initData) {
+                await loginTelegram(initData);
             } else {
-                emptyState.classList.add('hidden');
-                medicinesList.innerHTML = medicines.map(med => `
-                        <div class="medicine-card" data-id="${med.id}">
-                            <div class="medicine-info">
-                                <h4>${med.name}</h4>
-                                <p>${med.dosage || ''}</p>
-                            </div>
-                            <button class="medicine-taken" onclick="markAsTaken(${med.id})">✓</button>
-                        </div>
-                    `).join('');
+                showStatus('initData отсутствует — попробуй нажать кнопку "Войти"');
             }
-
-        } catch (error) {
-            console.error('Load medicines error:', error);
+        } else {
+            showStatus('Откройте страницу через Web App внутри Telegram.');
         }
-    }
-
-    async function addMedicine() {
-        const name = document.getElementById('medicineName').value.trim();
-        const dosage = document.getElementById('medicineDosage').value.trim();
-        const time = document.getElementById('medicineTime').value;
-
-        if (!name) {
-            showError('addError', 'Введите название');
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/medicines`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ name, dosage, description: '', instructions: '' })
-            });
-
-            if (!response.ok) throw new Error('Ошибка добавления');
-            const medicine = await response.json();
-
-            await fetch(`${API_BASE_URL}/reminders`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({
-                    userId: currentUser.id,
-                    medicineId: medicine.id,
-                    reminderTime: time + ':00',
-                    daysOfWeek: 'everyday'
-                })
-            });
-
-            await loadMedicines();
-            showMainScreen();
-
-        } catch (error) {
-            console.error('Add medicine error:', error);
-            showError('addError', 'Ошибка добавления');
-        }
-    }
-
-    function markAsTaken(medicineId) {
-        alert(`Лекарство ${medicineId} отмечено как принято (заглушка)`);
-    }
-
-    function updateUserInfo() {
-        if (currentUser) {
-            document.getElementById('displayName').textContent =
-                currentUser.firstName || currentUser.username || currentUser.email;
-
-            if (currentUser.photoUrl) {
-                document.getElementById('userAvatar').src = currentUser.photoUrl;
-                document.getElementById('userAvatar').style.display = 'block';
-                document.getElementById('avatarPlaceholder').style.display = 'none';
-            }
-        }
-    }
-
-    function logout() {
-        localStorage.removeItem('token');
-        authToken = null;
-        currentUser = null;
-        showLoginScreen();
-    }
-
-
-    function showLoading(message = 'Загрузка...') {
-        document.getElementById('loadingText').textContent = message;
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('loadingScreen').classList.add('active');
-    }
-
-    function hideLoading() {
-        document.getElementById('loadingScreen').classList.remove('active');
-    }
-
-    function showLoginScreen() {
-        hideLoading();
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('loginScreen').classList.add('active');
-        document.getElementById('loginUsername').value = '';
-        document.getElementById('loginPassword').value = '';
-    }
-
-    function showRegisterScreen() {
-        hideLoading();
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('registerScreen').classList.add('active');
-        document.getElementById('regUsername').value = '';
-        document.getElementById('regEmail').value = '';
-        document.getElementById('regPassword').value = '';
-    }
-
-    function showMainScreen() {
-        hideLoading();
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('mainScreen').classList.add('active');
-
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-        document.querySelector('.nav-item').classList.add('active');
-    }
-
-    function showAddMedicineScreen() {
-        if (!currentUser) {
-            showLoginScreen();
-            return;
-        }
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.getElementById('addMedicineScreen').classList.add('active');
-        document.getElementById('medicineName').value = '';
-        document.getElementById('medicineDosage').value = '';
-        document.getElementById('medicineTime').value = '09:00';
-    }
-
-    function navigateTo(page, event) {
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-        event.target.classList.add('active');
-
-        switch(page) {
-            case 'main':
-                showMainScreen();
-                break;
-            default:
-                alert('Страница в разработке');
-                break;
-        }
-    }
-
-    function showError(elementId, message) {
-        const el = document.getElementById(elementId);
-        el.textContent = message;
-        el.classList.remove('hidden');
-        setTimeout(() => el.classList.add('hidden'), 3000);
-    }
+    });
 </script>
 </body>
 </html>
