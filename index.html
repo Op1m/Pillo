@@ -1,1684 +1,1814 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Таблетки • финальная версия</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    body {
-      background: #eef2f6;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 0;
-    }
-
-    .app {
-      width: 100%;
-      max-width: 400px;
-      background: #ffffff;
-      border-radius: 32px 32px 0 0;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      box-shadow: 0 20px 40px rgba(0,20,50,0.15);
-      position: relative;
-    }
-
-    /* --- Верхняя плашка --- */
-    .top-pill {
-      background: #d2e6ff;
-      border-radius: 0 0 32px 32px;
-      padding: 18px 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 4px 12px rgba(0, 100, 200, 0.1);
-      position: relative;
-    }
-    .avatar {
-      width: 52px;
-      height: 52px;
-      background: #b7d9ff;
-      border-radius: 26px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .avatar svg {
-      width: 36px;
-      height: 36px;
-      fill: #1f5080;
-    }
-    .user-info {
-      flex: 1;
-    }
-    .user-name {
-      font-weight: 800;
-      font-size: 16px;
-      color: #0a2540;
-      line-height: 1.3;
-    }
-    .user-switch {
-      font-size: 13px;
-      color: #4f6f8f;
-      margin-top: 2px;
-      cursor: pointer;
-    }
-    .app-logo {
-      width: 40px;
-      height: 40px;
-      background: #ffffff;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    .app-logo svg {
-      width: 32px;
-      height: 32px;
-    }
-
-    /* --- Месяц под плашкой --- */
-    .month-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 20px 8px;
-      background: white;
-      position: relative;
-    }
-    .month-left {
-      font-weight: 700;
-      font-size: 18px;
-      color: #113355;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .month-left svg {
-      width: 20px;
-      height: 20px;
-      fill: #2d5980;
-    }
-    .month-nav {
-      display: flex;
-      gap: 12px;
-    }
-    .month-nav button {
-      background: #eef5fc;
-      border: none;
-      width: 36px;
-      height: 36px;
-      border-radius: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-    .month-nav button svg {
-      width: 24px;
-      height: 24px;
-      fill: #2d5980;
-    }
-
-    /* --- Календарь-попап --- */
-    .calendar-popup {
-      position: absolute;
-      top: 70px;
-      left: 20px;
-      right: 20px;
-      background: white;
-      border-radius: 32px;
-      box-shadow: 0 30px 50px #00000030;
-      padding: 18px;
-      z-index: 100;
-      display: none;
-    }
-    .cal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    .cal-header button {
-      background: #eef5fc;
-      border: none;
-      width: 36px;
-      height: 36px;
-      border-radius: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-    .cal-header button svg {
-      width: 24px;
-      height: 24px;
-      fill: #2d5980;
-    }
-    .cal-weekdays {
-      display: grid;
-      grid-template-columns: repeat(7,1fr);
-      text-align: center;
-      color: #6d8bb0;
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-    .cal-grid {
-      display: grid;
-      grid-template-columns: repeat(7,1fr);
-      gap: 4px;
-    }
-    .cal-cell {
-      aspect-ratio: 1/1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f6faff;
-      border-radius: 30px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-    .cal-cell.selected {
-      background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
-      color: white;
-    }
-    .cal-cell.today {
-      border: 2px solid #2e7aff;
-      background: white;
-      color: #2e7aff;
-      font-weight: 700;
-    }
-    .cal-cell.empty {
-      background: transparent;
-      pointer-events: none;
-    }
-
-    /* --- Неделя с датами --- */
-    .week-row {
-      display: flex;
-      gap: 6px;
-      justify-content: space-between;
-      padding: 0 16px 10px;
-    }
-    .day-chip {
-      flex: 1;
-      aspect-ratio: 1/1;
-      background: #f6faff;
-      border-radius: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #1f3f5c;
-      cursor: pointer;
-      border: 2px solid transparent;
-    }
-    .day-chip.today {
-      border-color: #2e7aff;
-      background: white;
-    }
-    .day-chip.selected {
-      background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
-      color: white;
-      border: none;
-    }
-    .day-number {
-      font-weight: 700;
-      font-size: 16px;
-    }
-    .day-name {
-      font-size: 10px;
-      text-transform: uppercase;
-      opacity: 0.7;
-    }
-
-    .divider-light {
-      height: 1px;
-      background: #e0eaf5;
-      margin: 6px 16px 10px;
-    }
-
-    /* --- Контент (группы времени) --- */
-    .content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0 16px 8px;
-      scrollbar-width: thin;
-    }
-    .time-group {
-      margin-bottom: 18px;
-      border-bottom: 1px solid #edf2f9;
-      padding-bottom: 6px;
-    }
-    .group-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      cursor: pointer;
-      user-select: none;
-    }
-    .group-header-left {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .group-time {
-      font-weight: 800;
-      font-size: 20px;
-      color: #0f2e4a;
-    }
-    .group-arrow svg {
-      width: 20px;
-      height: 20px;
-      fill: #7a99bb;
-      transition: transform 0.15s;
-    }
-    .group-header .btn-outline {
-      background: #eaf1fb;
-      border: none;
-      padding: 6px 14px;
-      border-radius: 40px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #1f4d8a;
-      cursor: pointer;
-    }
-
-    .med-cards {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .time-group.collapsed .med-cards {
-      display: none;
-    }
-    .time-group.collapsed .group-arrow svg {
-      transform: rotate(-90deg);
-    }
-
-    /* --- Карточка препарата --- */
-    .med-card {
-      min-height: 78px;
-      background: #ffffff;
-      border-radius: 24px;
-      padding: 14px 16px;
-      margin: 8px 0;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      border: 1px solid #e2ecf9;
-      transition: all 0.1s;
-    }
-    .med-card.taken {
-      background: #edfff5;
-      border-color: #a0ddc0;
-    }
-    .med-card.missed {
-      background: #ffeceb;
-      border-color: #ffc9c2;
-    }
-    .med-icon {
-      width: 65px;
-      height: 65px;
-      background: #f0f7ff;
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .med-icon svg {
-      width: 40px;
-      height: 40px;
-      fill: #2e7aff;
-    }
-    .med-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-    .med-name {
-      font-weight: 700;
-      font-size: 17px;
-      color: #01254a;
-    }
-    .med-desc {
-      color: #8FA9C6;
-      font-size: 13px;
-      margin-top: 3px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .med-desc svg {
-      width: 14px;
-      height: 14px;
-      fill: #8FA9C6;
-    }
-    .med-status {
-      font-weight: 600;
-      font-size: 13px;
-      margin-top: 3px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .status-taken { color: #0f9d6a; }
-    .status-missed { color: #e74c3c; }
-    .status-pending { color: #7a8fa8; }
-    .status-icon svg {
-      width: 16px;
-      height: 16px;
-    }
-    .status-taken svg { stroke: #0f9d6a; fill: none; }
-    .status-missed svg { stroke: #e74c3c; fill: none; }
-    .status-pending svg { fill: #7a8fa8; }
-
-    /* --- Заглушка --- */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 60px 20px;
-      text-align: center;
-      color: #7f99bb;
-    }
-    .empty-state svg {
-      width: 80px;
-      height: 80px;
-      fill: #aac3dd;
-      margin-bottom: 20px;
-    }
-    .empty-state p {
-      font-size: 16px;
-      font-weight: 500;
-    }
-
-    /* --- Кнопка "Добавить препарат" (70% ширины) --- */
-    .add-med-btn {
-      background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
-      border: none;
-      border-radius: 30px;
-      padding: 14px 20px;
-      width: 70%;
-      max-width: 300px;
-      margin: 20px auto 10px;
-      display: block;
-      font-weight: 700;
-      font-size: 16px;
-      color: white;
-      text-align: center;
-      box-shadow: 0 6px 12px rgba(30,107,255,0.3);
-      cursor: pointer;
-      transition: opacity 0.1s;
-    }
-    .add-med-btn:active {
-      opacity: 0.8;
-    }
-
-    /* --- Нижняя навигация (отдельные кнопки без общего фона) --- */
-    .bottom-nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      background: transparent;
-    }
-    .nav-items {
-      display: flex;
-      gap: 8px;
-    }
-    .nav-item {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 44px;
-      border-radius: 32px;
-      padding: 0 10px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: #f4faff;
-      color: #2f4b70;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    .nav-item.active {
-      background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
-      color: white;
-      flex: 1 1 auto;
-    }
-    .nav-item .icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .nav-item .icon svg {
-      width: 24px;
-      height: 24px;
-      fill: currentColor;
-    }
-    .nav-item .text {
-      display: none;
-      font-weight: 600;
-      font-size: 15px;
-      margin-left: 6px;
-      white-space: nowrap;
-      color: inherit;
-    }
-    .nav-item.active .text {
-      display: inline;
-    }
-    .plus-button {
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
-      border: none;
-      border-radius: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 18px rgba(30,107,255,0.4);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    .plus-button svg {
-      width: 32px;
-      height: 32px;
-      fill: white;
-    }
-
-    /* --- Модальное окно выбора (Новый препарат / Новый курс) --- */
-    .modal-sheet-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      align-items: flex-end;
-      justify-content: center;
-      z-index: 200;
-    }
-    .modal-sheet {
-      width: 100%;
-      max-width: 400px;
-      display: flex;
-      flex-direction: column;
-      padding: 16px;
-    }
-    .modal-card {
-      background: white;
-      border-radius: 28px;
-      padding: 14px 12px 8px 12px;
-      display: flex;
-      flex-direction: column;
-    }
-    .modal-title {
-      font-weight: 700;
-      font-size: 16px;
-      color: #263238;
-      text-align: center;
-      padding: 4px 0 12px 0;
-    }
-    .modal-divider {
-      height: 1px;
-      background: #f0f0f0;
-      margin: 0 0 8px 0;
-    }
-    .modal-option-group {
-      display: flex;
-      flex-direction: column;
-    }
-    .modal-option {
-      padding: 16px 0;
-      font-weight: 500;
-      font-size: 16px;
-      color: #263238;
-      text-align: center;
-      cursor: pointer;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .modal-option:last-child {
-      border-bottom: none;
-    }
-    .modal-cancel-btn {
-      background: white;
-      border-radius: 14px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 500;
-      font-size: 16px;
-      color: #263238;
-      cursor: pointer;
-      margin-top: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-
-    /* --- Модальное окно "Принять все" с белым фоном и синим текстом --- */
-    .take-all-option {
-      background: white;
-      color: #2e7aff !important;
-      border-radius: 40px;
-      margin: 4px 0;
-      padding: 14px 0;
-      font-weight: 600;
-      border: 0px solid #d0ddee;
-      box-shadow: none;
-    }
-    .take-all-subtitle {
-      font-size: 14px;
-      color: #6f8fb0;
-      text-align: center;
-      margin-bottom: 8px;
-    }
-    #cancelTakeAll {
-      background: white;
-      color: #2e7aff;
-      border: 0px solid #d0ddee;
-      box-shadow: none;
-    }
-
-    /* --- Детальный bottom sheet препарата (просмотр) --- */
-    .sheet-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.3);
-      backdrop-filter: blur(3px);
-      display: none;
-      align-items: flex-end;
-      justify-content: center;
-      z-index: 150;
-    }
-    .bottom-sheet-detail {
-      width: 100%;
-      max-width: 400px;
-      background: white;
-      border-radius: 32px 32px 0 0;
-      padding: 0 20px 20px 20px;
-      box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
-      display: flex;
-      flex-direction: column;
-      animation: slideUp 0.25s;
-      transition: transform 0.2s ease;
-      height: 85%; /* 85% экрана */
-      overflow-y: auto;
-    }
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-
-    .sheet-handle {
-      width: 40px;
-      height: 4px;
-      background: #d9d9d9;
-      border-radius: 2px;
-      margin: 16px auto 0;
-    }
-
-    .sheet-header-buttons {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 16px;
-    }
-    .btn-icon {
-      width: 40px;
-      height: 40px;
-      background: #f5f8ff;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-    .btn-icon svg {
-      width: 24px;
-      height: 24px;
-      fill: #1a2e44;
-    }
-
-    .pill-image-frame {
-      width: 150px;
-      height: 150px;
-      margin: 30px auto 0;
-      background: #f5f8ff;
-      border-radius: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .pill-image-frame svg {
-      width: 120px;
-      height: 120px;
-      fill: #2e7aff;
-    }
-
-    .sheet-detail-title {
-      font-weight: 700;
-      font-size: 22px;
-      color: #1a2e44;
-      text-align: center;
-      margin-top: 18px;
-    }
-
-    .sheet-subtitle {
-      font-size: 14px;
-      color: #6f8fb0;
-      text-align: center;
-      margin-top: 10px;
-      line-height: 1.4;
-      white-space: pre-line;
-    }
-
-    .progress-label {
-      font-weight: 600;
-      font-size: 14px;
-      color: #6f8fb0;
-      margin-top: 24px;
-      margin-bottom: 8px;
-    }
-    .progress-bar-bg {
-      background: #e2ecf9;
-      height: 8px;
-      border-radius: 30px;
-      overflow: hidden;
-      margin-bottom: 20px;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #5faaff, #2e7aff);
-      border-radius: 30px;
-    }
-
-    .info-card-blue {
-      background: #e1efff;
-      border-radius: 24px;
-      padding: 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin: 16px 0;
-    }
-    .info-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    .info-row svg {
-      width: 18px;
-      height: 18px;
-      fill: #3466a0;
-    }
-    .info-row .info-text {
-      font-weight: 600;
-      font-size: 16px;
-      color: #003e7e;
-    }
-    .info-row:last-child {
-      margin-bottom: 0;
-    }
-    .edit-icon-btn {
-      width: 40px;
-      height: 40px;
-      background: white;
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      cursor: pointer;
-    }
-    .edit-icon-btn svg {
-      width: 22px;
-      height: 22px;
-      fill: #004c99;
-    }
-
-    .action-row {
-      display: flex;
-      gap: 12px;
-      margin: 12px 0;
-    }
-    .action-btn {
-      flex: 1;
-      background: #f5f8ff;
-      border: none;
-      border-radius: 40px;
-      padding: 16px 0;
-      font-weight: 600;
-      font-size: 16px;
-      color: #1d4d7c;
-      cursor: pointer;
-    }
-    .action-btn.primary {
-      background: #2e7aff;
-      color: white;
-    }
-
-    .bottom-bar {
-      display: flex;
-      align-items: center;
-      background: #f5f8ff;
-      border-radius: 30px;
-      height: 50px;
-      margin-top: 16px;
-    }
-    .bottom-bar-item {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      cursor: pointer;
-      height: 100%;
-    }
-    .bottom-bar-item svg {
-      width: 20px;
-      height: 20px;
-    }
-    .bottom-bar-item .text {
-      font-weight: 600;
-      font-size: 15px;
-    }
-    .divider-vertical {
-      width: 1px;
-      height: 60%;
-      background: #d0ddee;
-    }
-    .delete-text {
-      color: #e74c3c;
-    }
-    .delete-text svg {
-      fill: #e74c3c;
-    }
-
-    /* --- Стили для окна создания препарата (поля ввода) --- */
-    .create-sheet .input-group {
-      margin-bottom: 16px;
-    }
-    .create-sheet label {
-      display: block;
-      font-weight: 600;
-      font-size: 14px;
-      color: #1d4d7c;
-      margin-bottom: 4px;
-    }
-    .create-sheet input, .create-sheet select {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid #d0ddee;
-      border-radius: 24px;
-      font-size: 16px;
-      background: #f9fcff;
-      outline: none;
-      transition: border 0.1s;
-    }
-    .create-sheet input:focus, .create-sheet select:focus {
-      border-color: #2e7aff;
-    }
-    .create-sheet .action-row {
-      margin-top: 24px;
-    }
-
-    /* --- Панель смены пользователя (40% высоты) --- */
-    .user-switch-sheet {
-      height: 40% !important;
-      min-height: 250px;
-    }
-    .user-list-item {
-      display: flex;
-      align-items: center;
-      padding: 12px 16px;
-      gap: 16px;
-      cursor: pointer;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .user-list-item:last-child {
-      border-bottom: none;
-    }
-    .user-avatar-small {
-      width: 48px;
-      height: 48px;
-      background: #e1efff;
-      border-radius: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 600;
-      color: #1f5080;
-      font-size: 16px;
-    }
-    .user-avatar-small.plus {
-      background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
-      color: white;
-    }
-    .user-name-small {
-      font-weight: 600;
-      font-size: 16px;
-      color: #0a2540;
-    }
-
-    /* --- Адаптация под ПК (ширина > 600px) --- */
-    @media (min-width: 600px) {
-      .app {
-        max-width: 700px;
-        height: 900px;
-        border-radius: 40px;
-      }
-
-      .top-pill { padding: 20px 30px; }
-      .avatar { width: 64px; height: 64px; }
-      .avatar svg { width: 42px; height: 42px; }
-      .user-name { font-size: 22px; }
-      .user-switch { font-size: 16px; }
-      .app-logo { width: 50px; height: 50px; }
-      .app-logo svg { width: 38px; height: 38px; }
-
-      .month-bar { padding: 14px 30px 10px; }
-      .month-left { font-size: 22px; }
-      .month-left svg { width: 26px; height: 26px; }
-      .month-nav button { width: 40px; height: 40px; }
-      .month-nav button svg { width: 28px; height: 28px; }
-
-      .week-row { padding: 0 30px 14px; gap: 8px; }
-      .day-chip { border-radius: 22px; }
-      .day-number { font-size: 22px; }
-      .day-name { font-size: 13px; }
-
-      .content { padding: 0 30px 12px; }
-      .group-time { font-size: 26px; }
-      .group-arrow svg { width: 26px; height: 26px; }
-      .group-header .btn-outline { font-size: 15px; padding: 6px 16px; }
-
-      .med-card { min-height: 90px; padding: 14px 18px; }
-      .med-icon { width: 64px; height: 64px; }
-      .med-icon svg { width: 40px; height: 40px; }
-      .med-name { font-size: 18px; }
-      .med-desc { font-size: 15px; }
-      .med-desc svg { width: 16px; height: 16px; }
-      .med-status { font-size: 15px; }
-      .status-icon svg { width: 18px; height: 18px; }
-
-      .add-med-btn {
-        font-size: 16px;
-        padding: 12px 20px;
-        margin: 16px auto;
-        max-width: 260px;
-      }
-
-      .bottom-nav { padding: 12px 30px; }
-      .nav-items { gap: 10px; }
-      .nav-item { height: 48px; padding: 0 12px; }
-      .nav-item .icon svg { width: 28px; height: 28px; }
-      #navHome .icon svg { width: 30px; height: 30px; }
-      #navStats .icon svg { width: 36px; height: 36px; }
-      #navProfile .icon svg { width: 34px; height: 34px; }
-      .nav-item .text { font-size: 16px; }
-      .plus-button { width: 56px; height: 56px; border-radius: 32px; }
-      .plus-button svg { width: 34px; height: 34px; }
-
-      .calendar-popup { top: 100px; width: 380px; padding: 20px; }
-      .cal-header button { width: 40px; height: 40px; }
-      .cal-header button svg { width: 26px; height: 26px; }
-      .cal-weekdays { font-size: 15px; }
-      .cal-cell { font-size: 17px; }
-
-      .modal-sheet { max-width: 550px; padding: 16px; }
-      .modal-title { font-size: 20px; padding: 4px 0 14px; }
-      .modal-option { font-size: 17px; padding: 16px 0; }
-      .modal-cancel-btn { height: 54px; font-size: 17px; border-radius: 22px; }
-
-      .bottom-sheet-detail, .create-sheet {
-        max-width: 550px;
-        padding: 0 28px 28px;
-      }
-      .create-sheet input, .create-sheet select {
-        font-size: 17px;
-        padding: 12px 18px;
-      }
-      .create-sheet label {
-        font-size: 15px;
-        margin-bottom: 5px;
-      }
-      .action-btn {
-        font-size: 17px;
-        padding: 14px 0;
-      }
-      .bottom-bar { height: 58px; }
-      .bottom-bar-item svg { width: 24px; height: 24px; }
-      .bottom-bar-item .text { font-size: 17px; }
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Таблетки • финальная версия</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background: #eef2f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 0;
+        }
+        .app {
+            width: 100%;
+            max-width: 400px;
+            background: #ffffff;
+            border-radius: 32px 32px 0 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-shadow: 0 20px 40px rgba(0,20,50,0.15);
+            position: relative;
+        }
+        .top-pill {
+            background: #d2e6ff;
+            border-radius: 0 0 32px 32px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0, 100, 200, 0.1);
+            position: relative;
+        }
+        .avatar {
+            width: 52px;
+            height: 52px;
+            background: #b7d9ff;
+            border-radius: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+        }
+        .avatar svg {
+            width: 36px;
+            height: 36px;
+            fill: #1f5080;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .user-name {
+            font-weight: 800;
+            font-size: 16px;
+            color: #0a2540;
+            line-height: 1.3;
+        }
+        .user-switch {
+            font-size: 13px;
+            color: #4f6f8f;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+        .app-logo {
+            width: 40px;
+            height: 40px;
+            background: #ffffff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .app-logo svg {
+            width: 32px;
+            height: 32px;
+        }
+        .month-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px 8px;
+            background: white;
+            position: relative;
+        }
+        .month-left {
+            font-weight: 700;
+            font-size: 18px;
+            color: #113355;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .month-left svg {
+            width: 20px;
+            height: 20px;
+            fill: #2d5980;
+        }
+        .month-nav {
+            display: flex;
+            gap: 12px;
+        }
+        .month-nav button {
+            background: #eef5fc;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .month-nav button svg {
+            width: 24px;
+            height: 24px;
+            fill: #2d5980;
+        }
+        .calendar-popup {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 30px 50px #00000030;
+            padding: 18px;
+            z-index: 100;
+            display: none;
+        }
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .cal-header button {
+            background: #eef5fc;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .cal-header button svg {
+            width: 24px;
+            height: 24px;
+            fill: #2d5980;
+        }
+        .cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7,1fr);
+            text-align: center;
+            color: #6d8bb0;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7,1fr);
+            gap: 4px;
+        }
+        .cal-cell {
+            aspect-ratio: 1/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f6faff;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .cal-cell.selected {
+            background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
+            color: white;
+        }
+        .cal-cell.today {
+            border: 2px solid #2e7aff;
+            background: white;
+            color: #2e7aff;
+            font-weight: 700;
+        }
+        .cal-cell.empty {
+            background: transparent;
+            pointer-events: none;
+        }
+        .week-row {
+            display: flex;
+            gap: 6px;
+            justify-content: space-between;
+            padding: 0 16px 10px;
+        }
+        .day-chip {
+            flex: 1;
+            aspect-ratio: 1/1;
+            background: #f6faff;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #1f3f5c;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .day-chip.today {
+            border-color: #2e7aff;
+            background: white;
+        }
+        .day-chip.selected {
+            background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
+            color: white;
+            border: none;
+        }
+        .day-number {
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .day-name {
+            font-size: 10px;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+        .divider-light {
+            height: 1px;
+            background: #e0eaf5;
+            margin: 6px 16px 10px;
+        }
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px 8px;
+            scrollbar-width: thin;
+        }
+        .time-group {
+            margin-bottom: 18px;
+            border-bottom: 1px solid #edf2f9;
+            padding-bottom: 6px;
+        }
+        .group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .group-header-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .group-time {
+            font-weight: 800;
+            font-size: 20px;
+            color: #0f2e4a;
+        }
+        .group-arrow svg {
+            width: 20px;
+            height: 20px;
+            fill: #7a99bb;
+            transition: transform 0.15s;
+        }
+        .group-header .btn-outline {
+            background: #eaf1fb;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f4d8a;
+            cursor: pointer;
+        }
+        .med-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .time-group.collapsed .med-cards {
+            display: none;
+        }
+        .time-group.collapsed .group-arrow svg {
+            transform: rotate(-90deg);
+        }
+        .med-card {
+            min-height: 78px;
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 14px 16px;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            border: 1px solid #e2ecf9;
+            transition: all 0.1s;
+        }
+        .med-card.taken {
+            background: #edfff5;
+            border-color: #a0ddc0;
+        }
+        .med-card.missed {
+            background: #ffeceb;
+            border-color: #ffc9c2;
+        }
+        .med-icon {
+            width: 65px;
+            height: 65px;
+            background: #f0f7ff;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .med-icon svg {
+            width: 40px;
+            height: 40px;
+            fill: #2e7aff;
+        }
+        .med-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .med-name {
+            font-weight: 700;
+            font-size: 17px;
+            color: #01254a;
+        }
+        .med-desc {
+            color: #8FA9C6;
+            font-size: 13px;
+            margin-top: 3px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .med-desc svg {
+            width: 14px;
+            height: 14px;
+            fill: #8FA9C6;
+        }
+        .med-status {
+            font-weight: 600;
+            font-size: 13px;
+            margin-top: 3px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .status-taken { color: #0f9d6a; }
+        .status-missed { color: #e74c3c; }
+        .status-pending { color: #7a8fa8; }
+        .status-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+        .status-taken svg { stroke: #0f9d6a; fill: none; }
+        .status-missed svg { stroke: #e74c3c; fill: none; }
+        .status-pending svg { fill: #7a8fa8; }
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            color: #7f99bb;
+        }
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            fill: #aac3dd;
+            margin-bottom: 20px;
+        }
+        .empty-state p {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .add-med-btn {
+            background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
+            border: none;
+            border-radius: 30px;
+            padding: 14px 20px;
+            width: 70%;
+            max-width: 300px;
+            margin: 20px auto 10px;
+            display: block;
+            font-weight: 700;
+            font-size: 16px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 6px 12px rgba(30,107,255,0.3);
+            cursor: pointer;
+            transition: opacity 0.1s;
+        }
+        .add-med-btn:active {
+            opacity: 0.8;
+        }
+        .bottom-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: transparent;
+        }
+        .nav-items {
+            display: flex;
+            gap: 8px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 44px;
+            border-radius: 32px;
+            padding: 0 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #f4faff;
+            color: #2f4b70;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .nav-item.active {
+            background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
+            color: white;
+            flex: 1 1 auto;
+        }
+        .nav-item .icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-item .icon svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+        .nav-item .text {
+            display: none;
+            font-weight: 600;
+            font-size: 15px;
+            margin-left: 6px;
+            white-space: nowrap;
+            color: inherit;
+        }
+        .nav-item.active .text {
+            display: inline;
+        }
+        .plus-button {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
+            border: none;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 18px rgba(30,107,255,0.4);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .plus-button svg {
+            width: 32px;
+            height: 32px;
+            fill: white;
+        }
+        .modal-sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-sheet {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 28px;
+            padding: 14px 12px 8px 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #263238;
+            text-align: center;
+            padding: 4px 0 12px 0;
+        }
+        .modal-divider {
+            height: 1px;
+            background: #f0f0f0;
+            margin: 0 0 8px 0;
+        }
+        .modal-option-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-option {
+            padding: 16px 0;
+            font-weight: 500;
+            font-size: 16px;
+            color: #263238;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .modal-option:last-child {
+            border-bottom: none;
+        }
+        .modal-cancel-btn {
+            background: white;
+            border-radius: 14px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            font-size: 16px;
+            color: #263238;
+            cursor: pointer;
+            margin-top: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .take-all-option {
+            background: white;
+            color: #2e7aff !important;
+            border-radius: 40px;
+            margin: 4px 0;
+            padding: 14px 0;
+            font-weight: 600;
+            border: 0px solid #d0ddee;
+            box-shadow: none;
+        }
+        .take-all-subtitle {
+            font-size: 14px;
+            color: #6f8fb0;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        #cancelTakeAll {
+            background: white;
+            color: #2e7aff;
+            border: 0px solid #d0ddee;
+            box-shadow: none;
+        }
+        .sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 150;
+        }
+        .bottom-sheet-detail {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 32px 32px 0 0;
+            padding: 0 20px 20px 20px;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.25s;
+            transition: transform 0.2s ease;
+            height: 85%;
+            overflow-y: auto;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .sheet-handle {
+            width: 40px;
+            height: 4px;
+            background: #d9d9d9;
+            border-radius: 2px;
+            margin: 16px auto 0;
+        }
+        .sheet-header-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+        }
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            background: #f5f8ff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .btn-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: #1a2e44;
+        }
+        .pill-image-frame {
+            width: 150px;
+            height: 150px;
+            margin: 30px auto 0;
+            background: #f5f8ff;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pill-image-frame svg {
+            width: 120px;
+            height: 120px;
+            fill: #2e7aff;
+        }
+        .sheet-detail-title {
+            font-weight: 700;
+            font-size: 22px;
+            color: #1a2e44;
+            text-align: center;
+            margin-top: 18px;
+        }
+        .sheet-subtitle {
+            font-size: 14px;
+            color: #6f8fb0;
+            text-align: center;
+            margin-top: 10px;
+            line-height: 1.4;
+            white-space: pre-line;
+        }
+        .progress-label {
+            font-weight: 600;
+            font-size: 14px;
+            color: #6f8fb0;
+            margin-top: 24px;
+            margin-bottom: 8px;
+        }
+        .progress-bar-bg {
+            background: #e2ecf9;
+            height: 8px;
+            border-radius: 30px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #5faaff, #2e7aff);
+            border-radius: 30px;
+        }
+        .info-card-blue {
+            background: #e1efff;
+            border-radius: 24px;
+            padding: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin: 16px 0;
+        }
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .info-row svg {
+            width: 18px;
+            height: 18px;
+            fill: #3466a0;
+        }
+        .info-row .info-text {
+            font-weight: 600;
+            font-size: 16px;
+            color: #003e7e;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        .edit-icon-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            cursor: pointer;
+        }
+        .edit-icon-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: #004c99;
+        }
+        .action-row {
+            display: flex;
+            gap: 12px;
+            margin: 12px 0;
+        }
+        .action-btn {
+            flex: 1;
+            background: #f5f8ff;
+            border: none;
+            border-radius: 40px;
+            padding: 16px 0;
+            font-weight: 600;
+            font-size: 16px;
+            color: #1d4d7c;
+            cursor: pointer;
+        }
+        .action-btn.primary {
+            background: #2e7aff;
+            color: white;
+        }
+        .bottom-bar {
+            display: flex;
+            align-items: center;
+            background: #f5f8ff;
+            border-radius: 30px;
+            height: 50px;
+            margin-top: 16px;
+        }
+        .bottom-bar-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            height: 100%;
+        }
+        .bottom-bar-item svg {
+            width: 20px;
+            height: 20px;
+        }
+        .bottom-bar-item .text {
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .divider-vertical {
+            width: 1px;
+            height: 60%;
+            background: #d0ddee;
+        }
+        .delete-text {
+            color: #e74c3c;
+        }
+        .delete-text svg {
+            fill: #e74c3c;
+        }
+        .create-sheet .input-group {
+            margin-bottom: 16px;
+        }
+        .create-sheet label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            color: #1d4d7c;
+            margin-bottom: 4px;
+        }
+        .create-sheet input, .create-sheet select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d0ddee;
+            border-radius: 24px;
+            font-size: 16px;
+            background: #f9fcff;
+            outline: none;
+            transition: border 0.1s;
+        }
+        .create-sheet input:focus, .create-sheet select:focus {
+            border-color: #2e7aff;
+        }
+        .create-sheet .action-row {
+            margin-top: 24px;
+        }
+        .user-switch-sheet {
+            height: 40% !important;
+            min-height: 250px;
+        }
+        .user-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            gap: 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .user-list-item:last-child {
+            border-bottom: none;
+        }
+        .user-avatar-small {
+            width: 48px;
+            height: 48px;
+            background: #e1efff;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #1f5080;
+            font-size: 16px;
+        }
+        .user-avatar-small.plus {
+            background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
+            color: white;
+        }
+        .user-name-small {
+            font-weight: 600;
+            font-size: 16px;
+            color: #0a2540;
+        }
+        @media (min-width: 600px) {
+            .app { max-width: 700px; height: 900px; border-radius: 40px; }
+            .top-pill { padding: 20px 30px; }
+            .avatar { width: 64px; height: 64px; }
+            .avatar svg { width: 42px; height: 42px; }
+            .user-name { font-size: 22px; }
+            .user-switch { font-size: 16px; }
+            .app-logo { width: 50px; height: 50px; }
+            .app-logo svg { width: 38px; height: 38px; }
+            .month-bar { padding: 14px 30px 10px; }
+            .month-left { font-size: 22px; }
+            .month-left svg { width: 26px; height: 26px; }
+            .month-nav button { width: 40px; height: 40px; }
+            .month-nav button svg { width: 28px; height: 28px; }
+            .week-row { padding: 0 30px 14px; gap: 8px; }
+            .day-chip { border-radius: 22px; }
+            .day-number { font-size: 22px; }
+            .day-name { font-size: 13px; }
+            .content { padding: 0 30px 12px; }
+            .group-time { font-size: 26px; }
+            .group-arrow svg { width: 26px; height: 26px; }
+            .group-header .btn-outline { font-size: 15px; padding: 6px 16px; }
+            .med-card { min-height: 90px; padding: 14px 18px; }
+            .med-icon { width: 64px; height: 64px; }
+            .med-icon svg { width: 40px; height: 40px; }
+            .med-name { font-size: 18px; }
+            .med-desc { font-size: 15px; }
+            .med-desc svg { width: 16px; height: 16px; }
+            .med-status { font-size: 15px; }
+            .status-icon svg { width: 18px; height: 18px; }
+            .add-med-btn { font-size: 16px; padding: 12px 20px; margin: 16px auto; max-width: 260px; }
+            .bottom-nav { padding: 12px 30px; }
+            .nav-items { gap: 10px; }
+            .nav-item { height: 48px; padding: 0 12px; }
+            .nav-item .icon svg { width: 28px; height: 28px; }
+            #navHome .icon svg { width: 30px; height: 30px; }
+            #navStats .icon svg { width: 36px; height: 36px; }
+            #navProfile .icon svg { width: 34px; height: 34px; }
+            .nav-item .text { font-size: 16px; }
+            .plus-button { width: 56px; height: 56px; border-radius: 32px; }
+            .plus-button svg { width: 34px; height: 34px; }
+            .calendar-popup { top: 100px; width: 380px; padding: 20px; }
+            .cal-header button { width: 40px; height: 40px; }
+            .cal-header button svg { width: 26px; height: 26px; }
+            .cal-weekdays { font-size: 15px; }
+            .cal-cell { font-size: 17px; }
+            .modal-sheet { max-width: 550px; padding: 16px; }
+            .modal-title { font-size: 20px; padding: 4px 0 14px; }
+            .modal-option { font-size: 17px; padding: 16px 0; }
+            .modal-cancel-btn { height: 54px; font-size: 17px; border-radius: 22px; }
+            .bottom-sheet-detail, .create-sheet { max-width: 550px; padding: 0 28px 28px; }
+            .create-sheet input, .create-sheet select { font-size: 17px; padding: 12px 18px; }
+            .create-sheet label { font-size: 15px; margin-bottom: 5px; }
+            .action-btn { font-size: 17px; padding: 14px 0; }
+            .bottom-bar { height: 58px; }
+            .bottom-bar-item svg { width: 24px; height: 24px; }
+            .bottom-bar-item .text { font-size: 17px; }
+        }
+    </style>
 </head>
 <body>
 <div class="app" id="app">
 
-  <!-- Верхняя плашка -->
-  <div class="top-pill">
-    <div class="avatar">
-      <svg viewBox="0 0 24 24">
-        <path fill="#1f5080" d="M12 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4z"/>
-      </svg>
+    <div class="top-pill">
+        <div class="avatar" id="avatarContainer">
+            <svg id="avatarPlaceholder" viewBox="0 0 24 24" style="display: block;">
+                <path fill="#1f5080" d="M12 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4z"/>
+            </svg>
+        </div>
+        <div class="user-info">
+            <div class="user-name" id="userName">Загрузка...</div>
+            <div class="user-switch" id="userSwitchBtn">Сменить пользователя</div>
+        </div>
+        <div class="app-logo">
+            <svg viewBox="0 0 108 108">
+                <path fill="#3DDC84" d="M0 0h108v108H0z"/>
+                <path fill="#FFFFFF" d="M31 63.928c0 0 6.4-11 12.1-13.1 7.2-2.6 26-1.4 26-1.4l38.1 38.1L107 108.928l-32-1L31 63.928z"/>
+                <path fill="#FFFFFF" d="M65.3 45.828l3.8-6.6c0.2-0.4 0.1-0.9-0.3-1.1-0.4-0.2-0.9-0.1-1.1 0.3l-3.9 6.7c-6.3-2.8-13.4-2.8-19.7 0l-3.9-6.7c-0.2-0.4-0.7-0.5-1.1-0.3-0.4 0.2-0.5 0.7-0.3 1.1l3.8 6.6c-6.5 4.6-11 11.2-11.7 19.1h46c-0.7-7.9-5.2-14.5-11.7-19.1zM43.4 57.328c-0.8 0-1.5-0.5-1.8-1.2-0.3-0.7-0.1-1.5 0.4-2.1 0.5-0.5 1.4-0.7 2.1-0.4 0.7 0.3 1.2 1 1.2 1.8 0 1.1-0.9 1.9-1.9 1.9zM64.6 57.328c-0.8 0-1.5-0.5-1.8-1.2-0.3-0.7-0.1-1.5 0.4-2.1 0.5-0.5 1.4-0.7 2.1-0.4 0.7 0.3 1.2 1 1.2 1.8 0 1.1-0.9 1.9-1.9 1.9z"/>
+            </svg>
+        </div>
     </div>
-    <div class="user-info">
-      <div class="user-name" id="userName">Екатерина</div>
-      <div class="user-switch" id="userSwitchBtn">Сменить пользователя</div>
-    </div>
-    <div class="app-logo">
-      <svg viewBox="0 0 108 108">
-        <path fill="#3DDC84" d="M0 0h108v108H0z"/>
-        <path fill="#FFFFFF" d="M31 63.928c0 0 6.4-11 12.1-13.1 7.2-2.6 26-1.4 26-1.4l38.1 38.1L107 108.928l-32-1L31 63.928z"/>
-        <path fill="#FFFFFF" d="M65.3 45.828l3.8-6.6c0.2-0.4 0.1-0.9-0.3-1.1-0.4-0.2-0.9-0.1-1.1 0.3l-3.9 6.7c-6.3-2.8-13.4-2.8-19.7 0l-3.9-6.7c-0.2-0.4-0.7-0.5-1.1-0.3-0.4 0.2-0.5 0.7-0.3 1.1l3.8 6.6c-6.5 4.6-11 11.2-11.7 19.1h46c-0.7-7.9-5.2-14.5-11.7-19.1zM43.4 57.328c-0.8 0-1.5-0.5-1.8-1.2-0.3-0.7-0.1-1.5 0.4-2.1 0.5-0.5 1.4-0.7 2.1-0.4 0.7 0.3 1.2 1 1.2 1.8 0 1.1-0.9 1.9-1.9 1.9zM64.6 57.328c-0.8 0-1.5-0.5-1.8-1.2-0.3-0.7-0.1-1.5 0.4-2.1 0.5-0.5 1.4-0.7 2.1-0.4 0.7 0.3 1.2 1 1.2 1.8 0 1.1-0.9 1.9-1.9 1.9z"/>
-      </svg>
-    </div>
-  </div>
 
-  <!-- Месяц под плашкой -->
-  <div class="month-bar">
-    <span class="month-left" id="monthLabel">
-      Февраль 2026
-      <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
-    </span>
-    <div class="month-nav">
-      <button id="prevWeek"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
-      <button id="nextWeek"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-    </div>
-  </div>
-
-  <!-- Календарь-попап -->
-  <div class="calendar-popup" id="calendarPopup">
-    <div class="cal-header">
-      <button id="calPrevMonth"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
-      <span id="calMonthYear">Февраль 2026</span>
-      <button id="calNextMonth"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-    </div>
-    <div class="cal-weekdays">
-      <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
-    </div>
-    <div class="cal-grid" id="calGrid"></div>
-  </div>
-
-  <!-- Неделя с датами -->
-  <div class="week-row" id="weekRow"></div>
-  <div class="divider-light"></div>
-
-  <!-- Контент (сюда будут добавляться группы и кнопка) -->
-  <div class="content" id="content"></div>
-
-  <!-- Нижняя навигация (отдельные кнопки без общего фона) -->
-  <div class="bottom-nav">
-    <div class="nav-items">
-      <div class="nav-item active" id="navHome">
-        <span class="icon">
-          <svg viewBox="0 0 19 19">
-            <path d="M15.875 16.212c0 .552-.476.788-1.062.788h-1.063c-.586 0-1.062-.236-1.062-.788v-1c0-1.105-.951-2.212-2.125-2.212h-2.125c-1.175 0-2.125 1.107-2.125 2.212v1c0 .552-.477.788-1.063.788H4.188c-.586 0-1.062-.236-1.062-.788V8.149c0-.133.056-.26.155-.354l5.457-5.136c.416-.391 1.088-.391 1.503 0l5.48 5.156c.099.094.155.221.155.353v8.044zM18 7.625c0-.265-.112-.518-.309-.706l-6.693-6.33c-.829-.783-2.175-.786-3.007-.006L1.312 6.848c-.199.188-.312.442-.312.708V17.212c0 1.105.951 1.788 2.125 1.788h3.188c1.174 0 2.125-.683 2.125-1.788v-1c0-.552.476-1 1.062-1 .586 0 1.063.448 1.063 1v1c0 1.105.95 1.788 2.125 1.788h3.187c1.174 0 2.125-.683 2.125-1.788V7.625z"/>
-          </svg>
+    <div class="month-bar">
+        <span class="month-left" id="monthLabel">
+          Февраль 2026
+          <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
         </span>
-        <span class="text">Главная</span>
-      </div>
-      <div class="nav-item" id="navStats">
-        <span class="icon">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-          </svg>
-        </span>
-        <span class="text">Курсы</span>
-      </div>
-      <div class="nav-item" id="navProfile">
-        <span class="icon">
-          <svg viewBox="0 0 24 24">
-            <path d="M5 21c0-3.866 3.134-7 7-7s7 3.134 7 7M16 7c0 2.209-1.791 4-4 4s-4-1.791-4-4 1.791-4 4-4 4 1.791 4 4z"/>
-          </svg>
-        </span>
-        <span class="text">Профиль</span>
-      </div>
+        <div class="month-nav">
+            <button id="prevWeek"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button id="nextWeek"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
     </div>
-    <button class="plus-button" id="plusBtn">
-      <svg viewBox="0 0 24 24"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
+
+    <div class="calendar-popup" id="calendarPopup">
+        <div class="cal-header">
+            <button id="calPrevMonth"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <span id="calMonthYear">Февраль 2026</span>
+            <button id="calNextMonth"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+        <div class="cal-weekdays">
+            <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="week-row" id="weekRow"></div>
+    <div class="divider-light"></div>
+
+    <div class="content" id="content"></div>
+
+    <div class="bottom-nav">
+        <div class="nav-items">
+            <div class="nav-item active" id="navHome">
+                <span class="icon">
+                    <svg viewBox="0 0 19 19">
+                        <path d="M15.875 16.212c0 .552-.476.788-1.062.788h-1.063c-.586 0-1.062-.236-1.062-.788v-1c0-1.105-.951-2.212-2.125-2.212h-2.125c-1.175 0-2.125 1.107-2.125 2.212v1c0 .552-.477.788-1.063.788H4.188c-.586 0-1.062-.236-1.062-.788V8.149c0-.133.056-.26.155-.354l5.457-5.136c.416-.391 1.088-.391 1.503 0l5.48 5.156c.099.094.155.221.155.353v8.044zM18 7.625c0-.265-.112-.518-.309-.706l-6.693-6.33c-.829-.783-2.175-.786-3.007-.006L1.312 6.848c-.199.188-.312.442-.312.708V17.212c0 1.105.951 1.788 2.125 1.788h3.188c1.174 0 2.125-.683 2.125-1.788v-1c0-.552.476-1 1.062-1 .586 0 1.063.448 1.063 1v1c0 1.105.95 1.788 2.125 1.788h3.187c1.174 0 2.125-.683 2.125-1.788V7.625z"/>
+                    </svg>
+                </span>
+                <span class="text">Главная</span>
+            </div>
+            <div class="nav-item" id="navStats">
+                <span class="icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                </span>
+                <span class="text">Курсы</span>
+            </div>
+            <div class="nav-item" id="navProfile">
+                <span class="icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M5 21c0-3.866 3.134-7 7-7s7 3.134 7 7M16 7c0 2.209-1.791 4-4 4s-4-1.791-4-4 1.791-4 4-4 4 1.791 4 4z"/>
+                    </svg>
+                </span>
+                <span class="text">Профиль</span>
+            </div>
+        </div>
+        <button class="plus-button" id="plusBtn">
+            <svg viewBox="0 0 24 24"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
+        </button>
+    </div>
+
+    <div class="modal-sheet-overlay" id="takeAllSheet">
+        <div class="modal-sheet">
+            <div class="modal-card">
+                <div class="modal-title">Принять все препараты</div>
+                <div class="take-all-subtitle" id="takeAllSubtitle">Отметить 3 лекарства на 09:00</div>
+                <div class="modal-divider"></div>
+                <div class="modal-option-group">
+                    <div class="modal-option take-all-option" id="takeAllConfirm">Принять все</div>
+                    <div class="modal-option take-all-option" id="skipAllConfirm">Пропустить все</div>
+                    <div class="modal-option take-all-option" id="postponeAllConfirm">Перенести все</div>
+                </div>
+            </div>
+            <div class="modal-cancel-btn" id="cancelTakeAll">Отменить</div>
+        </div>
+    </div>
+
+    <div class="modal-sheet-overlay" id="addChoiceSheet">
+        <div class="modal-sheet">
+            <div class="modal-card">
+                <div class="modal-title">Что вы хотите добавить?</div>
+                <div class="modal-divider"></div>
+                <div class="modal-option-group">
+                    <div class="modal-option take-all-option" id="chooseNewMed">Новый препарат</div>
+                    <div class="modal-option take-all-option" id="chooseNewCourse">Новый курс</div>
+                </div>
+            </div>
+            <div class="modal-cancel-btn" id="cancelAddChoice">Отменить</div>
+        </div>
+    </div>
+
+    <div class="sheet-overlay" id="createMedSheet">
+        <div class="bottom-sheet-detail create-sheet" id="createSheetDetail">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header-buttons">
+                <div class="btn-icon" id="closeCreateMed">
+                    <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+                </div>
+                <div class="btn-icon" id="infoCreateMed">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="pill-image-frame">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+                </svg>
+            </div>
+            <div class="sheet-detail-title">Новый препарат</div>
+
+            <div class="input-group">
+                <label>Название</label>
+                <input type="text" id="medName" placeholder="например, Парацетамол" value="Новый препарат">
+            </div>
+            <div class="input-group">
+                <label>Дозировка</label>
+                <input type="text" id="medDose" placeholder="например, 1 таб." value="1 таб.">
+            </div>
+            <div class="input-group">
+                <label>Время приёма</label>
+                <input type="time" id="medTime" value="08:30">
+            </div>
+            <div class="input-group">
+                <label>Приём пищи</label>
+                <select id="medFood">
+                    <option value="во время еды" selected>Во время еды</option>
+                    <option value="до еды">До еды</option>
+                    <option value="после еды">После еды</option>
+                    <option value="независимо">Независимо от еды</option>
+                </select>
+            </div>
+
+            <div class="action-row">
+                <button class="action-btn" id="cancelCreateMed">Отмена</button>
+                <button class="action-btn primary" id="saveCreateMed">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="sheet-overlay" id="userSwitchSheet">
+        <div class="bottom-sheet-detail user-switch-sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-detail-title">Сменить пользователя</div>
+            <div id="userSwitchList" style="margin-top: 16px;"></div>
+        </div>
+    </div>
+
+    <div class="sheet-overlay" id="sheetOverlay">
+        <div class="bottom-sheet-detail" id="detailSheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header-buttons">
+                <div class="btn-icon" id="btnBack">
+                    <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+                </div>
+                <div class="btn-icon" id="btnInfo">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="pill-image-frame">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+                </svg>
+            </div>
+            <div class="sheet-detail-title" id="sheetName">Бак-Сет Форте</div>
+            <div class="sheet-subtitle" id="sheetSub">Последний приём в 10:00 13 июля\nПринимают: Екатерина, Ольга</div>
+            <div class="progress-label" id="sheetProgressText">7/14 дней принято</div>
+            <div class="progress-bar-bg"><div class="progress-fill" id="sheetProgressFill" style="width:50%"></div></div>
+            <div class="info-card-blue">
+                <div>
+                    <div class="info-row">
+                        <svg viewBox="0 0 24 24"><path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/></svg>
+                        <span class="info-text" id="sheetDose">Дозировка: 2 таб.</span>
+                    </div>
+                    <div class="info-row">
+                        <svg viewBox="0 0 24 24"><path d="M3 9h18M7 3v2M17 3v2M6 13h2M6 17h2M11 13h2M11 17h2M16 13h2M16 17h2M6.2 21h11.6c1.12 0 1.68 0 2.108-.218.376-.192.682-.498.874-.874C21 19.48 21 18.92 21 17.8V8.2c0-1.12 0-1.68-.218-2.108a2 2 0 0 0-.874-.874C19.48 5 18.92 5 17.8 5H6.2c-1.12 0-1.68 0-2.108.218a2 2 0 0 0-.874.874C3 6.52 3 7.08 3 8.2v9.6c0 1.12 0 1.68.218 2.108.192.376.498.682.874.874C4.52 21 5.08 21 6.2 21z"/></svg>
+                        <span class="info-text" id="sheetDay">Сегодня</span>
+                    </div>
+                    <div class="info-row">
+                        <svg viewBox="0 0 24 24"><path d="M11 2v11c0 2.21-1.79 4-4 4s-4-1.79-4-4V2h2v11c0 1.1.9 2 2 2s2-.9 2-2V2h2zM21 6h-2v9c0 1.66-1.34 3-3 3s-3-1.34-3-3V6h-2v13h2v-6c0-1.66 1.34-3 3-3s3 1.34 3 3v6h2V6z"/></svg>
+                        <span class="info-text" id="sheetWhen">Во время еды</span>
+                    </div>
+                </div>
+                <div class="edit-icon-btn" id="editMed">
+                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </div>
+            </div>
+            <div class="action-row">
+                <button class="action-btn" id="skipBtn">Пропустить</button>
+                <button class="action-btn primary" id="takeBtn">Принять</button>
+            </div>
+            <div class="bottom-bar">
+                <div class="bottom-bar-item" id="postponeBtn">
+                    <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
+                    <span class="text">Отложить</span>
+                </div>
+                <div class="divider-vertical"></div>
+                <div class="bottom-bar-item" id="deleteBtn">
+                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    <span class="text delete-text">Удалить</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button onClick="localStorage.clear(); alert('localStorage cleared'); location.reload();"
+            style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+                   background: #ff4444; color: white; border: none; border-radius: 30px;
+                   padding: 12px 20px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        🧹 Очистить хранилище
     </button>
-  </div>
-
-  <!-- Модальное окно для "Принять все" (белый фон, синий текст) -->
-  <div class="modal-sheet-overlay" id="takeAllSheet">
-    <div class="modal-sheet">
-      <div class="modal-card">
-        <div class="modal-title">Принять все препараты</div>
-        <div class="take-all-subtitle" id="takeAllSubtitle">Отметить 3 лекарства на 09:00</div>
-        <div class="modal-divider"></div>
-        <div class="modal-option-group">
-          <div class="modal-option take-all-option" id="takeAllConfirm">Принять все</div>
-          <div class="modal-option take-all-option" id="skipAllConfirm">Пропустить все</div>
-          <div class="modal-option take-all-option" id="postponeAllConfirm">Перенести все</div>
-        </div>
-      </div>
-      <div class="modal-cancel-btn" id="cancelTakeAll">Отменить</div>
-    </div>
-  </div>
-
-  <!-- Модальное окно выбора (Новый препарат / Новый курс) для кнопки "+" -->
-  <div class="modal-sheet-overlay" id="addChoiceSheet">
-    <div class="modal-sheet">
-      <div class="modal-card">
-        <div class="modal-title">Что вы хотите добавить?</div>
-        <div class="modal-divider"></div>
-        <div class="modal-option-group">
-          <div class="modal-option take-all-option" id="chooseNewMed">Новый препарат</div>
-          <div class="modal-option take-all-option" id="chooseNewCourse">Новый курс</div>
-        </div>
-      </div>
-      <div class="modal-cancel-btn" id="cancelAddChoice">Отменить</div>
-    </div>
-  </div>
-
-  <!-- Окно создания нового препарата -->
-  <div class="sheet-overlay" id="createMedSheet">
-    <div class="bottom-sheet-detail create-sheet" id="createSheetDetail">
-      <div class="sheet-handle"></div>
-      <div class="sheet-header-buttons">
-        <div class="btn-icon" id="closeCreateMed">
-          <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
-        </div>
-        <div class="btn-icon" id="infoCreateMed">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
-          </svg>
-        </div>
-      </div>
-      <div class="pill-image-frame">
-        <svg viewBox="0 0 24 24">
-          <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
-        </svg>
-      </div>
-      <div class="sheet-detail-title">Новый препарат</div>
-
-      <!-- Поля ввода -->
-      <div class="input-group">
-        <label>Название</label>
-        <input type="text" id="medName" placeholder="например, Парацетамол" value="Новый препарат">
-      </div>
-      <div class="input-group">
-        <label>Дозировка</label>
-        <input type="text" id="medDose" placeholder="например, 1 таб." value="1 таб.">
-      </div>
-      <div class="input-group">
-        <label>Время приёма</label>
-        <input type="time" id="medTime" value="08:30">
-      </div>
-      <div class="input-group">
-        <label>Приём пищи</label>
-        <select id="medFood">
-          <option value="во время еды" selected>Во время еды</option>
-          <option value="до еды">До еды</option>
-          <option value="после еды">После еды</option>
-          <option value="независимо">Независимо от еды</option>
-        </select>
-      </div>
-
-      <div class="action-row">
-        <button class="action-btn" id="cancelCreateMed">Отмена</button>
-        <button class="action-btn primary" id="saveCreateMed">Создать</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Панель смены пользователя (40% экрана) -->
-  <div class="sheet-overlay" id="userSwitchSheet">
-    <div class="bottom-sheet-detail user-switch-sheet">
-      <div class="sheet-handle"></div>
-      <div class="sheet-detail-title">Сменить пользователя</div>
-      <div style="margin-top: 16px;">
-        <div class="user-list-item" data-user="ekaterina">
-          <div class="user-avatar-small">ЕК</div>
-          <span class="user-name-small">Екатерина</span>
-          <span style="margin-left: auto; color: #2e7aff;">✓</span>
-        </div>
-        <div class="user-list-item" data-user="olga">
-          <div class="user-avatar-small">ОЛ</div>
-          <span class="user-name-small">Ольга</span>
-        </div>
-        <div class="user-list-item" data-user="anatoly">
-          <div class="user-avatar-small">АН</div>
-          <span class="user-name-small">Анатолий</span>
-        </div>
-        <div class="user-list-item" id="addNewUser">
-          <div class="user-avatar-small plus">
-            <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
-          </div>
-          <span class="user-name-small">Новый пользователь</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Детальный bottom sheet препарата (просмотр) -->
-  <div class="sheet-overlay" id="sheetOverlay">
-    <div class="bottom-sheet-detail" id="detailSheet">
-      <div class="sheet-handle"></div>
-      <div class="sheet-header-buttons">
-        <div class="btn-icon" id="btnBack">
-          <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
-        </div>
-        <div class="btn-icon" id="btnInfo">
-          <svg viewBox="0 0 24 24">
-            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
-          </svg>
-        </div>
-      </div>
-      <div class="pill-image-frame">
-        <svg viewBox="0 0 24 24">
-          <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
-        </svg>
-      </div>
-      <div class="sheet-detail-title" id="sheetName">Бак-Сет Форте</div>
-      <div class="sheet-subtitle" id="sheetSub">Последний приём в 10:00 13 июля\nПринимают: Екатерина, Ольга</div>
-      <div class="progress-label" id="sheetProgressText">7/14 дней принято</div>
-      <div class="progress-bar-bg"><div class="progress-fill" id="sheetProgressFill" style="width:50%"></div></div>
-      <div class="info-card-blue">
-        <div>
-          <div class="info-row">
-            <svg viewBox="0 0 24 24"><path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/></svg>
-            <span class="info-text" id="sheetDose">Дозировка: 2 таб.</span>
-          </div>
-          <div class="info-row">
-            <svg viewBox="0 0 24 24"><path d="M3 9h18M7 3v2M17 3v2M6 13h2M6 17h2M11 13h2M11 17h2M16 13h2M16 17h2M6.2 21h11.6c1.12 0 1.68 0 2.108-.218.376-.192.682-.498.874-.874C21 19.48 21 18.92 21 17.8V8.2c0-1.12 0-1.68-.218-2.108a2 2 0 0 0-.874-.874C19.48 5 18.92 5 17.8 5H6.2c-1.12 0-1.68 0-2.108.218a2 2 0 0 0-.874.874C3 6.52 3 7.08 3 8.2v9.6c0 1.12 0 1.68.218 2.108.192.376.498.682.874.874C4.52 21 5.08 21 6.2 21z"/></svg>
-            <span class="info-text" id="sheetDay">Сегодня</span>
-          </div>
-          <div class="info-row">
-            <svg viewBox="0 0 24 24"><path d="M11 2v11c0 2.21-1.79 4-4 4s-4-1.79-4-4V2h2v11c0 1.1.9 2 2 2s2-.9 2-2V2h2zM21 6h-2v9c0 1.66-1.34 3-3 3s-3-1.34-3-3V6h-2v13h2v-6c0-1.66 1.34-3 3-3s3 1.34 3 3v6h2V6z"/></svg>
-            <span class="info-text" id="sheetWhen">Во время еды</span>
-          </div>
-        </div>
-        <div class="edit-icon-btn" id="editMed">
-          <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-        </div>
-      </div>
-      <div class="action-row">
-        <button class="action-btn" id="skipBtn">Пропустить</button>
-        <button class="action-btn primary" id="takeBtn">Принять</button>
-      </div>
-      <div class="bottom-bar">
-        <div class="bottom-bar-item" id="postponeBtn">
-          <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
-          <span class="text">Отложить</span>
-        </div>
-        <div class="divider-vertical"></div>
-        <div class="bottom-bar-item" id="deleteBtn">
-          <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-          <span class="text delete-text">Удалить</span>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-  (function() {
-    const STORAGE_KEY = 'meds_final_v15';
-    let medications = [];
+    (function() {
+        const API_BASE = 'https://medicine-reminder-app-t3u9.onrender.com/api';
+        const TOKEN_KEY = 'med_token';
+        const USER_KEY = 'med_user';
 
-    function loadMeds() {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try { medications = JSON.parse(stored); } catch { medications = []; }
-      } else {
-        medications = [
-          { id: 1, name: 'Препарат 1', dose: '1 таб.', time: '08:30', status: 'taken', daysTaken: 7, totalDays: 14, food: 'во время еды', lastTaken: '14:03', lastIntake: '10:00 13 июля', users: 'Екатерина, Ольга' },
-          { id: 2, name: 'Препарат 2', dose: '1 таб.', time: '08:30', status: 'missed', daysTaken: 3, totalDays: 14, food: 'во время еды', lastTaken: null, lastIntake: '—', users: 'Екатерина' },
-          { id: 3, name: 'Препарат 3', dose: '1 таб.', time: '09:00', status: 'pending', daysTaken: 0, totalDays: 14, food: 'во время еды', lastTaken: null, lastIntake: '—', users: 'Екатерина' },
-          { id: 4, name: 'Бак-Сет Форте', dose: '2 таб.', time: '09:00', status: 'taken', daysTaken: 7, totalDays: 14, food: 'во время еды', lastTaken: '09:00', lastIntake: '10:00 13 июля', users: 'Екатерина, Ольга' }
-        ];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(medications));
-      }
-    }
-    loadMeds();
-    function saveMeds() { localStorage.setItem(STORAGE_KEY, JSON.stringify(medications)); }
+        let currentUser = null;
+        let authToken = localStorage.getItem(TOKEN_KEY);
+        let reminders = [];
+        let historyMap = new Map();
 
-    let currentDate = new Date();
-    let selectedDay = new Date();
-    let activeTab = 'home';
-    let selectedMedId = null;
-    let currentGroupTime = null;
-    let startY = 0, currentY = 0;
-    let collapsedGroups = [];
+        const $ = id => document.getElementById(id);
+        const avatarContainer = $('avatarContainer');
+        const avatarPlaceholder = $('avatarPlaceholder');
+        const userNameEl = $('userName');
+        const contentDiv = $('content');
+        const monthLabel = $('monthLabel');
+        const weekRow = $('weekRow');
+        const calendarPopup = $('calendarPopup');
+        const calGrid = $('calGrid');
+        const calMonthYear = $('calMonthYear');
+        const takeAllSheet = $('takeAllSheet');
+        const takeAllSubtitle = $('takeAllSubtitle');
+        const addChoiceSheet = $('addChoiceSheet');
+        const createMedSheet = $('createMedSheet');
+        const userSwitchSheet = $('userSwitchSheet');
+        const userSwitchList = $('userSwitchList');
+        const sheetOverlay = $('sheetOverlay');
+        const detailSheet = $('detailSheet');
 
-    const weekRow = document.getElementById('weekRow');
-    const contentDiv = document.getElementById('content');
-    const monthLabel = document.getElementById('monthLabel');
-    const calendarPopup = document.getElementById('calendarPopup');
-    const calGrid = document.getElementById('calGrid');
-    const calMonthYear = document.getElementById('calMonthYear');
-    const sheetOverlay = document.getElementById('sheetOverlay');
-    const detailSheet = document.getElementById('detailSheet');
-    const takeAllSheet = document.getElementById('takeAllSheet');
-    const takeAllSubtitle = document.getElementById('takeAllSubtitle');
-    const addChoiceSheet = document.getElementById('addChoiceSheet');
-    const createMedSheet = document.getElementById('createMedSheet');
-    const userSwitchSheet = document.getElementById('userSwitchSheet');
-    const plusBtn = document.getElementById('plusBtn');
-    const userSwitchBtn = document.getElementById('userSwitchBtn');
-    const navItems = document.querySelectorAll('.nav-item');
+        const medNameInput = $('medName');
+        const medDoseInput = $('medDose');
+        const medTimeInput = $('medTime');
+        const medFoodSelect = $('medFood');
+        const saveCreateMed = $('saveCreateMed');
+        const cancelCreateMed = $('cancelCreateMed');
+        const closeCreateMed = $('closeCreateMed');
+        const infoCreateMed = $('infoCreateMed');
 
-    // Элементы создания препарата
-    const medNameInput = document.getElementById('medName');
-    const medDoseInput = document.getElementById('medDose');
-    const medTimeInput = document.getElementById('medTime');
-    const medFoodSelect = document.getElementById('medFood');
-    const saveCreateMed = document.getElementById('saveCreateMed');
-    const cancelCreateMed = document.getElementById('cancelCreateMed');
-    const closeCreateMed = document.getElementById('closeCreateMed');
-    const infoCreateMed = document.getElementById('infoCreateMed');
+        const sheetName = $('sheetName');
+        const sheetSub = $('sheetSub');
+        const sheetProgressText = $('sheetProgressText');
+        const sheetProgressFill = $('sheetProgressFill');
+        const sheetDose = $('sheetDose');
+        const sheetDay = $('sheetDay');
+        const sheetWhen = $('sheetWhen');
+        const skipBtn = $('skipBtn');
+        const takeBtn = $('takeBtn');
+        const deleteBtn = $('deleteBtn');
+        const postponeBtn = $('postponeBtn');
+        const editMed = $('editMed');
+        const btnBack = $('btnBack');
+        const btnInfo = $('btnInfo');
 
-    // Функция добавления препарата из формы
-    function createNewMed() {
-      const name = medNameInput.value.trim();
-      if (!name) {
-        alert('Введите название препарата');
-        return;
-      }
-      const dose = medDoseInput.value.trim() || '1 таб.';
-      const time = medTimeInput.value;
-      if (!time) {
-        alert('Выберите время приёма');
-        return;
-      }
-      const food = medFoodSelect.value;
-      const newMed = {
-        id: Date.now(),
-        name,
-        dose,
-        time,
-        status: 'pending',
-        daysTaken: 0,
-        totalDays: 14,
-        food,
-        lastTaken: null,
-        lastIntake: '—',
-        users: 'Екатерина'
-      };
-      medications.push(newMed);
-      saveMeds();
-      renderGroups();
-      createMedSheet.style.display = 'none';
-    }
+        let selectedReminderId = null;
+        let selectedReminder = null;
+        let currentGroupTime = null;
+        let currentDate = new Date();
+        let selectedDay = new Date();
+        let collapsedGroups = [];
 
-    // Закрытие create sheet
-    function closeCreateSheet() {
-      createMedSheet.style.display = 'none';
-    }
+        function safeJSONParse(str) {
+            try { return JSON.parse(str); } catch (e) { return null; }
+        }
 
-    // Открыть create sheet
-    function openCreateSheet() {
-      medNameInput.value = 'Новый препарат';
-      medDoseInput.value = '1 таб.';
-      medTimeInput.value = '08:30';
-      medFoodSelect.value = 'во время еды';
-      createMedSheet.style.display = 'flex';
-    }
+        async function apiFetch(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            };
+            if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
-    // Обработчики создания
-    saveCreateMed.addEventListener('click', createNewMed);
-    cancelCreateMed.addEventListener('click', closeCreateSheet);
-    closeCreateMed.addEventListener('click', closeCreateSheet);
-    infoCreateMed.addEventListener('click', () => alert('Заполните поля и нажмите Создать'));
-    createMedSheet.addEventListener('click', (e) => {
-      if (e.target === createMedSheet) closeCreateSheet();
-    });
+            const fetchOptions = { ...options, headers };
 
-    // Кнопка "+" открывает выбор
-    plusBtn.addEventListener('click', () => {
-      addChoiceSheet.style.display = 'flex';
-    });
-
-    // Выбор "Новый препарат" из меню
-    document.getElementById('chooseNewMed').addEventListener('click', () => {
-      addChoiceSheet.style.display = 'none';
-      openCreateSheet();
-    });
-
-    // Выбор "Новый курс" (заглушка)
-    document.getElementById('chooseNewCourse').addEventListener('click', () => {
-      addChoiceSheet.style.display = 'none';
-      alert('Добавление курса (заглушка)');
-    });
-
-    // Отмена в меню выбора
-    document.getElementById('cancelAddChoice').addEventListener('click', () => {
-      addChoiceSheet.style.display = 'none';
-    });
-
-    addChoiceSheet.addEventListener('click', (e) => {
-      if (e.target === addChoiceSheet) addChoiceSheet.style.display = 'none';
-    });
-
-    // Функция для кнопки "Добавить препарат" снизу
-    function addMedFromMain() {
-      openCreateSheet();
-    }
-
-    // --- Панель смены пользователя ---
-    userSwitchBtn.addEventListener('click', () => {
-      userSwitchSheet.style.display = 'flex';
-    });
-
-    // Закрытие по клику на фон
-    userSwitchSheet.addEventListener('click', (e) => {
-      if (e.target === userSwitchSheet) userSwitchSheet.style.display = 'none';
-    });
-
-    // Обработчики выбора пользователя (заглушка)
-    document.querySelectorAll('.user-list-item[data-user]').forEach(item => {
-      item.addEventListener('click', () => {
-        alert('Переключение на пользователя (демо)');
-        userSwitchSheet.style.display = 'none';
-      });
-    });
-    document.getElementById('addNewUser').addEventListener('click', () => {
-      alert('Добавление нового пользователя');
-      userSwitchSheet.style.display = 'none';
-    });
-
-    // --- renderGroups, openSheet, свайп, календарь и т.д. ---
-    function getWeekDays(date) {
-      const d = new Date(date);
-      const day = d.getDay();
-      const diff = (day === 0 ? -6 : 1 - day);
-      const monday = new Date(d);
-      monday.setDate(d.getDate() + diff);
-      const week = [];
-      for (let i = 0; i < 7; i++) {
-        const day = new Date(monday);
-        day.setDate(monday.getDate() + i);
-        week.push(day);
-      }
-      return week;
-    }
-
-    function renderWeek(centerDate) {
-      const week = getWeekDays(centerDate);
-      weekRow.innerHTML = '';
-      const today = new Date();
-      week.forEach((day) => {
-        const chip = document.createElement('div');
-        chip.className = 'day-chip';
-        if (day.toDateString() === today.toDateString()) chip.classList.add('today');
-        if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
-        chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
-        chip.addEventListener('click', () => {
-          document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
-          chip.classList.add('selected');
-          selectedDay = day;
-        });
-        weekRow.appendChild(chip);
-      });
-      monthLabel.childNodes[0].nodeValue = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
-    }
-
-    function renderGroups() {
-      const meds = [...medications];
-      const groups = {};
-      meds.forEach(m => { if (!groups[m.time]) groups[m.time] = []; groups[m.time].push(m); });
-      const sortedTimes = Object.keys(groups).sort();
-
-      contentDiv.innerHTML = '';
-      if (sortedTimes.length === 0) {
-        contentDiv.innerHTML = `
-          <div class="empty-state">
-            <svg viewBox="0 0 470 470">
-              <path d="M341 204.29h-57.26c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5h-57.47c-9.65 0-17.5 7.85-17.5 17.5v57.26c0 1.36-1.14 2.5-2.5 2.5H129c-9.65 0-17.5 7.85-17.5 17.5v57.47c0 9.65 7.85 17.5 17.5 17.5h57.26c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5h57.47c9.65 0 17.5-7.85 17.5-17.5v-19.26c0-4.14-3.36-7.5-7.5-7.5s-7.5 3.36-7.5 7.5v19.26c0 1.36-1.14 2.5-2.5 2.5h-57.47c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5H129c-1.36 0-2.5-1.14-2.5-2.5v-57.47c0-1.36 1.14-2.5 2.5-2.5h57.26c9.65 0 17.5-7.85 17.5-17.5v-57.26c0-1.36 1.14-2.5 2.5-2.5h57.47c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5H341c1.36 0 2.5 1.14 2.5 2.5v57.47c0 1.36-1.14 2.5-2.5 2.5h-57.26c-9.65 0-17.5 7.85-17.5 17.5v8c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-8c0-1.36 1.14-2.5 2.5-2.5H341c9.65 0 17.5-7.85 17.5-17.5v-57.47c0-9.65-7.85-17.5-17.5-17.5zM433.5 68.76H299.43V51.04c0-15.88-12.92-28.8-28.8-28.8h-71.25c-15.88 0-28.8 12.92-28.8 28.8l0 17.73H36.5c-20.13 0-36.5 16.37-36.5 36.5v290.53c0 20.13 16.37 36.5 36.5 36.5h36v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h295v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h36c20.13 0 36.5-16.37 36.5-36.5V105.26c0-20.12-16.37-36.5-36.5-36.5zM185.57 51.04c0-7.61 6.19-13.8 13.8-13.8h71.25c7.61 0 13.8 6.19 13.8 13.8v17.73h-98.85V51.04zM455 395.79c0 11.85-9.65 21.5-21.5 21.5h-397c-11.85 0-21.5-9.65-21.5-21.5V105.26c0-11.85 9.65-21.5 21.5-21.5h397c11.85 0 21.5 9.65 21.5 21.5V395.79zM80 63.76h30.62c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5H80c-4.14 0-7.5 3.36-7.5 7.5S75.86 63.76 80 63.76zM359.38 63.76H390c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5h-30.62c-4.14 0-7.5 3.36-7.5 7.5S355.24 63.76 359.38 63.76z"/>
-            </svg>
-            <p>Здесь будут препараты, которые вы принимаете.</p>
-          </div>
-        `;
-      } else {
-        sortedTimes.forEach(time => {
-          const groupDiv = document.createElement('div');
-          groupDiv.className = 'time-group';
-          groupDiv.dataset.time = time;
-          if (collapsedGroups.includes(time)) {
-            groupDiv.classList.add('collapsed');
-          }
-
-          const header = document.createElement('div');
-          header.className = 'group-header';
-          header.innerHTML = `
-            <div class="group-header-left">
-              <span class="group-time">${time}</span>
-              <span class="group-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
-            </div>
-            <button class="btn-outline take-all" data-time="${time}">Принять все</button>
-          `;
-
-          header.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') return;
-            groupDiv.classList.toggle('collapsed');
-            if (groupDiv.classList.contains('collapsed')) {
-              if (!collapsedGroups.includes(time)) collapsedGroups.push(time);
-            } else {
-              collapsedGroups = collapsedGroups.filter(t => t !== time);
+            const res = await fetch(API_BASE + endpoint, fetchOptions);
+            if (!res.ok) {
+                let err = {};
+                try { err = await res.json(); } catch (e) { /* ignore */ }
+                throw new Error(err.message || `HTTP ${res.status}`);
             }
-          });
+            if (res.status === 204) return {};
+            try { return await res.json(); } catch (e) { return {}; }
+        }
 
-          const cardsDiv = document.createElement('div');
-          cardsDiv.className = 'med-cards';
-
-          groups[time].forEach(med => {
-            const card = document.createElement('div');
-            card.className = `med-card ${med.status}`;
-            card.dataset.id = med.id;
-
-            let statusHtml = '';
-            if (med.status === 'taken') {
-              statusHtml = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято в ${med.lastTaken || '08:30'}, сегодня</span>`;
-            } else if (med.status === 'missed') {
-              statusHtml = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
+        function setAvatar(user) {
+            if (!avatarContainer || !avatarPlaceholder) return;
+            if (user && user.photoUrl) {
+                avatarContainer.style.backgroundImage = `url(${user.photoUrl})`;
+                avatarContainer.style.backgroundSize = 'cover';
+                avatarPlaceholder.style.display = 'none';
             } else {
-              statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg> Ожидается</span>`;
+                avatarContainer.style.backgroundImage = '';
+                avatarPlaceholder.style.display = 'block';
+            }
+        }
+
+        function updateUserInfo(user) {
+            if (!userNameEl) return;
+            userNameEl.innerText = user?.firstName || user?.username || 'Пользователь';
+            setAvatar(user || {});
+        }
+
+        async function loginWithTelegram() {
+            const tg = window.Telegram?.WebApp;
+            if (!tg || !tg.initData) {
+                console.log('Telegram WebApp not found — falling back to test user');
+                currentUser = { id: 1, firstName: 'Тест', lastName: '', username: 'test', photoUrl: null };
+                authToken = 'fake-token';
+                localStorage.setItem(TOKEN_KEY, authToken);
+                localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+                updateUserInfo(currentUser);
+                await loadReminders().catch(e => console.error(e));
+                return;
             }
 
-            card.innerHTML = `
-              <div class="med-icon">
-                <svg viewBox="0 0 24 24">
-                  <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
-                </svg>
-              </div>
-              <div class="med-info">
-                <div class="med-name">${med.name}</div>
-                <div class="med-desc">
-                  <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
-                  ${med.dose} · ${med.food}
+            try {
+                const data = await apiFetch('/auth/telegram', {
+                    method: 'POST',
+                    body: JSON.stringify({ initData: tg.initData })
+                });
+                authToken = data.token;
+                currentUser = data.user;
+                localStorage.setItem(TOKEN_KEY, authToken);
+                localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+                updateUserInfo(currentUser);
+                await loadReminders();
+            } catch (err) {
+                console.error('loginWithTelegram error', err);
+                currentUser = { id: 1, firstName: 'Ошибка', lastName: '', username: 'error', photoUrl: null };
+                updateUserInfo(currentUser);
+            }
+        }
+
+        async function loadReminders() {
+            if (!currentUser) {
+                alert('❌ currentUser = null');
+                return;
+            }
+
+            try {
+                alert('Загружаем напоминания для userId = ' + currentUser.id);
+
+                const data = await apiFetch(`/reminders/user/${currentUser.id}`);
+
+                if (!Array.isArray(data)) {
+                    alert('⚠️ Сервер вернул не массив:\n\n' + JSON.stringify(data));
+                    reminders = [];
+                } else {
+                    reminders = data;
+                    alert('✅ Загружено напоминаний: ' + reminders.length);
+                }
+
+                await loadHistoryForDate(selectedDay);
+
+            } catch (err) {
+                alert('❌ Ошибка загрузки напоминаний:\n\n' + (err.message || err));
+            }
+        }
+
+        async function loadHistoryForDate(date) {
+            if (!currentUser) return;
+
+            const start = new Date(date);
+            start.setHours(0,0,0,0);
+
+            const end = new Date(date);
+            end.setHours(23,59,59,999);
+
+            try {
+                const history = await apiFetch(
+                    `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
+                );
+
+                const dateKey = date.toISOString().split('T')[0];
+                historyMap.set(dateKey, Array.isArray(history) ? history : []);
+
+                renderGroupsForDate(date);
+
+            } catch (err) {
+                alert('❌ Ошибка загрузки истории:\n\n' + (err.message || err));
+                renderGroupsForDate(date);
+            }
+        }
+
+        function remindersForDate(date) {
+            const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
+            return reminders.filter(r => {
+                const days = r.daysOfWeek;
+                if (!days) return false;
+                if (days === 'everyday') return true;
+                return String(days).split(',').map(x => parseInt(x)).includes(dayOfWeek);
+            });
+        }
+
+        function getStatusForReminderOnDate(reminder, date) {
+            const dateKey = date.toISOString().split('T')[0];
+            const history = historyMap.get(dateKey) || [];
+            const entry = history.find(h => h.reminder && h.reminder.id === reminder.id);
+            if (entry && entry.status) return String(entry.status).toLowerCase();
+            return 'pending';
+        }
+
+        function renderGroupsForDate(date) {
+            if (!contentDiv) return;
+            const filtered = remindersForDate(date);
+            console.log(`Отображаем ${filtered.length} напоминаний на ${date.toDateString()}`);
+
+            if (filtered.length === 0) {
+                contentDiv.innerHTML = `
+                <div class="empty-state">
+                    <p>На этот день нет запланированных препаратов.</p>
                 </div>
-                <div class="med-status">${statusHtml}</div>
-              </div>
             `;
-            card.addEventListener('click', () => openSheet(med.id));
-            cardsDiv.appendChild(card);
-          });
+                return;
+            }
 
-          groupDiv.appendChild(header);
-          groupDiv.appendChild(cardsDiv);
-          contentDiv.appendChild(groupDiv);
+            const groups = {};
+            filtered.forEach(r => {
+                const time = (r.reminderTime || '').substring(0,5) || '00:00';
+                if (!groups[time]) groups[time] = [];
+                groups[time].push(r);
+            });
+
+            const sortedTimes = Object.keys(groups).sort();
+
+            contentDiv.innerHTML = '';
+            sortedTimes.forEach(time => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'time-group';
+                groupDiv.dataset.time = time;
+                if (collapsedGroups.includes(time)) groupDiv.classList.add('collapsed');
+
+                const header = document.createElement('div');
+                header.className = 'group-header';
+                header.innerHTML = `
+                <div class="group-header-left">
+                    <span class="group-time">${time}</span>
+                    <span class="group-arrow">▾</span>
+                </div>
+                <button class="btn-outline take-all" data-time="${time}">Принять все</button>
+            `;
+                header.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') return;
+                    groupDiv.classList.toggle('collapsed');
+                    if (groupDiv.classList.contains('collapsed')) {
+                        if (!collapsedGroups.includes(time)) collapsedGroups.push(time);
+                    } else {
+                        collapsedGroups = collapsedGroups.filter(t => t !== time);
+                    }
+                });
+
+                const cardsDiv = document.createElement('div');
+                cardsDiv.className = 'med-cards';
+
+                groups[time].forEach(r => {
+                    const status = getStatusForReminderOnDate(r, date);
+                    const card = document.createElement('div');
+                    card.className = `med-card ${status}`;
+                    card.dataset.id = r.id;
+
+                    const med = r.medicine || (r.medicineId ? { id: r.medicineId, name: 'Препарат #' + r.medicineId, dosage: '', instructions: '' } : { name: 'Неизвестно', dosage: '', instructions: '' });
+
+                    let statusHtml = '';
+                    if (status === 'taken') statusHtml = `<span class="status-taken">Принято</span>`;
+                    else if (status === 'missed') statusHtml = `<span class="status-missed">Пропущено</span>`;
+                    else statusHtml = `<span class="status-pending">Ожидается</span>`;
+
+                    card.innerHTML = `
+                    <div class="med-icon">💊</div>
+                    <div class="med-info">
+                        <div class="med-name">${escapeHtml(med.name)}</div>
+                        <div class="med-desc">${escapeHtml(med.dosage || '')} · ${escapeHtml(med.instructions || 'не указано')}</div>
+                        <div class="med-status">${statusHtml}</div>
+                    </div>
+                `;
+
+                    card.addEventListener('click', () => openDetailSheet(r.id));
+                    cardsDiv.appendChild(card);
+                });
+
+                groupDiv.appendChild(header);
+                groupDiv.appendChild(cardsDiv);
+                contentDiv.appendChild(groupDiv);
+            });
+
+            const addButton = document.createElement('button');
+            addButton.className = 'add-med-btn';
+            addButton.textContent = 'Добавить препарат';
+            addButton.addEventListener('click', () => openCreateSheet());
+            contentDiv.appendChild(addButton);
+
+            document.querySelectorAll('.take-all').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const time = btn.dataset.time;
+                    const count = filtered.filter(r => (r.reminderTime||'').substring(0,5) === time).length;
+                    if (takeAllSubtitle) takeAllSubtitle.innerText = `Отметить ${count} лекарств на ${time}`;
+                    currentGroupTime = time;
+                    if (takeAllSheet) takeAllSheet.style.display = 'flex';
+                });
+            });
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return str || '';
+            return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+        }
+
+        function openDetailSheet(reminderId) {
+            const reminder = reminders.find(r => r.id === reminderId);
+            if (!reminder) return;
+            selectedReminderId = reminderId;
+            selectedReminder = reminder;
+
+            const med = reminder.medicine || (reminder.medicineId ? { name: 'Препарат #' + reminder.medicineId, dosage:'', instructions:'' } : { name:'Неизвестно', dosage:'', instructions:'' });
+
+            if (sheetName) sheetName.innerText = med.name;
+            if (sheetDose) sheetDose.innerText = `Дозировка: ${med.dosage || '—'}`;
+            if (sheetWhen) sheetWhen.innerText = med.instructions || 'Не указано';
+            if (sheetDay) sheetDay.innerText = 'Сегодня';
+            if (sheetSub) sheetSub.innerText = `Последний приём: —\nПринимают: ${currentUser?.firstName || 'Вы'}`;
+            if (sheetProgressText) sheetProgressText.innerText = '0/14 дней принято';
+            if (sheetProgressFill) sheetProgressFill.style.width = '0%';
+            if (sheetOverlay) sheetOverlay.style.display = 'flex';
+        }
+
+        async function createMedicineAndReminder(name, dosage, time, food) {
+            if (!currentUser) return;
+            try {
+                const medicine = await apiFetch('/medicines', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, dosage, description: '', instructions: food }),
+                });
+                const reminder = await apiFetch('/reminders', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        userId: currentUser.id,
+                        medicineId: medicine.id,
+                        reminderTime: time,
+                        daysOfWeek: 'everyday'
+                    }),
+                });
+                reminders.push(reminder);
+                console.log('Создано напоминание:', reminder);
+                await loadHistoryForDate(selectedDay);
+            } catch (err) {
+                console.error('createMedicineAndReminder', err);
+                alert('Не удалось создать препарат');
+            }
+        }
+
+        async function markReminderAsTaken(reminderId) {
+            try {
+                const reminder = reminders.find(r => r.id === reminderId);
+                if (!reminder) {
+                    alert('Напоминание не найдено');
+                    return;
+                }
+
+                const now = new Date();
+                const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00')
+                    .split(':')
+                    .map(Number);
+
+                const scheduledTime = new Date(now);
+                scheduledTime.setHours(hour, minute, 0, 0);
+                const scheduledISO = scheduledTime.toISOString();
+
+                const history = await apiFetch('/medicine-history/schedule', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        reminderId,
+                        scheduledTime: scheduledISO
+                    })
+                });
+
+                await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ notes: '' })
+                });
+
+                await loadHistoryForDate(selectedDay);
+
+            } catch (err) {
+                alert('Ошибка при отметке приёма:\n\n' + (err.message || err));
+                throw err;
+            }
+        }
+
+        async function markReminderAsSkipped(reminderId) {
+            try {
+                const reminder = reminders.find(r => r.id === reminderId);
+                if (!reminder) return;
+                const now = new Date();
+                const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
+                const scheduledTime = new Date(now);
+                scheduledTime.setHours(hour, minute, 0, 0);
+                const scheduledISO = scheduledTime.toISOString();
+
+                console.log('Отметка пропуска:', { reminderId, scheduledISO });
+
+                const history = await apiFetch('/medicine-history/schedule', {
+                    method: 'POST',
+                    body: JSON.stringify({ reminderId, scheduledTime: scheduledISO })
+                });
+                await apiFetch(`/medicine-history/${history.id}/mark-skipped`, { method: 'PATCH' });
+                console.log('Статус пропущен');
+                await loadHistoryForDate(selectedDay);
+            } catch (err) {
+                console.error('Ошибка отметки пропуска:', err);
+            }
+        }
+
+        async function deleteReminder(reminderId) {
+            try {
+                await apiFetch(`/reminders/${reminderId}`, { method: 'DELETE' });
+                reminders = reminders.filter(r => r.id !== reminderId);
+                console.log('Напоминание удалено');
+                await loadHistoryForDate(selectedDay);
+            } catch (err) {
+                console.error('deleteReminder', err);
+            }
+        }
+
+        takeBtn?.addEventListener('click', async () => {
+            if (selectedReminderId) {
+                try {
+                    await markReminderAsTaken(selectedReminderId);
+                    await loadHistoryForDate(selectedDay);
+                    if (sheetOverlay) sheetOverlay.style.display = 'none';
+                } catch (err) {
+                    console.error(err);
+                    alert('Не удалось отметить приём. Посмотрите консоль.');
+                }
+            }
         });
-      }
 
-      // Добавляем кнопку "Добавить препарат" после всех групп
-      const addButton = document.createElement('button');
-      addButton.className = 'add-med-btn';
-      addButton.textContent = 'Добавить препарат';
-      addButton.addEventListener('click', addMedFromMain);
-      contentDiv.appendChild(addButton);
-
-      document.querySelectorAll('.take-all').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          currentGroupTime = btn.dataset.time;
-          // Подсчёт количества препаратов в группе и обновление подзаголовка
-          const groupMeds = medications.filter(m => m.time === currentGroupTime);
-          const count = groupMeds.length;
-          takeAllSubtitle.innerText = `Отметить ${count} лекарств на ${currentGroupTime}`;
-          takeAllSheet.style.display = 'flex';
+        skipBtn?.addEventListener('click', () => {
+            if (selectedReminderId) {
+                markReminderAsSkipped(selectedReminderId);
+                if (sheetOverlay) sheetOverlay.style.display = 'none';
+            }
         });
-      });
-    }
 
-    function openSheet(id) {
-      const med = medications.find(m => m.id === id);
-      if (!med) return;
-      selectedMedId = id;
-      document.getElementById('sheetName').innerText = med.name;
-      document.getElementById('sheetSub').innerText = `Последний приём в ${med.lastIntake || '—'}\nПринимают: ${med.users || 'Екатерина'}`;
-      document.getElementById('sheetProgressText').innerText = `${med.daysTaken || 0}/${med.totalDays || 14} дней принято`;
-      const percent = ((med.daysTaken || 0) / (med.totalDays || 14)) * 100;
-      document.getElementById('sheetProgressFill').style.width = percent + '%';
-      document.getElementById('sheetDose').innerText = `Дозировка: ${med.dose}`;
-      document.getElementById('sheetDay').innerText = 'Сегодня';
-      document.getElementById('sheetWhen').innerText = med.food;
-      sheetOverlay.style.display = 'flex';
-    }
-
-    detailSheet.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
-    detailSheet.addEventListener('touchmove', (e) => {
-      currentY = e.touches[0].clientY;
-      const diff = currentY - startY;
-      if (diff > 0) detailSheet.style.transform = `translateY(${diff}px)`;
-    }, { passive: true });
-    detailSheet.addEventListener('touchend', () => {
-      if (currentY - startY > 80) sheetOverlay.style.display = 'none';
-      detailSheet.style.transform = '';
-      startY = 0; currentY = 0;
-    });
-
-    document.getElementById('takeAllConfirm').addEventListener('click', () => {
-      if (currentGroupTime) {
-        medications.forEach(m => { if (m.time === currentGroupTime && m.status !== 'taken') { m.status = 'taken'; m.lastTaken = new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' }); m.daysTaken = Math.min(m.totalDays, (m.daysTaken||0)+1); } });
-        saveMeds(); renderGroups();
-      }
-      takeAllSheet.style.display = 'none';
-    });
-    document.getElementById('skipAllConfirm').addEventListener('click', () => {
-      if (currentGroupTime) {
-        medications.forEach(m => { if (m.time === currentGroupTime) { m.status = 'missed'; m.lastTaken = null; } });
-        saveMeds(); renderGroups();
-      }
-      takeAllSheet.style.display = 'none';
-    });
-    document.getElementById('postponeAllConfirm').addEventListener('click', () => { alert('Перенести всё'); takeAllSheet.style.display = 'none'; });
-    document.getElementById('cancelTakeAll').addEventListener('click', () => { takeAllSheet.style.display = 'none'; });
-
-    document.getElementById('skipBtn').addEventListener('click', () => {
-      if (selectedMedId) { let m = medications.find(m => m.id === selectedMedId); if(m){ m.status='missed'; m.lastTaken=null; saveMeds(); renderGroups(); sheetOverlay.style.display='none'; } }
-    });
-    document.getElementById('takeBtn').addEventListener('click', () => {
-      if (selectedMedId) { let m = medications.find(m => m.id === selectedMedId); if(m){ m.status='taken'; m.lastTaken=new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}); m.daysTaken = Math.min(m.totalDays, (m.daysTaken||0)+1); saveMeds(); renderGroups(); sheetOverlay.style.display='none'; } }
-    });
-    document.getElementById('deleteBtn').addEventListener('click', () => {
-      if (selectedMedId) { medications = medications.filter(m => m.id !== selectedMedId); saveMeds(); renderGroups(); sheetOverlay.style.display='none'; }
-    });
-    document.getElementById('postponeBtn').addEventListener('click', () => { alert('Отложено на 15 мин'); sheetOverlay.style.display='none'; });
-    document.getElementById('editMed').addEventListener('click', () => alert('Редактирование'));
-    document.getElementById('btnBack').addEventListener('click', () => sheetOverlay.style.display='none');
-    document.getElementById('btnInfo').addEventListener('click', () => alert('Информация о препарате'));
-
-    sheetOverlay.addEventListener('click', (e) => { if (e.target === sheetOverlay) sheetOverlay.style.display = 'none'; });
-
-    let calDate = new Date();
-    function renderCalendar() {
-      calMonthYear.innerText = calDate.toLocaleString('ru', { month: 'long', year: 'numeric' });
-      const year = calDate.getFullYear(), month = calDate.getMonth();
-      const firstDay = new Date(year, month, 1);
-      let startDay = firstDay.getDay(); startDay = startDay === 0 ? 6 : startDay - 1;
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      calGrid.innerHTML = '';
-      for (let i = 0; i < startDay; i++) {
-        const empty = document.createElement('div');
-        empty.className = 'cal-cell empty';
-        calGrid.appendChild(empty);
-      }
-      const today = new Date();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const cell = document.createElement('div');
-        cell.className = 'cal-cell';
-        cell.innerText = d;
-        const cellDate = new Date(year, month, d);
-        if (cellDate.toDateString() === today.toDateString()) cell.classList.add('today');
-        if (selectedDay && cellDate.toDateString() === selectedDay.toDateString()) cell.classList.add('selected');
-        cell.addEventListener('click', () => {
-          document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
-          cell.classList.add('selected');
-          selectedDay = new Date(year, month, d);
-          currentDate = new Date(selectedDay);
-          renderWeek(currentDate);
-          calendarPopup.style.display = 'none';
+        deleteBtn?.addEventListener('click', () => {
+            if (selectedReminderId && confirm('Удалить этот препарат?')) {
+                deleteReminder(selectedReminderId);
+                if (sheetOverlay) sheetOverlay.style.display = 'none';
+            }
         });
-        calGrid.appendChild(cell);
-      }
-    }
-    monthLabel.addEventListener('click', (e) => {
-      e.stopPropagation();
-      calendarPopup.style.display = 'block';
-      renderCalendar();
-    });
-    document.addEventListener('click', (e) => {
-      if (!calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
-    });
-    document.getElementById('calPrevMonth').addEventListener('click', (e) => {
-      e.stopPropagation();
-      calDate.setMonth(calDate.getMonth()-1);
-      renderCalendar();
-    });
-    document.getElementById('calNextMonth').addEventListener('click', (e) => {
-      e.stopPropagation();
-      calDate.setMonth(calDate.getMonth()+1);
-      renderCalendar();
-    });
 
-    document.getElementById('prevWeek').addEventListener('click', () => {
-      currentDate.setDate(currentDate.getDate() - 7);
-      renderWeek(currentDate);
-    });
-    document.getElementById('nextWeek').addEventListener('click', () => {
-      currentDate.setDate(currentDate.getDate() + 7);
-      renderWeek(currentDate);
-    });
+        postponeBtn?.addEventListener('click', () => alert('Отложено на 15 мин (заглушка)'));
+        editMed?.addEventListener('click', () => alert('Редактирование (заглушка)'));
+        btnBack?.addEventListener('click', () => { if (sheetOverlay) sheetOverlay.style.display = 'none'; });
+        btnInfo?.addEventListener('click', () => alert('Информация о препарате'));
 
-    function setActiveTab(tabId) {
-      navItems.forEach(item => item.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      activeTab = tabId.replace('nav', '').toLowerCase();
-      if (activeTab === 'home') {
-        contentDiv.innerHTML = '';
-        renderGroups();
-      } else if (activeTab === 'stats') {
-        contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">📊 Курсы (заглушка)</div>';
-      } else {
-        contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">👤 Профиль (заглушка)</div>';
-      }
-    }
+        sheetOverlay?.addEventListener('click', (e) => { if (e.target === sheetOverlay) sheetOverlay.style.display = 'none'; });
 
-    document.getElementById('navHome').addEventListener('click', () => setActiveTab('navHome'));
-    document.getElementById('navStats').addEventListener('click', () => setActiveTab('navStats'));
-    document.getElementById('navProfile').addEventListener('click', () => setActiveTab('navProfile'));
+        (function addSheetTouch() {
+            if (!detailSheet) return;
+            let startY = 0, currentY = 0;
+            detailSheet.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+            detailSheet.addEventListener('touchmove', (e) => {
+                currentY = e.touches[0].clientY;
+                const diff = currentY - startY;
+                if (diff > 0) detailSheet.style.transform = `translateY(${diff}px)`;
+            }, { passive: true });
+            detailSheet.addEventListener('touchend', () => {
+                if (currentY - startY > 80) { if (sheetOverlay) sheetOverlay.style.display = 'none'; }
+                detailSheet.style.transform = '';
+                startY = currentY = 0;
+            });
+        })();
 
-    renderWeek(new Date());
-    renderGroups();
-  })();
+        $('takeAllConfirm')?.addEventListener('click', async () => {
+            if (currentGroupTime) {
+                const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime||'').substring(0,5) === currentGroupTime);
+                for (const r of groupReminders) await markReminderAsTaken(r.id);
+                await loadHistoryForDate(selectedDay);
+            }
+            if (takeAllSheet) takeAllSheet.style.display = 'none';
+        });
+
+        $('skipAllConfirm')?.addEventListener('click', async () => {
+            if (currentGroupTime) {
+                const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime||'').substring(0,5) === currentGroupTime);
+                for (const r of groupReminders) await markReminderAsSkipped(r.id);
+                await loadHistoryForDate(selectedDay);
+            }
+            if (takeAllSheet) takeAllSheet.style.display = 'none';
+        });
+
+        $('postponeAllConfirm')?.addEventListener('click', () => {
+            alert('Функция отложить всё пока не реализована');
+            if (takeAllSheet) takeAllSheet.style.display = 'none';
+        });
+        $('cancelTakeAll')?.addEventListener('click', () => { if (takeAllSheet) takeAllSheet.style.display = 'none'; });
+
+        $('plusBtn')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'flex'; });
+        $('chooseNewMed')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'none'; openCreateSheet(); });
+        $('chooseNewCourse')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'none'; alert('Добавление курса (заглушка)'); });
+        $('cancelAddChoice')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'none'; });
+        addChoiceSheet?.addEventListener('click', (e) => { if (e.target === addChoiceSheet) addChoiceSheet.style.display = 'none'; });
+
+        function openCreateSheet() {
+            if (medNameInput) medNameInput.value = 'Новый препарат';
+            if (medDoseInput) medDoseInput.value = '1 таб.';
+            if (medTimeInput) medTimeInput.value = '08:30';
+            if (medFoodSelect) medFoodSelect.value = 'во время еды';
+            if (createMedSheet) createMedSheet.style.display = 'flex';
+        }
+        function closeCreateSheet() { if (createMedSheet) createMedSheet.style.display = 'none'; }
+
+        saveCreateMed?.addEventListener('click', () => {
+            const name = medNameInput?.value?.trim();
+            if (!name) { alert('Введите название'); return; }
+            const dose = medDoseInput?.value?.trim() || '1 таб.';
+            const time = medTimeInput?.value;
+            if (!time) { alert('Выберите время'); return; }
+            const food = medFoodSelect?.value;
+            createMedicineAndReminder(name, dose, time, food);
+            closeCreateSheet();
+        });
+        cancelCreateMed?.addEventListener('click', closeCreateSheet);
+        closeCreateMed?.addEventListener('click', closeCreateSheet);
+        infoCreateMed?.addEventListener('click', () => alert('Заполните поля и нажмите Создать'));
+        createMedSheet?.addEventListener('click', (e) => { if (e.target === createMedSheet) closeCreateSheet(); });
+
+        function getWeekDays(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = (day === 0 ? -6 : 1 - day);
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + diff);
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+                const D = new Date(monday);
+                D.setDate(monday.getDate() + i);
+                week.push(D);
+            }
+            return week;
+        }
+
+        function renderWeek(centerDate) {
+            if (!weekRow) return;
+            const week = getWeekDays(centerDate);
+            weekRow.innerHTML = '';
+            const today = new Date();
+            week.forEach((day) => {
+                const chip = document.createElement('div');
+                chip.className = 'day-chip';
+                if (day.toDateString() === today.toDateString()) chip.classList.add('today');
+                if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
+                chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
+                    chip.classList.add('selected');
+                    onDateSelected(day);
+                });
+                weekRow.appendChild(chip);
+            });
+            if (monthLabel) monthLabel.childNodes[0].nodeValue = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
+        }
+
+        let calDate = new Date();
+
+        function renderCalendar() {
+            if (!calGrid || !calMonthYear) return;
+            calMonthYear.innerText = calDate.toLocaleString('ru', { month: 'long', year: 'numeric' });
+            const year = calDate.getFullYear(), month = calDate.getMonth();
+            const firstDay = new Date(year, month, 1);
+            let startDay = firstDay.getDay();
+            startDay = startDay === 0 ? 6 : startDay - 1;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            calGrid.innerHTML = '';
+            for (let i = 0; i < startDay; i++) calGrid.appendChild(document.createElement('div')).className = 'cal-cell empty';
+            const today = new Date();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const cell = document.createElement('div');
+                cell.className = 'cal-cell';
+                cell.innerText = d;
+                const cellDate = new Date(year, month, d);
+                if (cellDate.toDateString() === today.toDateString()) cell.classList.add('today');
+                if (selectedDay && cellDate.toDateString() === selectedDay.toDateString()) cell.classList.add('selected');
+                cell.addEventListener('click', () => {
+                    document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
+                    cell.classList.add('selected');
+                    onDateSelected(new Date(year, month, d));
+                    if (calendarPopup) calendarPopup.style.display = 'none';
+                });
+                calGrid.appendChild(cell);
+            }
+        }
+
+        function onDateSelected(date) {
+            selectedDay = date;
+            loadHistoryForDate(date).then(() => { renderWeek(currentDate); });
+        }
+
+        $('prevWeek')?.addEventListener('click', () => { currentDate.setDate(currentDate.getDate() - 7); renderWeek(currentDate); });
+        $('nextWeek')?.addEventListener('click', () => { currentDate.setDate(currentDate.getDate() + 7); renderWeek(currentDate); });
+
+        monthLabel?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (calendarPopup) calendarPopup.style.display = 'block';
+            renderCalendar();
+        });
+        document.addEventListener('click', (e) => {
+            if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
+        });
+        $('calPrevMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() - 1); renderCalendar(); });
+        $('calNextMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() + 1); renderCalendar(); });
+
+        function renderUserSwitchList() {
+            if (!currentUser || !userSwitchList) return;
+            userSwitchList.innerHTML = `
+            <div class="user-list-item" data-user="current">
+                <div class="user-avatar-small">${(currentUser.firstName?.[0] || currentUser.username?.[0] || '?').toUpperCase()}</div>
+                <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
+                <span style="margin-left: auto; color: #2e7aff;">✓</span>
+            </div>
+            <div class="user-list-item" id="addNewUser">
+                <div class="user-avatar-small plus">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
+                </div>
+                <span class="user-name-small">Новый пользователь</span>
+            </div>
+        `;
+            userSwitchList.querySelectorAll('.user-list-item[data-user]')?.forEach(item => {
+                item.addEventListener('click', () => { alert('Переключение (заглушка)'); if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
+            });
+            $('addNewUser')?.addEventListener('click', () => { alert('Добавление пользователя (заглушка)'); if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
+        }
+
+        $('userSwitchBtn')?.addEventListener('click', () => { renderUserSwitchList(); if (userSwitchSheet) userSwitchSheet.style.display = 'flex'; });
+        userSwitchSheet?.addEventListener('click', (e) => { if (e.target === userSwitchSheet) userSwitchSheet.style.display = 'none'; });
+
+        function setActiveTab(tabId) {
+            document.querySelectorAll('.nav-item')?.forEach(item => item.classList.remove('active'));
+            $(tabId)?.classList.add('active');
+            const active = tabId.replace('nav', '').toLowerCase();
+            if (active === 'home') renderGroupsForDate(selectedDay);
+            else if (active === 'stats') contentDiv && (contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">📊 Курсы (заглушка)</div>');
+            else contentDiv && (contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">👤 Профиль (заглушка)</div>');
+        }
+        $('navHome')?.addEventListener('click', () => setActiveTab('navHome'));
+        $('navStats')?.addEventListener('click', () => setActiveTab('navStats'));
+        $('navProfile')?.addEventListener('click', () => setActiveTab('navProfile'));
+
+        (async function init() {
+            console.log('App init start');
+            const savedUser = localStorage.getItem(USER_KEY);
+            if (savedUser) {
+                try {
+                    currentUser = safeJSONParse(savedUser);
+                    authToken = localStorage.getItem(TOKEN_KEY);
+                    updateUserInfo(currentUser);
+                    await loadReminders();
+                } catch (e) { console.warn('Ошибка парсинга пользователя', e); }
+            }
+            if (!currentUser) await loginWithTelegram();
+            renderWeek(new Date());
+            console.log('App initialization finished');
+        })();
+
+        window.__app = {
+            loadReminders,
+            loadHistoryForDate,
+            getReminders: () => reminders,
+            getHistoryMap: () => historyMap,
+            getCurrentUser: () => currentUser,
+            apiFetch
+        };
+        console.log('Debug helpers available at window.__app');
+    })();
 </script>
 </body>
 </html>
