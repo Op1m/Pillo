@@ -3,107 +3,126 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Medicine Reminder — Pixel-accurate UI</title>
+  <title>Medicine Reminder — Improved UI</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app" id="app" role="application" aria-label="Medicine Reminder App">
-    <header class="app-header">
-      <div class="user-avatar" id="avatarPlaceholder" aria-hidden="true">👤</div>
-      <div class="user-meta">
-        <div class="user-name" id="userName">Имя пользователя</div>
-        <div class="user-sub" id="userSub">Нажмите, чтобы сменить</div>
-      </div>
-      <div class="top-controls">
-        <div class="month-label" id="monthLabel">Февраль, 2026</div>
-        <button class="month-toggle" id="monthPrev" title="Предыдущая неделя">‹</button>
-        <button class="month-toggle" id="monthNext" title="Следующая неделя">›</button>
+  <div class="app" id="app" role="application" aria-label="Medicine Reminder">
+    <!-- Top blue pill -->
+    <header class="top-pill" id="topPill">
+      <div class="top-left">
+        <div class="avatar" id="avatar">👤</div>
+        <div class="user-texts">
+          <div class="user-fullname" id="userFull">Алексей П.</div>
+          <div class="user-sub" id="userSub">Сменить пользователя</div>
+        </div>
       </div>
     </header>
 
-    <nav class="left-pane" id="leftPane" aria-hidden="false">
-      <div class="calendar" id="calendar">
-        <div class="week-header">
-          <div class="tiny">Неделя</div>
-          <div class="tiny" id="todayLabel">Сегодня</div>
-        </div>
-        <div class="week-scroll" id="weekScroll" aria-label="calendar week"></div>
-      </div>
+    <!-- Month row -->
+    <div class="month-row">
+      <button class="month-btn" id="prevWeek" aria-label="Предыдущая неделя">‹</button>
+      <button class="month-label" id="monthLabel">Февраль, 2026</button>
+      <button class="month-btn" id="nextWeek" aria-label="Следующая неделя">›</button>
+    </div>
 
-      <div class="bottom-nav-left">
-        <button class="nav-button-left active" data-screen="home" id="navHome">🏠</button>
-        <button class="nav-button-left" data-screen="calendar" id="navCalendar">🗓</button>
-        <button class="nav-button-left" data-screen="profile" id="navProfile">👤</button>
+    <!-- Week squares -->
+    <div class="week-wrap">
+      <div class="week-row" id="weekRow" aria-label="Выбор дня недели"></div>
+      <div class="week-sep" aria-hidden="true"></div>
+    </div>
+
+    <!-- Main content -->
+    <main class="main">
+      <!-- Accordion with times -->
+      <div id="timesContainer" class="times-container"></div>
+
+      <div style="text-align:center;margin-top:18px;">
+        <button class="btn add-main" id="addBtn">Добавить препарат</button>
+      </div>
+    </main>
+
+    <!-- Bottom navigation (expanding) -->
+    <nav class="bottom-nav" role="navigation" aria-label="Навигация">
+      <div class="nav-item active" data-screen="home" id="navHome">
+        <div class="nav-icon">🏠</div>
+        <div class="nav-label">Главная</div>
+      </div>
+      <div class="nav-item" data-screen="stats" id="navStats">
+        <div class="nav-icon">📊</div>
+        <div class="nav-label">Статистика</div>
+      </div>
+      <div class="nav-item" data-screen="profile" id="navProfile">
+        <div class="nav-icon">👤</div>
+        <div class="nav-label">Профиль</div>
       </div>
     </nav>
 
-    <main class="main" id="main">
-      <!-- HOME SCREEN -->
-      <section class="screen" id="screen-home" data-screen="home">
-        <div class="section" id="todaySection">
-          <div class="reminder-time" id="timeHeader">
-            <div class="time-label" id="currentTimeLabel">08:30</div>
-            <div class="time-actions">
-              <button class="add-btn tiny" id="takeAll">Принять все</button>
+    <!-- Mini calendar modal -->
+    <div class="modal-backdrop" id="miniCalBackdrop" aria-hidden="true">
+      <div class="mini-calendar" role="dialog" aria-modal="true" id="miniCal">
+        <div class="mini-header">
+          <button id="miniPrev">‹</button>
+          <div id="miniTitle">Февраль 2026</div>
+          <button id="miniNext">›</button>
+        </div>
+        <div class="mini-grid" id="miniGrid"></div>
+        <div style="text-align:right;margin-top:8px">
+          <button class="btn alt" id="miniClose">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom sheet for med detail -->
+    <div class="sheet-backdrop" id="sheetBackdrop" aria-hidden="true">
+      <div class="sheet" role="dialog" aria-modal="true" id="medSheet">
+        <div class="sheet-top">
+          <div class="sheet-left">
+            <div class="sheet-avatar" id="sheetAvatar">💊</div>
+            <div class="sheet-meta">
+              <div class="sheet-title" id="sheetTitle">Парацетамол</div>
+              <div class="sheet-sub muted" id="sheetSub">Напоминание: 08:30</div>
+              <div class="sheet-progress">
+                <div class="progress-label">7/14</div>
+                <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:50%"></div></div>
+              </div>
             </div>
           </div>
+          <button class="sheet-edit" id="sheetEdit" title="Редактировать">✎</button>
+        </div>
 
-          <div class="reminder-list" id="reminderList" aria-live="polite"></div>
-
-          <div style="margin-top:18px;text-align:center">
-            <button class="add-btn" id="addMedicationBtn">Добавить препарат</button>
+        <div class="sheet-blue">
+          <div>
+            <div class="pill-dose" id="sheetDose">1 таб.</div>
+            <div class="pill-note muted" id="sheetNote">Во время еды · Даты: 1 фев — 14 фев</div>
           </div>
         </div>
 
-        <div class="section">
-          <div class="empty-state" id="emptyState">
-            <div class="empty-illustr">🧰</div>
-            <div class="empty-title">Здесь будут препараты, которые вы принимаете.</div>
-            <div class="muted">Добавьте препарат, чтобы начать отслеживать приём.</div>
+        <div class="sheet-actions">
+          <div class="row">
+            <button class="btn ghost" id="btnSkip">Пропустить</button>
+            <button class="btn primary" id="btnTake">Принять</button>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn ghost" id="btnSnooze">Отложить</button>
+            <button class="btn danger" id="btnDelete">Удалить</button>
           </div>
         </div>
-      </section>
+      </div>
+    </div>
 
-      <!-- CALENDAR/LIST SCREEN -->
-      <section class="screen hidden" id="screen-calendar" data-screen="calendar">
-        <h2 class="section-title">Календарь приёмов</h2>
-        <div id="calendarDetails" class="calendar-details muted">Выберите день в неделе слева</div>
-      </section>
-
-      <!-- PROFILE SCREEN -->
-      <section class="screen hidden" id="screen-profile" data-screen="profile">
-        <h2 class="section-title">Профиль</h2>
-        <div class="card profile-card">
-          <div class="profile-row"><strong id="profileName">Имя пользователя</strong></div>
-          <div class="profile-row muted" id="profileNick">@username</div>
-          <div class="profile-actions" style="margin-top:12px">
-            <button class="btn" id="logoutBtn">Выйти</button>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <!-- Modal -->
-    <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <h3 id="modalTitle">Добавить препарат</h3>
-        <div class="field">
-          <label for="medName">Название</label>
-          <input id="medName" placeholder="Например: Парацетамол" />
-        </div>
+    <!-- Add/edit modal -->
+    <div class="modal-backdrop" id="addBackdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true">
+        <h3 id="addTitle">Добавить препарат</h3>
+        <div class="field"><label>Название</label><input id="iName" /></div>
         <div class="row">
-          <div class="field small">
-            <label for="medDose">Дозировка</label>
-            <input id="medDose" placeholder="1 таб." />
-          </div>
-          <div class="field small">
-            <label for="medTime">Время</label>
-            <input id="medTime" type="time" value="08:30" />
-          </div>
+          <div class="field small"><label>Дозировка</label><input id="iDose" /></div>
+          <div class="field small"><label>Время</label><input id="iTime" type="time" value="08:30" /></div>
         </div>
-        <div class="row" style="justify-content:flex-end;margin-top:10px">
-          <button class="add-btn" id="saveMed">Сохранить</button>
-          <button class="add-btn alt" id="cancelMed">Отмена</button>
+        <div style="text-align:right;margin-top:8px">
+          <button class="btn alt" id="addCancel">Отмена</button>
+          <button class="btn" id="addSave">Сохранить</button>
         </div>
       </div>
     </div>
