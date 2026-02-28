@@ -1269,17 +1269,50 @@
 
         async function loadReminders() {
             if (!currentUser) {
-                alert('❌ currentUser = null');
+                alert('❌ loadReminders: currentUser = null');
                 return;
             }
 
-            try {
-                alert('Загружаем напоминания для userId = ' + currentUser.id);
+            const url = API_BASE + `/reminders/user/${currentUser.id}`;
+            alert('Загружаем напоминания для userId = ' + currentUser.id + '\nЗапрос: ' + url);
 
-                const data = await apiFetch(`/reminders/user/${currentUser.id}`);
+            try {
+                // Собираем заголовки так же, как в apiFetch, чтобы сервер видел аналогичный запрос
+                const headers = { 'Content-Type': 'application/json' };
+                if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+
+                const res = await fetch(url, { method: 'GET', headers });
+
+                // прочитаем тело как текст, чтобы показать всё, даже если это не JSON
+                const text = await res.text();
+
+                // покажем детали запроса/ответа в alert (в Telegram это видно)
+                const info = [
+                    'HTTP ' + res.status + ' ' + res.statusText,
+                    'Request URL: ' + url,
+                    'Request Headers: ' + JSON.stringify(headers, null, 2),
+                    'Response body (first 2000 chars):',
+                    text ? text.substring(0, 2000) : '(пусто)'
+                ].join('\n\n');
+
+                if (!res.ok) {
+                    // покажем подробную ошибку
+                    alert('Ошибка загрузки напоминаний:\n\n' + info);
+                    // Для дальнейшей логики всё равно кинем ошибку (если нужно)
+                    throw new Error('HTTP ' + res.status + ': ' + (text || res.statusText));
+                }
+
+                // если ок — попытаемся распарсить JSON и продолжить обычную логику
+                let data;
+                try { data = JSON.parse(text); } catch (e) {
+                    alert('⚠️ Сервер вернул не-JSON:\n\n' + info);
+                    reminders = [];
+                    await loadHistoryForDate(selectedDay);
+                    return;
+                }
 
                 if (!Array.isArray(data)) {
-                    alert('⚠️ Сервер вернул не массив:\n\n' + JSON.stringify(data));
+                    alert('⚠️ Сервер вернул не массив:\n\n' + JSON.stringify(data, null, 2));
                     reminders = [];
                 } else {
                     reminders = data;
@@ -1289,7 +1322,9 @@
                 await loadHistoryForDate(selectedDay);
 
             } catch (err) {
-                alert('❌ Ошибка загрузки напоминаний:\n\n' + (err.message || err));
+                // На всякий случай покажем текст ошибки
+                try { alert('Exception in loadReminders:\n\n' + (err.message || err)); } catch (e) { /* ignore */ }
+                console.error(err);
             }
         }
 
