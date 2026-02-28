@@ -1,134 +1,968 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Medicine Reminder — Improved UI</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Таблетки • финальная версия</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: #eef2f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 400px;
+      background: #ffffff;
+      border-radius: 32px 32px 0 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 800px;
+      max-height: 100vh;
+      box-shadow: 0 20px 40px rgba(0,20,50,0.15);
+      position: relative;
+    }
+
+    /* --- Верхняя плашка (скруглена только снизу) --- */
+    .top-pill {
+      background: #d2e6ff;
+      border-radius: 0 0 32px 32px;
+      padding: 18px 20px 18px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0, 100, 200, 0.1);
+    }
+    .avatar {
+      width: 52px;
+      height: 52px;
+      background: #b7d9ff;
+      border-radius: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 500;
+      color: #1f5080;
+      flex-shrink: 0;
+    }
+    .user-info {
+      flex: 1;
+    }
+    .user-name {
+      font-weight: 800;
+      font-size: 16px;
+      color: #0a2540;
+      line-height: 1.3;
+    }
+    .user-switch {
+      font-size: 13px;
+      color: #4f6f8f;
+      margin-top: 2px;
+    }
+
+    /* --- Месяц под плашкой --- */
+    .month-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px 8px;
+      background: white;
+    }
+    .month-left {
+      font-weight: 700;
+      font-size: 18px;
+      color: #113355;
+      cursor: pointer;
+    }
+    .month-nav button {
+      background: #eef5fc;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 40px;
+      font-size: 18px;
+      color: #2d5980;
+      cursor: pointer;
+    }
+
+    /* --- Неделя с датами --- */
+    .week-row {
+      display: flex;
+      gap: 6px;
+      justify-content: space-between;
+      padding: 0 16px 10px;
+    }
+    .day-chip {
+      flex: 1;
+      aspect-ratio: 1/1;
+      background: #f6faff;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #1f3f5c;
+      cursor: pointer;
+      border: 1px solid #e2edff;
+    }
+    .day-chip.selected {
+      background: #2e7aff;
+      color: white;
+      border: none;
+      box-shadow: 0 6px 12px #2e7aff55;
+    }
+    .day-number {
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .day-name {
+      font-size: 10px;
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    .divider-light {
+      height: 1px;
+      background: #e0eaf5;
+      margin: 6px 16px 10px;
+    }
+
+    /* --- Контент (группы времени) --- */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 16px 8px;
+      scrollbar-width: thin;
+    }
+    .time-group {
+      margin-bottom: 18px;
+      border-bottom: 1px solid #edf2f9;
+      padding-bottom: 6px;
+    }
+    .group-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .group-header-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .group-time {
+      font-weight: 800;
+      font-size: 20px;
+      color: #0f2e4a;
+    }
+    .group-arrow {
+      font-size: 16px;
+      color: #7a99bb;
+      transition: transform 0.15s;
+    }
+    .group-header .btn-outline {
+      background: #eaf1fb;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 40px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f4d8a;
+      cursor: pointer;
+    }
+
+    .med-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .time-group.collapsed .med-cards {
+      display: none;
+    }
+
+    .med-item {
+      display: flex;
+      align-items: center;
+      background: #ffffff;
+      border: 1px solid #e2ecf9;
+      border-radius: 24px;
+      padding: 12px 14px;
+      cursor: pointer;
+    }
+    .med-item.taken {
+      background: #edfff5;
+      border-color: #a0ddc0;
+    }
+    .med-item.missed {
+      background: #ffeceb;
+      border-color: #ffc9c2;
+    }
+    .med-icon {
+      width: 52px;
+      height: 52px;
+      background: #e1efff;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #2e7aff;
+      margin-right: 14px;
+      flex-shrink: 0;
+    }
+    .med-details {
+      flex: 1;
+    }
+    .med-name {
+      font-weight: 700;
+      font-size: 16px;
+      color: #01254a;
+    }
+    .med-dose {
+      font-size: 13px;
+      color: #5c7592;
+      margin: 4px 0 2px;
+    }
+    .med-status {
+      font-size: 12px;
+    }
+    .status-taken { color: #0f9d6a; }
+    .status-missed { color: #e74c3c; }
+    .status-pending { color: #7a8fa8; }
+
+    /* --- Нижняя навигация --- */
+    .footer-nav {
+      background: #ffffff;
+      border-top: 1px solid #eaf1fa;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .nav-items {
+      display: flex;
+      flex: 1;
+      gap: 8px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #f4faff;
+      border-radius: 30px;
+      padding: 10px;
+      transition: 0.2s ease;
+      cursor: pointer;
+      color: #2f4b70;
+      flex: 0 1 auto;
+      min-width: 48px;
+    }
+    .nav-item.active {
+      background: #e1efff;
+      flex: 1 1 auto;
+      justify-content: flex-start;
+      padding: 10px 18px;
+      color: #004c99;
+    }
+    .nav-item .nav-icon {
+      font-size: 22px;
+    }
+    .nav-item .nav-text {
+      display: none;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .nav-item.active .nav-text {
+      display: inline;
+    }
+    .plus-button {
+      width: 56px;
+      height: 56px;
+      background: #2e7aff;
+      border: none;
+      border-radius: 30px;
+      color: white;
+      font-size: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 18px #2e7aff70;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* --- Bottom Sheet для модалок (выбор действий) --- */
+    .modal-sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.2);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 200;
+    }
+    .modal-sheet {
+      background: white;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 36px 36px 0 0;
+      padding: 24px 20px 30px;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-sheet .sheet-title {
+      font-weight: 700;
+      font-size: 20px;
+      color: #002856;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .modal-option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .modal-option {
+      background: #f0f7ff;
+      border-radius: 60px;
+      padding: 18px 20px;
+      font-weight: 600;
+      color: #1d4e8a;
+      text-align: center;
+      cursor: pointer;
+      font-size: 16px;
+      border: 1px solid transparent;
+    }
+    .modal-option.cancel {
+      background: #f0f0f0;
+      color: #555;
+      margin-top: 8px;
+      border: 1px solid #ddd;
+    }
+
+    /* --- Bottom Sheet детальный (препарат) на 85% со свайпом --- */
+    .sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,20,40,0.3);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 150;
+    }
+    .bottom-sheet {
+      background: white;
+      width: 100%;
+      max-width: 400px;
+      height: 85%;
+      border-radius: 36px 36px 0 0;
+      padding: 20px 20px 20px;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.25s;
+      transition: transform 0.2s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .sheet-handle {
+      width: 50px;
+      height: 5px;
+      background: #cfdeef;
+      border-radius: 10px;
+      margin: 0 auto 16px;
+      cursor: grab;
+    }
+    .sheet-content {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .sheet-icon {
+      width: 90px;
+      height: 90px;
+      background: #e4f0ff;
+      border-radius: 32px;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      color: #1e5d9e;
+    }
+    .sheet-title {
+      font-weight: 800;
+      font-size: 26px;
+      text-align: center;
+      color: #002856;
+    }
+    .sheet-remind {
+      text-align: center;
+      color: #4d7195;
+      font-size: 16px;
+      margin: 8px 0 20px;
+    }
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+      color: #1f3b58;
+      margin-bottom: 8px;
+    }
+    .progress-bar-bg {
+      background: #e2ecf9;
+      height: 14px;
+      border-radius: 30px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #5faaff, #2e7aff);
+      border-radius: 30px;
+    }
+    .info-card-blue {
+      background: #e1efff;
+      border-radius: 28px;
+      padding: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 16px 0 28px;
+    }
+    .info-dose {
+      font-weight: 700;
+      font-size: 20px;
+      color: #003e7e;
+    }
+    .info-when {
+      font-size: 15px;
+      color: #3466a0;
+      margin-top: 6px;
+    }
+    .edit-icon {
+      background: white;
+      width: 46px;
+      height: 46px;
+      border-radius: 23px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #004c99;
+      font-size: 22px;
+    }
+    .sheet-actions-row {
+      display: flex;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .sheet-btn {
+      flex: 1;
+      background: #f1f7ff;
+      border: none;
+      border-radius: 40px;
+      padding: 16px 0;
+      font-weight: 600;
+      color: #1d4d7c;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .sheet-btn.primary {
+      background: #2e7aff;
+      color: white;
+    }
+    .sheet-btn.danger {
+      background: #ffeae8;
+      color: #d44c3a;
+    }
+
+    /* --- Календарь-попап (полная версия) --- */
+    .calendar-popup {
+      position: absolute;
+      top: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      background: white;
+      border-radius: 32px;
+      box-shadow: 0 30px 50px #00000030;
+      padding: 18px;
+      z-index: 100;
+      display: none;
+    }
+    .cal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .cal-header button {
+      background: #eef5fc;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 40px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7,1fr);
+      text-align: center;
+      color: #6d8bb0;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7,1fr);
+      gap: 4px;
+    }
+    .cal-cell {
+      aspect-ratio: 1/1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f6faff;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .cal-cell.selected {
+      background: #2e7aff;
+      color: white;
+    }
+    .cal-cell.empty {
+      background: transparent;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
-  <div class="app" id="app" role="application" aria-label="Medicine Reminder">
-    <!-- Top blue pill -->
-    <header class="top-pill" id="topPill">
-      <div class="top-left">
-        <div class="avatar" id="avatar">👤</div>
-        <div class="user-texts">
-          <div class="user-fullname" id="userFull">Алексей П.</div>
-          <div class="user-sub" id="userSub">Сменить пользователя</div>
-        </div>
-      </div>
-    </header>
+<div class="app" id="app">
 
-    <!-- Month row -->
-    <div class="month-row">
-      <button class="month-btn" id="prevWeek" aria-label="Предыдущая неделя">‹</button>
-      <button class="month-label" id="monthLabel">Февраль, 2026</button>
-      <button class="month-btn" id="nextWeek" aria-label="Следующая неделя">›</button>
+  <!-- Верхняя плашка -->
+  <div class="top-pill">
+    <div class="avatar" id="avatar">👤</div>
+    <div class="user-info">
+      <div class="user-name" id="userName">Екатерина</div>
+      <div class="user-switch">Сменить пользователя</div>
     </div>
-
-    <!-- Week squares -->
-    <div class="week-wrap">
-      <div class="week-row" id="weekRow" aria-label="Выбор дня недели"></div>
-      <div class="week-sep" aria-hidden="true"></div>
-    </div>
-
-    <!-- Main content -->
-    <main class="main">
-      <!-- Accordion with times -->
-      <div id="timesContainer" class="times-container"></div>
-
-      <div style="text-align:center;margin-top:18px;">
-        <button class="btn add-main" id="addBtn">Добавить препарат</button>
-      </div>
-    </main>
-
-    <!-- Bottom navigation (expanding) -->
-    <nav class="bottom-nav" role="navigation" aria-label="Навигация">
-      <div class="nav-item active" data-screen="home" id="navHome">
-        <div class="nav-icon">🏠</div>
-        <div class="nav-label">Главная</div>
-      </div>
-      <div class="nav-item" data-screen="stats" id="navStats">
-        <div class="nav-icon">📊</div>
-        <div class="nav-label">Статистика</div>
-      </div>
-      <div class="nav-item" data-screen="profile" id="navProfile">
-        <div class="nav-icon">👤</div>
-        <div class="nav-label">Профиль</div>
-      </div>
-    </nav>
-
-    <!-- Mini calendar modal -->
-    <div class="modal-backdrop" id="miniCalBackdrop" aria-hidden="true">
-      <div class="mini-calendar" role="dialog" aria-modal="true" id="miniCal">
-        <div class="mini-header">
-          <button id="miniPrev">‹</button>
-          <div id="miniTitle">Февраль 2026</div>
-          <button id="miniNext">›</button>
-        </div>
-        <div class="mini-grid" id="miniGrid"></div>
-        <div style="text-align:right;margin-top:8px">
-          <button class="btn alt" id="miniClose">Закрыть</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom sheet for med detail -->
-    <div class="sheet-backdrop" id="sheetBackdrop" aria-hidden="true">
-      <div class="sheet" role="dialog" aria-modal="true" id="medSheet">
-        <div class="sheet-top">
-          <div class="sheet-left">
-            <div class="sheet-avatar" id="sheetAvatar">💊</div>
-            <div class="sheet-meta">
-              <div class="sheet-title" id="sheetTitle">Парацетамол</div>
-              <div class="sheet-sub muted" id="sheetSub">Напоминание: 08:30</div>
-              <div class="sheet-progress">
-                <div class="progress-label">7/14</div>
-                <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:50%"></div></div>
-              </div>
-            </div>
-          </div>
-          <button class="sheet-edit" id="sheetEdit" title="Редактировать">✎</button>
-        </div>
-
-        <div class="sheet-blue">
-          <div>
-            <div class="pill-dose" id="sheetDose">1 таб.</div>
-            <div class="pill-note muted" id="sheetNote">Во время еды · Даты: 1 фев — 14 фев</div>
-          </div>
-        </div>
-
-        <div class="sheet-actions">
-          <div class="row">
-            <button class="btn ghost" id="btnSkip">Пропустить</button>
-            <button class="btn primary" id="btnTake">Принять</button>
-          </div>
-          <div class="row" style="margin-top:8px">
-            <button class="btn ghost" id="btnSnooze">Отложить</button>
-            <button class="btn danger" id="btnDelete">Удалить</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add/edit modal -->
-    <div class="modal-backdrop" id="addBackdrop" aria-hidden="true">
-      <div class="modal" role="dialog" aria-modal="true">
-        <h3 id="addTitle">Добавить препарат</h3>
-        <div class="field"><label>Название</label><input id="iName" /></div>
-        <div class="row">
-          <div class="field small"><label>Дозировка</label><input id="iDose" /></div>
-          <div class="field small"><label>Время</label><input id="iTime" type="time" value="08:30" /></div>
-        </div>
-        <div style="text-align:right;margin-top:8px">
-          <button class="btn alt" id="addCancel">Отмена</button>
-          <button class="btn" id="addSave">Сохранить</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 
-  <script src="app.js"></script>
+  <!-- Месяц под плашкой -->
+  <div class="month-bar">
+    <span class="month-left" id="monthLabel">Февраль 2026 ▾</span>
+    <div class="month-nav">
+      <button id="prevMonth">◀</button>
+      <button id="nextMonth">▶</button>
+    </div>
+  </div>
+
+  <!-- Неделя с датами -->
+  <div class="week-row" id="weekRow"></div>
+  <div class="divider-light"></div>
+
+  <!-- Контент -->
+  <div class="content" id="content"></div>
+
+  <!-- Нижняя навигация -->
+  <div class="footer-nav">
+    <div class="nav-items" id="navItems">
+      <div class="nav-item active" data-tab="home">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-text">Главная</span>
+      </div>
+      <div class="nav-item" data-tab="stats">
+        <span class="nav-icon">📊</span>
+        <span class="nav-text">Статистика</span>
+      </div>
+      <div class="nav-item" data-tab="profile">
+        <span class="nav-icon">👤</span>
+        <span class="nav-text">Профиль</span>
+      </div>
+    </div>
+    <button class="plus-button" id="plusBtn">+</button>
+  </div>
+
+  <!-- Календарь-попап (полностью восстановлен) -->
+  <div class="calendar-popup" id="calendarPopup">
+    <div class="cal-header">
+      <button id="calPrevMonth">◀</button>
+      <span id="calMonthYear">Февраль 2026</span>
+      <button id="calNextMonth">▶</button>
+    </div>
+    <div class="cal-weekdays">
+      <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- Bottom sheet детальный (препарат) -->
+  <div class="sheet-overlay" id="sheetOverlay">
+    <div class="bottom-sheet" id="detailSheet">
+      <div class="sheet-handle" id="sheetHandle"></div>
+      <div class="sheet-content">
+        <div>
+          <div class="sheet-icon" id="sheetIcon">💊</div>
+          <div class="sheet-title" id="sheetName">Препарат 1</div>
+          <div class="sheet-remind" id="sheetTime">Напоминание: 09:00</div>
+          <div class="progress-row"><span id="sheetProgressText">7/14 дней принято</span></div>
+          <div class="progress-bar-bg"><div class="progress-fill" id="sheetProgressFill" style="width:50%"></div></div>
+          <div class="info-card-blue">
+            <div>
+              <div class="info-dose" id="sheetDose">Дозировка: 2 таб.</div>
+              <div class="info-when" id="sheetWhen">Сегодня · Во время еды</div>
+            </div>
+            <div class="edit-icon" id="editMed">✎</div>
+          </div>
+        </div>
+        <div>
+          <div class="sheet-actions-row">
+            <button class="sheet-btn" id="skipBtn">Пропустить</button>
+            <button class="sheet-btn primary" id="takeBtn">Принять</button>
+          </div>
+          <div class="sheet-actions-row">
+            <button class="sheet-btn" id="postponeBtn">Отложить</button>
+            <button class="sheet-btn danger" id="deleteBtn">Удалить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальный bottom sheet для "Принять все" -->
+  <div class="modal-sheet-overlay" id="takeAllSheet">
+    <div class="modal-sheet">
+      <div class="sheet-title">Что сделать со всеми препаратами?</div>
+      <div class="modal-option-group">
+        <div class="modal-option" id="takeAllConfirm">✅ Принять всё</div>
+        <div class="modal-option" id="skipAllConfirm">⏭️ Пропустить всё</div>
+        <div class="modal-option" id="postponeAllConfirm">🕒 Перенести всё</div>
+      </div>
+      <div class="modal-option cancel" id="cancelTakeAll">Отменить</div>
+    </div>
+  </div>
+
+  <!-- Модальный bottom sheet для "+" -->
+  <div class="modal-sheet-overlay" id="addSheet">
+    <div class="modal-sheet">
+      <div class="sheet-title">Что вы хотите добавить?</div>
+      <div class="modal-option-group">
+        <div class="modal-option" id="addNewMed">➕ Новый препарат</div>
+        <div class="modal-option" id="addNewCourse">📚 Новый курс</div>
+      </div>
+      <div class="modal-option cancel" id="cancelAdd">Отменить</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const STORAGE_KEY = 'meds_perfect_v4';
+    let medications = [];
+
+    function loadMeds() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try { medications = JSON.parse(stored); } catch { medications = []; }
+      } else {
+        medications = [
+          { id: 1, name: 'Препарат 1', dose: '1 таб.', time: '08:30', status: 'taken', daysTaken: 7, totalDays: 14, food: 'во время еды', lastTaken: '14:03' },
+          { id: 2, name: 'Препарат 2', dose: '1 таб.', time: '08:30', status: 'missed', daysTaken: 3, totalDays: 14, food: 'во время еды', lastTaken: null },
+          { id: 3, name: 'Препарат 3', dose: '1 таб.', time: '09:00', status: 'pending', daysTaken: 0, totalDays: 14, food: 'во время еды', lastTaken: null },
+          { id: 4, name: 'Бак-Сет Форте', dose: '2 таб.', time: '09:00', status: 'taken', daysTaken: 7, totalDays: 14, food: 'во время еды', lastTaken: '09:00' }
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(medications));
+      }
+    }
+    loadMeds();
+    function saveMeds() { localStorage.setItem(STORAGE_KEY, JSON.stringify(medications)); }
+
+    let currentDate = new Date();
+    let activeTab = 'home';
+    let selectedMedId = null;
+    let currentGroupTime = null;
+    let startY = 0, currentY = 0;
+
+    const weekRow = document.getElementById('weekRow');
+    const contentDiv = document.getElementById('content');
+    const monthLabel = document.getElementById('monthLabel');
+    const calendarPopup = document.getElementById('calendarPopup');
+    const calGrid = document.getElementById('calGrid');
+    const calMonthYear = document.getElementById('calMonthYear');
+    const sheetOverlay = document.getElementById('sheetOverlay');
+    const detailSheet = document.getElementById('detailSheet');
+    const takeAllSheet = document.getElementById('takeAllSheet');
+    const addSheet = document.getElementById('addSheet');
+    const navItems = document.querySelectorAll('.nav-item');
+
+    // ---- Функции отображения ----
+    function getWeekDays(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = (day === 0 ? -6 : 1 - day);
+      const monday = new Date(d); monday.setDate(d.getDate() + diff);
+      const week = [];
+      for (let i = 0; i < 7; i++) { let day = new Date(monday); day.setDate(monday.getDate() + i); week.push(day); }
+      return week;
+    }
+    function renderWeek(centerDate) {
+      const week = getWeekDays(centerDate);
+      weekRow.innerHTML = '';
+      week.forEach((day) => {
+        const chip = document.createElement('div');
+        chip.className = 'day-chip';
+        const today = new Date();
+        if (day.toDateString() === today.toDateString()) chip.classList.add('selected');
+        chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
+        chip.addEventListener('click', () => {
+          document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+        });
+        weekRow.appendChild(chip);
+      });
+      monthLabel.innerText = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ▾';
+    }
+
+    function renderGroups() {
+      const meds = [...medications];
+      const groups = {};
+      meds.forEach(m => { if (!groups[m.time]) groups[m.time] = []; groups[m.time].push(m); });
+      const sortedTimes = Object.keys(groups).sort();
+
+      contentDiv.innerHTML = '';
+      if (sortedTimes.length === 0) {
+        contentDiv.innerHTML = '<div style="text-align:center; color:#7f99bb; padding:30px;">Нет препаратов</div>';
+        return;
+      }
+
+      sortedTimes.forEach(time => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'time-group';
+        groupDiv.dataset.time = time;
+
+        const header = document.createElement('div');
+        header.className = 'group-header';
+        header.innerHTML = `
+          <div class="group-header-left">
+            <span class="group-time">${time}</span>
+            <span class="group-arrow">▼</span>
+          </div>
+          <button class="btn-outline take-all" data-time="${time}">Принять все</button>
+        `;
+
+        header.addEventListener('click', (e) => {
+          if (e.target.tagName === 'BUTTON') return;
+          groupDiv.classList.toggle('collapsed');
+          const arrow = header.querySelector('.group-arrow');
+          arrow.innerText = groupDiv.classList.contains('collapsed') ? '▶' : '▼';
+        });
+
+        const cardsDiv = document.createElement('div');
+        cardsDiv.className = 'med-cards';
+
+        groups[time].forEach(med => {
+          const card = document.createElement('div');
+          card.className = `med-item ${med.status}`;
+          card.dataset.id = med.id;
+          let statusHtml = '';
+          if (med.status === 'taken') statusHtml = `<span class="status-taken">✔ Принято в ${med.lastTaken || '08:30'}, сегодня</span>`;
+          else if (med.status === 'missed') statusHtml = `<span class="status-missed">✖ Пропущено</span>`;
+          else statusHtml = `<span class="status-pending">🟢 Ожидается</span>`;
+
+          card.innerHTML = `
+            <div class="med-icon">${med.name[0]}</div>
+            <div class="med-details">
+              <div class="med-name">${med.name}</div>
+              <div class="med-dose">${med.dose} · ${med.food || 'во время еды'}</div>
+              <div class="med-status">${statusHtml}</div>
+            </div>
+          `;
+          card.addEventListener('click', () => openSheet(med.id));
+          cardsDiv.appendChild(card);
+        });
+
+        groupDiv.appendChild(header);
+        groupDiv.appendChild(cardsDiv);
+        contentDiv.appendChild(groupDiv);
+      });
+
+      document.querySelectorAll('.take-all').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          currentGroupTime = btn.dataset.time;
+          takeAllSheet.style.display = 'flex';
+        });
+      });
+    }
+
+    // Bottom sheet детальный
+    function openSheet(id) {
+      const med = medications.find(m => m.id === id);
+      if (!med) return;
+      selectedMedId = id;
+      document.getElementById('sheetIcon').innerText = med.name[0];
+      document.getElementById('sheetName').innerText = med.name;
+      document.getElementById('sheetTime').innerText = `Напоминание: ${med.time}`;
+      document.getElementById('sheetProgressText').innerText = `${med.daysTaken || 0}/${med.totalDays || 14} дней принято`;
+      const percent = ((med.daysTaken || 0) / (med.totalDays || 14)) * 100;
+      document.getElementById('sheetProgressFill').style.width = percent + '%';
+      document.getElementById('sheetDose').innerText = `Дозировка: ${med.dose}`;
+      document.getElementById('sheetWhen').innerText = `Сегодня, ${med.time} · ${med.food || 'во время еды'}`;
+      sheetOverlay.style.display = 'flex';
+    }
+
+    // Свайп для закрытия detail sheet
+    detailSheet.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+    detailSheet.addEventListener('touchmove', (e) => {
+      currentY = e.touches[0].clientY;
+      const diff = currentY - startY;
+      if (diff > 0) {
+        detailSheet.style.transform = `translateY(${diff}px)`;
+      }
+    }, { passive: true });
+    detailSheet.addEventListener('touchend', () => {
+      const diff = currentY - startY;
+      if (diff > 80) {
+        sheetOverlay.style.display = 'none';
+      }
+      detailSheet.style.transform = '';
+      startY = 0; currentY = 0;
+    });
+
+    // ---- Модальные bottom sheets ----
+    document.getElementById('takeAllConfirm').addEventListener('click', () => {
+      if (currentGroupTime) {
+        medications.forEach(m => { if (m.time === currentGroupTime && m.status !== 'taken') { m.status = 'taken'; m.lastTaken = new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' }); m.daysTaken = Math.min(m.totalDays, (m.daysTaken||0)+1); } });
+        saveMeds(); renderGroups();
+      }
+      takeAllSheet.style.display = 'none';
+    });
+    document.getElementById('skipAllConfirm').addEventListener('click', () => {
+      if (currentGroupTime) {
+        medications.forEach(m => { if (m.time === currentGroupTime) { m.status = 'missed'; m.lastTaken = null; } });
+        saveMeds(); renderGroups();
+      }
+      takeAllSheet.style.display = 'none';
+    });
+    document.getElementById('postponeAllConfirm').addEventListener('click', () => {
+      alert('Перенести всё (демо)');
+      takeAllSheet.style.display = 'none';
+    });
+    document.getElementById('cancelTakeAll').addEventListener('click', () => { takeAllSheet.style.display = 'none'; });
+
+    document.getElementById('plusBtn').addEventListener('click', () => {
+      addSheet.style.display = 'flex';
+    });
+    document.getElementById('addNewMed').addEventListener('click', () => {
+      addSheet.style.display = 'none';
+      const name = prompt('Название препарата:', 'Новый препарат');
+      if (!name) return;
+      const time = prompt('Время (например 08:30):', '08:30');
+      if (!time) return;
+      const newMed = { id: Date.now(), name, dose: '1 таб.', time, status: 'pending', daysTaken: 0, totalDays: 14, food: 'во время еды', lastTaken: null };
+      medications.push(newMed); saveMeds(); renderGroups();
+    });
+    document.getElementById('addNewCourse').addEventListener('click', () => {
+      alert('Добавить курс (заглушка)');
+      addSheet.style.display = 'none';
+    });
+    document.getElementById('cancelAdd').addEventListener('click', () => { addSheet.style.display = 'none'; });
+
+    // Закрытие модальных окон по клику на фон
+    [takeAllSheet, addSheet].forEach(sheet => {
+      sheet.addEventListener('click', (e) => { if (e.target === sheet) sheet.style.display = 'none'; });
+    });
+
+    // Действия в детальном sheet
+    document.getElementById('skipBtn').addEventListener('click', () => {
+      if (selectedMedId) { let m = medications.find(m => m.id === selectedMedId); if(m){ m.status='missed'; m.lastTaken=null; saveMeds(); renderGroups(); sheetOverlay.style.display='none'; } }
+    });
+    document.getElementById('takeBtn').addEventListener('click', () => {
+      if (selectedMedId) { let m = medications.find(m => m.id === selectedMedId); if(m){ m.status='taken'; m.lastTaken=new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}); m.daysTaken = Math.min(m.totalDays, (m.daysTaken||0)+1); saveMeds(); renderGroups(); sheetOverlay.style.display='none'; } }
+    });
+    document.getElementById('deleteBtn').addEventListener('click', () => {
+      if (selectedMedId) { medications = medications.filter(m => m.id !== selectedMedId); saveMeds(); renderGroups(); sheetOverlay.style.display='none'; }
+    });
+    document.getElementById('postponeBtn').addEventListener('click', () => { alert('Отложено на 15 мин'); sheetOverlay.style.display='none'; });
+    sheetOverlay.addEventListener('click', (e) => { if (e.target === sheetOverlay) sheetOverlay.style.display = 'none'; });
+    document.getElementById('editMed').addEventListener('click', () => alert('Редактирование'));
+
+    // Календарь
+    let calDate = new Date();
+    function renderCalendar() {
+      calMonthYear.innerText = calDate.toLocaleString('ru', { month: 'long', year: 'numeric' });
+      const year = calDate.getFullYear(), month = calDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      let startDay = firstDay.getDay(); startDay = startDay === 0 ? 6 : startDay - 1;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      calGrid.innerHTML = '';
+      for (let i = 0; i < startDay; i++) calGrid.innerHTML += '<div class="cal-cell empty"></div>';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const cell = document.createElement('div');
+        cell.className = 'cal-cell';
+        cell.innerText = d;
+        if (d === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear()) cell.classList.add('selected');
+        cell.addEventListener('click', () => {
+          currentDate = new Date(year, month, d);
+          renderWeek(currentDate);
+          calendarPopup.style.display = 'none';
+        });
+        calGrid.appendChild(cell);
+      }
+    }
+    monthLabel.addEventListener('click', (e) => { e.stopPropagation(); calendarPopup.style.display = 'block'; renderCalendar(); });
+    document.addEventListener('click', (e) => {
+      if (!calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
+    });
+    document.getElementById('calPrevMonth').addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth()-1); renderCalendar(); });
+    document.getElementById('calNextMonth').addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth()+1); renderCalendar(); });
+    document.getElementById('prevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()-1); renderWeek(currentDate); });
+    document.getElementById('nextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()+1); renderWeek(currentDate); });
+
+    // Навигация по вкладкам
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        navItems.forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        activeTab = item.dataset.tab;
+        if (activeTab === 'home') { contentDiv.innerHTML = ''; renderGroups(); }
+        else if (activeTab === 'stats') contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">📊 Статистика (заглушка)</div>';
+        else contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">👤 Профиль (заглушка)</div>';
+      });
+    });
+
+    // Инициализация
+    renderWeek(new Date());
+    renderGroups();
+  })();
+</script>
 </body>
 </html>
