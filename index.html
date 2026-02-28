@@ -1,121 +1,115 @@
 <!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Medicine Reminder — Telegram Login</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f4f7fb; }
-        .card { width: 360px; background:white; border-radius:12px; box-shadow:0 6px 20px rgba(30,40,60,0.08); padding:20px; text-align:center; }
-        h1 { font-size:18px; margin:0 0 8px; }
-        p { color:#555; margin:0 0 16px; font-size:14px; }
-        .btn { display:inline-block;padding:10px 16px;border-radius:10px;background:#3AA0FF;color:white;border:none;font-weight:600;cursor:pointer;margin:8px 4px; }
-        .btn.secondary { background:#F0F4FF;color:#223; }
-        .status { margin-top:12px;color:#333;font-weight:600; }
-        .small { font-size:13px;color:#777;margin-top:8px; }
-        img.avatar { width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:8px; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Medicine Reminder — Pixel-accurate UI</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="card">
-    <h1>Medicine Reminder</h1>
-    <p>Войдите через Telegram, чтобы видеть напоминания о приёме таблеток.</p>
+  <div class="app" id="app" role="application" aria-label="Medicine Reminder App">
+    <header class="app-header">
+      <div class="user-avatar" id="avatarPlaceholder" aria-hidden="true">👤</div>
+      <div class="user-meta">
+        <div class="user-name" id="userName">Имя пользователя</div>
+        <div class="user-sub" id="userSub">Нажмите, чтобы сменить</div>
+      </div>
+      <div class="top-controls">
+        <div class="month-label" id="monthLabel">Февраль, 2026</div>
+        <button class="month-toggle" id="monthPrev" title="Предыдущая неделя">‹</button>
+        <button class="month-toggle" id="monthNext" title="Следующая неделя">›</button>
+      </div>
+    </header>
 
-    <div id="userBlock" style="display:none">
-        <img id="avatar" class="avatar" src="" alt="avatar" />
-        <div id="username" style="font-weight:700"></div>
-        <div id="fullname" class="small"></div>
-        <button id="logoutBtn" class="btn secondary">Выйти</button>
+    <nav class="left-pane" id="leftPane" aria-hidden="false">
+      <div class="calendar" id="calendar">
+        <div class="week-header">
+          <div class="tiny">Неделя</div>
+          <div class="tiny" id="todayLabel">Сегодня</div>
+        </div>
+        <div class="week-scroll" id="weekScroll" aria-label="calendar week"></div>
+      </div>
+
+      <div class="bottom-nav-left">
+        <button class="nav-button-left active" data-screen="home" id="navHome">🏠</button>
+        <button class="nav-button-left" data-screen="calendar" id="navCalendar">🗓</button>
+        <button class="nav-button-left" data-screen="profile" id="navProfile">👤</button>
+      </div>
+    </nav>
+
+    <main class="main" id="main">
+      <!-- HOME SCREEN -->
+      <section class="screen" id="screen-home" data-screen="home">
+        <div class="section" id="todaySection">
+          <div class="reminder-time" id="timeHeader">
+            <div class="time-label" id="currentTimeLabel">08:30</div>
+            <div class="time-actions">
+              <button class="add-btn tiny" id="takeAll">Принять все</button>
+            </div>
+          </div>
+
+          <div class="reminder-list" id="reminderList" aria-live="polite"></div>
+
+          <div style="margin-top:18px;text-align:center">
+            <button class="add-btn" id="addMedicationBtn">Добавить препарат</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-illustr">🧰</div>
+            <div class="empty-title">Здесь будут препараты, которые вы принимаете.</div>
+            <div class="muted">Добавьте препарат, чтобы начать отслеживать приём.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CALENDAR/LIST SCREEN -->
+      <section class="screen hidden" id="screen-calendar" data-screen="calendar">
+        <h2 class="section-title">Календарь приёмов</h2>
+        <div id="calendarDetails" class="calendar-details muted">Выберите день в неделе слева</div>
+      </section>
+
+      <!-- PROFILE SCREEN -->
+      <section class="screen hidden" id="screen-profile" data-screen="profile">
+        <h2 class="section-title">Профиль</h2>
+        <div class="card profile-card">
+          <div class="profile-row"><strong id="profileName">Имя пользователя</strong></div>
+          <div class="profile-row muted" id="profileNick">@username</div>
+          <div class="profile-actions" style="margin-top:12px">
+            <button class="btn" id="logoutBtn">Выйти</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h3 id="modalTitle">Добавить препарат</h3>
+        <div class="field">
+          <label for="medName">Название</label>
+          <input id="medName" placeholder="Например: Парацетамол" />
+        </div>
+        <div class="row">
+          <div class="field small">
+            <label for="medDose">Дозировка</label>
+            <input id="medDose" placeholder="1 таб." />
+          </div>
+          <div class="field small">
+            <label for="medTime">Время</label>
+            <input id="medTime" type="time" value="08:30" />
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end;margin-top:10px">
+          <button class="add-btn" id="saveMed">Сохранить</button>
+          <button class="add-btn alt" id="cancelMed">Отмена</button>
+        </div>
+      </div>
     </div>
 
-    <div id="loginBlock">
-        <button id="loginBtn" class="btn">Войти через Telegram</button>
-        <div class="small" id="hint">Открой это в Telegram WebApp для автологина.</div>
-    </div>
+  </div>
 
-    <div id="status" class="status"></div>
-</div>
-
-<script>
-    const BACKEND = 'https://medicine-reminder-app-t3u9.onrender.com';
-    const tokenKey = 'medrem_token';
-
-    function showStatus(text) { document.getElementById('status').innerText = text; }
-
-    async function loginTelegram(initData) {
-        showStatus('Авторизация...');
-        try {
-            const resp = await fetch(BACKEND + '/auth/telegram', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData })
-            });
-            const json = await resp.json();
-            if (resp.ok) {
-                localStorage.setItem(tokenKey, json.token);
-                const user = json.user;
-                showUser(user);
-                showStatus('Успешно: ' + (user.username || user.firstName || 'user'));
-                if (window.Telegram && Telegram.WebApp) {
-                }
-            } else {
-                console.error('Auth failed', json);
-                showStatus('Auth failed: ' + (json.error || JSON.stringify(json)));
-            }
-        } catch (e) {
-            console.error(e);
-            showStatus('Ошибка сети при auth');
-        }
-    }
-
-    function showUser(user) {
-        if (!user) return;
-        document.getElementById('loginBlock').style.display = 'none';
-        document.getElementById('userBlock').style.display = 'block';
-        document.getElementById('username').innerText = user.username || ('tg:' + user.telegramId);
-        document.getElementById('fullname').innerText = (user.firstName || '') + (user.lastName? ' ' + user.lastName : '');
-        if (user.photoUrl) document.getElementById('avatar').src = user.photoUrl;
-        else document.getElementById('avatar').style.display = 'none';
-    }
-
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem(tokenKey);
-        document.getElementById('userBlock').style.display = 'none';
-        document.getElementById('loginBlock').style.display = 'block';
-        showStatus('Выход выполнен');
-    });
-
-    document.getElementById('loginBtn').addEventListener('click', async () => {
-        if (window.Telegram && Telegram.WebApp) {
-            const initData = Telegram.WebApp.initData;
-            if (!initData) {
-                showStatus('initData не найден. Откройте этот сайт внутри Telegram WebApp.');
-                return;
-            }
-            await loginTelegram(initData);
-        } else {
-            showStatus('Откройте этот сайт ВНУТРИ Telegram (через кнопку Web App у бота).');
-        }
-    });
-
-    window.addEventListener('load', async () => {
-        const token = localStorage.getItem(tokenKey);
-        if (token) {
-            showStatus('Вход уже выполнен');
-        }
-        if (window.Telegram && Telegram.WebApp) {
-            showStatus('Открыт в Telegram WebApp');
-            const initData = Telegram.WebApp.initData;
-            if (initData) {
-                await loginTelegram(initData);
-            } else {
-                showStatus('initData отсутствует — попробуй нажать кнопку "Войти"');
-            }
-        } else {
-            showStatus('Откройте страницу через Web App внутри Telegram.');
-        }
-    });
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
