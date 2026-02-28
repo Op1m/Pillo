@@ -35,15 +35,16 @@
       position: relative;
     }
 
-    /* --- Верхняя плашка (скруглена только снизу) --- */
+    /* --- Верхняя плашка --- */
     .top-pill {
       background: #d2e6ff;
       border-radius: 0 0 32px 32px;
-      padding: 18px 20px 18px 20px;
+      padding: 18px 20px;
       display: flex;
       align-items: center;
       gap: 12px;
       box-shadow: 0 4px 12px rgba(0, 100, 200, 0.1);
+      position: relative;
     }
     .avatar {
       width: 52px;
@@ -53,10 +54,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
-      font-weight: 500;
-      color: #1f5080;
       flex-shrink: 0;
+    }
+    .avatar svg {
+      width: 36px;
+      height: 36px;
+      fill: #1f5080;
     }
     .user-info {
       flex: 1;
@@ -72,6 +75,20 @@
       color: #4f6f8f;
       margin-top: 2px;
     }
+    .app-logo {
+      width: 40px;
+      height: 40px;
+      background: #ffffff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .app-logo svg {
+      width: 32px;
+      height: 32px;
+    }
 
     /* --- Месяц под плашкой --- */
     .month-bar {
@@ -80,12 +97,25 @@
       justify-content: space-between;
       padding: 12px 20px 8px;
       background: white;
+      position: relative;
     }
     .month-left {
       font-weight: 700;
       font-size: 18px;
       color: #113355;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .month-left svg {
+      width: 20px;
+      height: 20px;
+      fill: #2d5980;
+    }
+    .month-nav {
+      display: flex;
+      gap: 12px;
     }
     .month-nav button {
       background: #eef5fc;
@@ -93,9 +123,88 @@
       width: 36px;
       height: 36px;
       border-radius: 40px;
-      font-size: 18px;
-      color: #2d5980;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
+    }
+    .month-nav button svg {
+      width: 24px;
+      height: 24px;
+      fill: #2d5980;
+    }
+
+    /* --- Календарь-попап --- */
+    .calendar-popup {
+      position: absolute;
+      top: 70px;
+      left: 20px;
+      right: 20px;
+      background: white;
+      border-radius: 32px;
+      box-shadow: 0 30px 50px #00000030;
+      padding: 18px;
+      z-index: 100;
+      display: none;
+    }
+    .cal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .cal-header button {
+      background: #eef5fc;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .cal-header button svg {
+      width: 24px;
+      height: 24px;
+      fill: #2d5980;
+    }
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7,1fr);
+      text-align: center;
+      color: #6d8bb0;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7,1fr);
+      gap: 4px;
+    }
+    .cal-cell {
+      aspect-ratio: 1/1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f6faff;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .cal-cell.selected {
+      background: #2e7aff;
+      color: white;
+    }
+    .cal-cell.today {
+      border: 2px solid #2e7aff;
+      background: white;
+      color: #2e7aff;
+      font-weight: 700;
+    }
+    .cal-cell.empty {
+      background: transparent;
+      pointer-events: none;
     }
 
     /* --- Неделя с датами --- */
@@ -116,13 +225,16 @@
       justify-content: center;
       color: #1f3f5c;
       cursor: pointer;
-      border: 1px solid #e2edff;
+      border: 2px solid transparent;
+    }
+    .day-chip.today {
+      border-color: #2e7aff;
+      background: white;
     }
     .day-chip.selected {
       background: #2e7aff;
       color: white;
       border: none;
-      box-shadow: 0 6px 12px #2e7aff55;
     }
     .day-number {
       font-weight: 700;
@@ -170,9 +282,10 @@
       font-size: 20px;
       color: #0f2e4a;
     }
-    .group-arrow {
-      font-size: 16px;
-      color: #7a99bb;
+    .group-arrow svg {
+      width: 20px;
+      height: 20px;
+      fill: #7a99bb;
       transition: transform 0.15s;
     }
     .group-header .btn-outline {
@@ -194,101 +307,169 @@
     .time-group.collapsed .med-cards {
       display: none;
     }
+    .time-group.collapsed .group-arrow svg {
+      transform: rotate(-90deg);
+    }
 
-    .med-item {
+    /* --- Карточка препарата --- */
+    .med-card {
+      min-height: 78px;
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 14px 16px;
+      margin: 8px 0;
       display: flex;
       align-items: center;
-      background: #ffffff;
-      border: 1px solid #e2ecf9;
-      border-radius: 24px;
-      padding: 12px 14px;
+      gap: 12px;
       cursor: pointer;
+      border: 1px solid #e2ecf9;
+      transition: all 0.1s;
     }
-    .med-item.taken {
+    .med-card.taken {
       background: #edfff5;
       border-color: #a0ddc0;
     }
-    .med-item.missed {
+    .med-card.missed {
       background: #ffeceb;
       border-color: #ffc9c2;
     }
     .med-icon {
-      width: 52px;
-      height: 52px;
-      background: #e1efff;
-      border-radius: 20px;
+      width: 65px;
+      height: 65px;
+      background: #f0f7ff;
+      border-radius: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
-      color: #2e7aff;
-      margin-right: 14px;
       flex-shrink: 0;
     }
-    .med-details {
+    .med-icon svg {
+      width: 40px;
+      height: 40px;
+      fill: #2e7aff;
+    }
+    .med-info {
       flex: 1;
+      display: flex;
+      flex-direction: column;
     }
     .med-name {
       font-weight: 700;
-      font-size: 16px;
+      font-size: 17px;
       color: #01254a;
     }
-    .med-dose {
+    .med-desc {
+      color: #8FA9C6;
       font-size: 13px;
-      color: #5c7592;
-      margin: 4px 0 2px;
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .med-desc svg {
+      width: 14px;
+      height: 14px;
+      fill: #8FA9C6;
     }
     .med-status {
-      font-size: 12px;
+      font-weight: 600;
+      font-size: 13px;
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
     .status-taken { color: #0f9d6a; }
     .status-missed { color: #e74c3c; }
     .status-pending { color: #7a8fa8; }
+    .status-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+    .status-taken svg { stroke: #0f9d6a; fill: none; }
+    .status-missed svg { stroke: #e74c3c; fill: none; }
+    .status-pending svg { fill: #7a8fa8; }
 
-    /* --- Нижняя навигация --- */
-    .footer-nav {
-      background: #ffffff;
-      border-top: 1px solid #eaf1fa;
-      padding: 10px 16px;
+    /* --- Заглушка --- */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      color: #7f99bb;
+    }
+    .empty-state svg {
+      width: 80px;
+      height: 80px;
+      fill: #aac3dd;
+      margin-bottom: 20px;
+    }
+    .empty-state p {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* --- Нижняя навигация (левая группа + плюс) без лишнего фона --- */
+    .bottom-nav {
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: transparent;
+      /* Убираем возможный лишний фон, оставляем только отступы для удобства */
     }
-    .nav-items {
+    .left-nav {
       display: flex;
-      flex: 1;
-      gap: 8px;
+      background: #ffffff;
+      border-radius: 40px;
+      padding: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      width: auto;
+      min-width: 160px;
+      max-width: 200px;
     }
     .nav-item {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      background: #f4faff;
-      border-radius: 30px;
-      padding: 10px;
-      transition: 0.2s ease;
+      height: 44px;
+      border-radius: 32px;
+      padding: 0 10px;
+      margin-right: 6px;
       cursor: pointer;
+      transition: all 0.2s ease;
+      background: #f4faff;
       color: #2f4b70;
-      flex: 0 1 auto;
-      min-width: 48px;
     }
     .nav-item.active {
-      background: #e1efff;
+      background: #2e7aff;
+      color: white;
       flex: 1 1 auto;
-      justify-content: flex-start;
-      padding: 10px 18px;
-      color: #004c99;
     }
-    .nav-item .nav-icon {
-      font-size: 22px;
+    .nav-item:last-child {
+      margin-right: 0;
     }
-    .nav-item .nav-text {
+    .nav-item .icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-item .icon svg {
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+    .nav-item .text {
       display: none;
       font-weight: 600;
       font-size: 15px;
+      margin-left: 6px;
+      white-space: nowrap;
+      color: inherit;
     }
-    .nav-item.active .nav-text {
+    .nav-item.active .text {
       display: inline;
     }
     .plus-button {
@@ -297,8 +478,6 @@
       background: #2e7aff;
       border: none;
       border-radius: 30px;
-      color: white;
-      font-size: 36px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -306,259 +485,383 @@
       cursor: pointer;
       flex-shrink: 0;
     }
+    .plus-button svg {
+      width: 32px;
+      height: 32px;
+      fill: white;
+    }
 
-    /* --- Bottom Sheet для модалок (выбор действий) --- */
+    /* --- Модальные окна выбора действий --- */
     .modal-sheet-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.2);
-      backdrop-filter: blur(3px);
+      background: rgba(0,0,0,0.5);
       display: none;
       align-items: flex-end;
       justify-content: center;
       z-index: 200;
     }
     .modal-sheet {
-      background: white;
       width: 100%;
       max-width: 400px;
-      border-radius: 36px 36px 0 0;
-      padding: 24px 20px 30px;
-      box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+    }
+    .modal-card {
+      background: white;
+      border-radius: 28px;
+      padding: 14px 12px 8px 12px;
       display: flex;
       flex-direction: column;
     }
-    .modal-sheet .sheet-title {
+    .modal-title {
       font-weight: 700;
-      font-size: 20px;
-      color: #002856;
-      margin-bottom: 16px;
+      font-size: 16px;
+      color: #263238;
       text-align: center;
+      padding: 4px 0 12px 0;
+    }
+    .modal-divider {
+      height: 1px;
+      background: #f0f0f0;
+      margin: 0 0 8px 0;
     }
     .modal-option-group {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin-bottom: 20px;
     }
     .modal-option {
-      background: #f0f7ff;
-      border-radius: 60px;
-      padding: 18px 20px;
-      font-weight: 600;
-      color: #1d4e8a;
+      padding: 16px 0;
+      font-weight: 500;
+      font-size: 16px;
+      color: #263238;
       text-align: center;
       cursor: pointer;
-      font-size: 16px;
-      border: 1px solid transparent;
+      border-bottom: 1px solid #f0f0f0;
     }
-    .modal-option.cancel {
-      background: #f0f0f0;
-      color: #555;
+    .modal-option:last-child {
+      border-bottom: none;
+    }
+    .modal-cancel-btn {
+      background: white;
+      border-radius: 14px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      font-size: 16px;
+      color: #263238;
+      cursor: pointer;
       margin-top: 8px;
-      border: 1px solid #ddd;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
-    /* --- Bottom Sheet детальный (препарат) на 85% со свайпом --- */
+    /* --- Детальный bottom sheet препарата --- */
     .sheet-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,20,40,0.3);
-      backdrop-filter: blur(4px);
+      background: rgba(0,0,0,0.3);
+      backdrop-filter: blur(3px);
       display: none;
       align-items: flex-end;
       justify-content: center;
       z-index: 150;
     }
-    .bottom-sheet {
-      background: white;
+    .bottom-sheet-detail {
       width: 100%;
       max-width: 400px;
-      height: 85%;
-      border-radius: 36px 36px 0 0;
-      padding: 20px 20px 20px;
+      background: white;
+      border-radius: 32px 32px 0 0;
+      padding: 0 20px 20px 20px;
       box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
       display: flex;
       flex-direction: column;
       animation: slideUp 0.25s;
       transition: transform 0.2s ease;
+      max-height: 90%;
+      overflow-y: auto;
     }
     @keyframes slideUp {
       from { transform: translateY(100%); }
       to { transform: translateY(0); }
     }
+
     .sheet-handle {
-      width: 50px;
-      height: 5px;
-      background: #cfdeef;
-      border-radius: 10px;
-      margin: 0 auto 16px;
-      cursor: grab;
+      width: 40px;
+      height: 4px;
+      background: #d9d9d9;
+      border-radius: 2px;
+      margin: 16px auto 0;
     }
-    .sheet-content {
-      flex: 1;
-      overflow-y: auto;
+
+    .sheet-header-buttons {
       display: flex;
-      flex-direction: column;
       justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
     }
-    .sheet-icon {
-      width: 90px;
-      height: 90px;
-      background: #e4f0ff;
-      border-radius: 32px;
-      margin: 0 auto 12px;
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      background: #f5f8ff;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 48px;
-      color: #1e5d9e;
+      cursor: pointer;
     }
-    .sheet-title {
-      font-weight: 800;
-      font-size: 26px;
-      text-align: center;
-      color: #002856;
+    .btn-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: #1a2e44;
     }
-    .sheet-remind {
-      text-align: center;
-      color: #4d7195;
-      font-size: 16px;
-      margin: 8px 0 20px;
-    }
-    .progress-row {
+
+    .pill-image-frame {
+      width: 150px;
+      height: 150px;
+      margin: 30px auto 0;
+      background: #f5f8ff;
+      border-radius: 24px;
       display: flex;
-      justify-content: space-between;
-      font-size: 16px;
-      color: #1f3b58;
+      align-items: center;
+      justify-content: center;
+    }
+    .pill-image-frame svg {
+      width: 120px;
+      height: 120px;
+      fill: #2e7aff;
+    }
+
+    .sheet-detail-title {
+      font-weight: 700;
+      font-size: 22px;
+      color: #1a2e44;
+      text-align: center;
+      margin-top: 18px;
+    }
+
+    .sheet-subtitle {
+      font-size: 14px;
+      color: #6f8fb0;
+      text-align: center;
+      margin-top: 10px;
+      line-height: 1.4;
+      white-space: pre-line;
+    }
+
+    .progress-label {
+      font-weight: 600;
+      font-size: 14px;
+      color: #6f8fb0;
+      margin-top: 24px;
       margin-bottom: 8px;
     }
     .progress-bar-bg {
       background: #e2ecf9;
-      height: 14px;
+      height: 8px;
       border-radius: 30px;
       overflow: hidden;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
     .progress-fill {
       height: 100%;
       background: linear-gradient(90deg, #5faaff, #2e7aff);
       border-radius: 30px;
     }
+
     .info-card-blue {
       background: #e1efff;
-      border-radius: 28px;
-      padding: 22px;
+      border-radius: 24px;
+      padding: 18px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin: 16px 0 28px;
+      align-items: flex-start;
+      margin: 16px 0;
     }
-    .info-dose {
-      font-weight: 700;
-      font-size: 20px;
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .info-row svg {
+      width: 18px;
+      height: 18px;
+      fill: #3466a0;
+    }
+    .info-row .info-text {
+      font-weight: 600;
+      font-size: 16px;
       color: #003e7e;
     }
-    .info-when {
-      font-size: 15px;
-      color: #3466a0;
-      margin-top: 6px;
+    .info-row:last-child {
+      margin-bottom: 0;
     }
-    .edit-icon {
+    .edit-icon-btn {
+      width: 40px;
+      height: 40px;
       background: white;
-      width: 46px;
-      height: 46px;
-      border-radius: 23px;
+      border-radius: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #004c99;
-      font-size: 22px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      cursor: pointer;
     }
-    .sheet-actions-row {
+    .edit-icon-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: #004c99;
+    }
+
+    .action-row {
       display: flex;
-      gap: 14px;
-      margin-top: 16px;
+      gap: 12px;
+      margin: 12px 0;
     }
-    .sheet-btn {
+    .action-btn {
       flex: 1;
-      background: #f1f7ff;
+      background: #f5f8ff;
       border: none;
       border-radius: 40px;
       padding: 16px 0;
       font-weight: 600;
-      color: #1d4d7c;
       font-size: 16px;
+      color: #1d4d7c;
       cursor: pointer;
     }
-    .sheet-btn.primary {
+    .action-btn.primary {
       background: #2e7aff;
       color: white;
     }
-    .sheet-btn.danger {
-      background: #ffeae8;
-      color: #d44c3a;
-    }
 
-    /* --- Календарь-попап (полная версия) --- */
-    .calendar-popup {
-      position: absolute;
-      top: 130px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 300px;
-      background: white;
-      border-radius: 32px;
-      box-shadow: 0 30px 50px #00000030;
-      padding: 18px;
-      z-index: 100;
-      display: none;
-    }
-    .cal-header {
+    .bottom-bar {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      background: #f5f8ff;
+      border-radius: 30px;
+      height: 50px;
+      margin-top: 16px;
     }
-    .cal-header button {
-      background: #eef5fc;
-      border: none;
-      width: 36px;
-      height: 36px;
-      border-radius: 40px;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    .cal-weekdays {
-      display: grid;
-      grid-template-columns: repeat(7,1fr);
-      text-align: center;
-      color: #6d8bb0;
-      font-size: 12px;
-      margin-bottom: 8px;
-    }
-    .cal-grid {
-      display: grid;
-      grid-template-columns: repeat(7,1fr);
-      gap: 4px;
-    }
-    .cal-cell {
-      aspect-ratio: 1/1;
+    .bottom-bar-item {
+      flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #f6faff;
-      border-radius: 30px;
+      gap: 8px;
       cursor: pointer;
-      font-weight: 500;
+      height: 100%;
     }
-    .cal-cell.selected {
-      background: #2e7aff;
-      color: white;
+    .bottom-bar-item svg {
+      width: 20px;
+      height: 20px;
     }
-    .cal-cell.empty {
-      background: transparent;
-      pointer-events: none;
+    .bottom-bar-item .text {
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .divider-vertical {
+      width: 1px;
+      height: 60%;
+      background: #d0ddee;
+    }
+    .delete-text {
+      color: #e74c3c;
+    }
+    .delete-text svg {
+      fill: #e74c3c;
+    }
+
+    /* --- Адаптация под ПК (ширина > 600px) --- */
+    @media (min-width: 600px) {
+      .app {
+        max-width: 800px;
+        height: 900px;
+        border-radius: 48px;
+      }
+
+      .top-pill { padding: 24px 28px; }
+      .avatar { width: 72px; height: 72px; }
+      .avatar svg { width: 48px; height: 48px; }
+      .user-name { font-size: 22px; }
+      .user-switch { font-size: 16px; }
+      .app-logo { width: 56px; height: 56px; }
+      .app-logo svg { width: 44px; height: 44px; }
+
+      .month-bar { padding: 16px 28px; }
+      .month-left { font-size: 24px; }
+      .month-left svg { width: 28px; height: 28px; }
+      .month-nav button { width: 48px; height: 48px; }
+      .month-nav button svg { width: 32px; height: 32px; }
+
+      .week-row { padding: 0 28px 16px; gap: 10px; }
+      .day-chip { border-radius: 24px; }
+      .day-number { font-size: 22px; }
+      .day-name { font-size: 14px; }
+
+      .content { padding: 0 28px 12px; }
+      .group-time { font-size: 28px; }
+      .group-arrow svg { width: 28px; height: 28px; }
+      .group-header .btn-outline { font-size: 16px; padding: 8px 20px; }
+
+      .med-card { min-height: 100px; padding: 18px 22px; }
+      .med-icon { width: 80px; height: 80px; }
+      .med-icon svg { width: 50px; height: 50px; }
+      .med-name { font-size: 22px; }
+      .med-desc { font-size: 16px; }
+      .med-desc svg { width: 18px; height: 18px; }
+      .med-status { font-size: 16px; }
+      .status-icon svg { width: 20px; height: 20px; }
+
+      .bottom-nav { padding: 16px 28px; }
+      .left-nav { padding: 8px; border-radius: 60px; }
+      .nav-item { height: 56px; padding: 0 16px; }
+      .nav-item .icon svg { width: 30px; height: 30px; }
+      #navHome .icon svg { width: 32px; height: 32px; }
+      #navStats .icon svg { width: 38px; height: 38px; }
+      #navProfile .icon svg { width: 36px; height: 36px; }
+      .nav-item .text { font-size: 18px; }
+      .plus-button { width: 72px; height: 72px; border-radius: 40px; }
+      .plus-button svg { width: 42px; height: 42px; }
+
+      .calendar-popup { top: 100px; width: 400px; padding: 24px; left: 50%; transform: translateX(-50%); right: auto; }
+      .cal-header button { width: 44px; height: 44px; }
+      .cal-header button svg { width: 28px; height: 28px; }
+      .cal-weekdays { font-size: 16px; }
+      .cal-cell { font-size: 18px; }
+
+      /* Модальные окна на ПК — шире и крупнее */
+      .modal-sheet {
+        max-width: 600px;
+        padding: 24px;
+      }
+      .modal-title { font-size: 24px; padding: 8px 0 16px; }
+      .modal-option { font-size: 20px; padding: 20px 0; }
+      .modal-cancel-btn { height: 64px; font-size: 20px; border-radius: 20px; }
+
+      .bottom-sheet-detail {
+        max-width: 600px;
+        padding: 0 32px 32px;
+      }
+      .btn-icon { width: 56px; height: 56px; }
+      .btn-icon svg { width: 32px; height: 32px; }
+      .pill-image-frame { width: 220px; height: 220px; }
+      .pill-image-frame svg { width: 180px; height: 180px; }
+      .sheet-detail-title { font-size: 34px; }
+      .sheet-subtitle { font-size: 20px; }
+      .progress-label { font-size: 20px; }
+      .progress-bar-bg { height: 14px; }
+      .info-card-blue { padding: 28px; }
+      .info-row svg { width: 26px; height: 26px; }
+      .info-row .info-text { font-size: 22px; }
+      .edit-icon-btn { width: 56px; height: 56px; }
+      .edit-icon-btn svg { width: 30px; height: 30px; }
+      .action-btn { font-size: 22px; padding: 22px 0; }
+      .bottom-bar { height: 72px; }
+      .bottom-bar-item svg { width: 28px; height: 28px; }
+      .bottom-bar-item .text { font-size: 20px; }
     }
   </style>
 </head>
@@ -567,20 +870,47 @@
 
   <!-- Верхняя плашка -->
   <div class="top-pill">
-    <div class="avatar" id="avatar">👤</div>
+    <div class="avatar">
+      <svg viewBox="0 0 24 24">
+        <path fill="#1f5080" d="M12 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 2c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4z"/>
+      </svg>
+    </div>
     <div class="user-info">
       <div class="user-name" id="userName">Екатерина</div>
       <div class="user-switch">Сменить пользователя</div>
+    </div>
+    <div class="app-logo">
+      <svg viewBox="0 0 108 108">
+        <path fill="#3DDC84" d="M0 0h108v108H0z"/>
+        <path fill="#FFFFFF" d="M31 63.928c0 0 6.4-11 12.1-13.1 7.2-2.6 26-1.4 26-1.4l38.1 38.1L107 108.928l-32-1L31 63.928z"/>
+        <path fill="#FFFFFF" d="M65.3 45.828l3.8-6.6c0.2-0.4 0.1-0.9-0.3-1.1-0.4-0.2-0.9-0.1-1.1 0.3l-3.9 6.7c-6.3-2.8-13.4-2.8-19.7 0l-3.9-6.7c-0.2-0.4-0.7-0.5-1.1-0.3-0.4 0.2-0.5 0.7-0.3 1.1l3.8 6.6c-6.5 4.6-11 11.2-11.7 19.1h46c-0.7-7.9-5.2-14.5-11.7-19.1zM43.4 57.328c-0.8 0-1.5-0.5-1.8-1.2-0.3-0.7-0.1-1.5 0.4-2.1 0.5-0.5 1.4-0.7 2.1-0.4 0.7 0.3 1.2 1 1.2 1.8 0 1.1-0.9 1.9-1.9 1.9zM64.6 57.328c-0.8 0-1.5-0.5-1.8-1.2-0.3-0.7-0.1-1.5 0.4-2.1 0.5-0.5 1.4-0.7 2.1-0.4 0.7 0.3 1.2 1 1.2 1.8 0 1.1-0.9 1.9-1.9 1.9z"/>
+      </svg>
     </div>
   </div>
 
   <!-- Месяц под плашкой -->
   <div class="month-bar">
-    <span class="month-left" id="monthLabel">Февраль 2026 ▾</span>
+    <span class="month-left" id="monthLabel">
+      Февраль 2026
+      <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+    </span>
     <div class="month-nav">
-      <button id="prevMonth">◀</button>
-      <button id="nextMonth">▶</button>
+      <button id="prevWeek"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button id="nextWeek"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
+  </div>
+
+  <!-- Календарь-попап -->
+  <div class="calendar-popup" id="calendarPopup">
+    <div class="cal-header">
+      <button id="calPrevMonth"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <span id="calMonthYear">Февраль 2026</span>
+      <button id="calNextMonth"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+    <div class="cal-weekdays">
+      <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
   </div>
 
   <!-- Неделя с датами -->
@@ -590,100 +920,133 @@
   <!-- Контент -->
   <div class="content" id="content"></div>
 
-  <!-- Нижняя навигация -->
-  <div class="footer-nav">
-    <div class="nav-items" id="navItems">
-      <div class="nav-item active" data-tab="home">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-text">Главная</span>
+  <!-- Нижняя навигация (левая группа + плюс) без лишнего фона -->
+  <div class="bottom-nav">
+    <div class="left-nav" id="leftNav">
+      <div class="nav-item active" id="navHome">
+        <span class="icon">
+          <svg viewBox="0 0 19 19">
+            <path d="M15.875 16.212c0 .552-.476.788-1.062.788h-1.063c-.586 0-1.062-.236-1.062-.788v-1c0-1.105-.951-2.212-2.125-2.212h-2.125c-1.175 0-2.125 1.107-2.125 2.212v1c0 .552-.477.788-1.063.788H4.188c-.586 0-1.062-.236-1.062-.788V8.149c0-.133.056-.26.155-.354l5.457-5.136c.416-.391 1.088-.391 1.503 0l5.48 5.156c.099.094.155.221.155.353v8.044zM18 7.625c0-.265-.112-.518-.309-.706l-6.693-6.33c-.829-.783-2.175-.786-3.007-.006L1.312 6.848c-.199.188-.312.442-.312.708V17.212c0 1.105.951 1.788 2.125 1.788h3.188c1.174 0 2.125-.683 2.125-1.788v-1c0-.552.476-1 1.062-1 .586 0 1.063.448 1.063 1v1c0 1.105.95 1.788 2.125 1.788h3.187c1.174 0 2.125-.683 2.125-1.788V7.625z"/>
+          </svg>
+        </span>
+        <span class="text">Главная</span>
       </div>
-      <div class="nav-item" data-tab="stats">
-        <span class="nav-icon">📊</span>
-        <span class="nav-text">Статистика</span>
+      <div class="nav-item" id="navStats">
+        <span class="icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        </span>
+        <span class="text">Курсы</span>
       </div>
-      <div class="nav-item" data-tab="profile">
-        <span class="nav-icon">👤</span>
-        <span class="nav-text">Профиль</span>
+      <div class="nav-item" id="navProfile">
+        <span class="icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M5 21c0-3.866 3.134-7 7-7s7 3.134 7 7M16 7c0 2.209-1.791 4-4 4s-4-1.791-4-4 1.791-4 4-4 4 1.791 4 4z"/>
+          </svg>
+        </span>
+        <span class="text">Профиль</span>
       </div>
     </div>
-    <button class="plus-button" id="plusBtn">+</button>
+    <button class="plus-button" id="plusBtn">
+      <svg viewBox="0 0 24 24"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
+    </button>
   </div>
 
-  <!-- Календарь-попап (полностью восстановлен) -->
-  <div class="calendar-popup" id="calendarPopup">
-    <div class="cal-header">
-      <button id="calPrevMonth">◀</button>
-      <span id="calMonthYear">Февраль 2026</span>
-      <button id="calNextMonth">▶</button>
-    </div>
-    <div class="cal-weekdays">
-      <span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span>
-    </div>
-    <div class="cal-grid" id="calGrid"></div>
-  </div>
-
-  <!-- Bottom sheet детальный (препарат) -->
-  <div class="sheet-overlay" id="sheetOverlay">
-    <div class="bottom-sheet" id="detailSheet">
-      <div class="sheet-handle" id="sheetHandle"></div>
-      <div class="sheet-content">
-        <div>
-          <div class="sheet-icon" id="sheetIcon">💊</div>
-          <div class="sheet-title" id="sheetName">Препарат 1</div>
-          <div class="sheet-remind" id="sheetTime">Напоминание: 09:00</div>
-          <div class="progress-row"><span id="sheetProgressText">7/14 дней принято</span></div>
-          <div class="progress-bar-bg"><div class="progress-fill" id="sheetProgressFill" style="width:50%"></div></div>
-          <div class="info-card-blue">
-            <div>
-              <div class="info-dose" id="sheetDose">Дозировка: 2 таб.</div>
-              <div class="info-when" id="sheetWhen">Сегодня · Во время еды</div>
-            </div>
-            <div class="edit-icon" id="editMed">✎</div>
-          </div>
-        </div>
-        <div>
-          <div class="sheet-actions-row">
-            <button class="sheet-btn" id="skipBtn">Пропустить</button>
-            <button class="sheet-btn primary" id="takeBtn">Принять</button>
-          </div>
-          <div class="sheet-actions-row">
-            <button class="sheet-btn" id="postponeBtn">Отложить</button>
-            <button class="sheet-btn danger" id="deleteBtn">Удалить</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Модальный bottom sheet для "Принять все" -->
+  <!-- Модальные окна выбора действий -->
   <div class="modal-sheet-overlay" id="takeAllSheet">
     <div class="modal-sheet">
-      <div class="sheet-title">Что сделать со всеми препаратами?</div>
-      <div class="modal-option-group">
-        <div class="modal-option" id="takeAllConfirm">✅ Принять всё</div>
-        <div class="modal-option" id="skipAllConfirm">⏭️ Пропустить всё</div>
-        <div class="modal-option" id="postponeAllConfirm">🕒 Перенести всё</div>
+      <div class="modal-card">
+        <div class="modal-title">Что сделать со всеми препаратами?</div>
+        <div class="modal-divider"></div>
+        <div class="modal-option-group">
+          <div class="modal-option" id="takeAllConfirm">Принять всё</div>
+          <div class="modal-option" id="skipAllConfirm">Пропустить всё</div>
+          <div class="modal-option" id="postponeAllConfirm">Перенести всё</div>
+        </div>
       </div>
-      <div class="modal-option cancel" id="cancelTakeAll">Отменить</div>
+      <div class="modal-cancel-btn" id="cancelTakeAll">Отменить</div>
     </div>
   </div>
 
-  <!-- Модальный bottom sheet для "+" -->
   <div class="modal-sheet-overlay" id="addSheet">
     <div class="modal-sheet">
-      <div class="sheet-title">Что вы хотите добавить?</div>
-      <div class="modal-option-group">
-        <div class="modal-option" id="addNewMed">➕ Новый препарат</div>
-        <div class="modal-option" id="addNewCourse">📚 Новый курс</div>
+      <div class="modal-card">
+        <div class="modal-title">Что вы хотите добавить?</div>
+        <div class="modal-divider"></div>
+        <div class="modal-option-group">
+          <div class="modal-option" id="addNewMed">Новый препарат</div>
+          <div class="modal-option" id="addNewCourse">Новый курс</div>
+        </div>
       </div>
-      <div class="modal-option cancel" id="cancelAdd">Отменить</div>
+      <div class="modal-cancel-btn" id="cancelAdd">Отменить</div>
+    </div>
+  </div>
+
+  <!-- Детальный bottom sheet препарата -->
+  <div class="sheet-overlay" id="sheetOverlay">
+    <div class="bottom-sheet-detail" id="detailSheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header-buttons">
+        <div class="btn-icon" id="btnBack">
+          <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+        </div>
+        <div class="btn-icon" id="btnInfo">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
+          </svg>
+        </div>
+      </div>
+      <div class="pill-image-frame">
+        <svg viewBox="0 0 24 24">
+          <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+        </svg>
+      </div>
+      <div class="sheet-detail-title" id="sheetName">Бак-Сет Форте</div>
+      <div class="sheet-subtitle" id="sheetSub">Последний приём в 10:00 13 июля\nПринимают: Екатерина, Ольга</div>
+      <div class="progress-label" id="sheetProgressText">7/14 дней принято</div>
+      <div class="progress-bar-bg"><div class="progress-fill" id="sheetProgressFill" style="width:50%"></div></div>
+      <div class="info-card-blue">
+        <div>
+          <div class="info-row">
+            <svg viewBox="0 0 24 24"><path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/></svg>
+            <span class="info-text" id="sheetDose">Дозировка: 2 таб.</span>
+          </div>
+          <div class="info-row">
+            <svg viewBox="0 0 24 24"><path d="M3 9h18M7 3v2M17 3v2M6 13h2M6 17h2M11 13h2M11 17h2M16 13h2M16 17h2M6.2 21h11.6c1.12 0 1.68 0 2.108-.218.376-.192.682-.498.874-.874C21 19.48 21 18.92 21 17.8V8.2c0-1.12 0-1.68-.218-2.108a2 2 0 0 0-.874-.874C19.48 5 18.92 5 17.8 5H6.2c-1.12 0-1.68 0-2.108.218a2 2 0 0 0-.874.874C3 6.52 3 7.08 3 8.2v9.6c0 1.12 0 1.68.218 2.108.192.376.498.682.874.874C4.52 21 5.08 21 6.2 21z"/></svg>
+            <span class="info-text" id="sheetDay">Сегодня</span>
+          </div>
+          <div class="info-row">
+            <svg viewBox="0 0 24 24"><path d="M11 2v11c0 2.21-1.79 4-4 4s-4-1.79-4-4V2h2v11c0 1.1.9 2 2 2s2-.9 2-2V2h2zM21 6h-2v9c0 1.66-1.34 3-3 3s-3-1.34-3-3V6h-2v13h2v-6c0-1.66 1.34-3 3-3s3 1.34 3 3v6h2V6z"/></svg>
+            <span class="info-text" id="sheetWhen">Во время еды</span>
+          </div>
+        </div>
+        <div class="edit-icon-btn" id="editMed">
+          <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </div>
+      </div>
+      <div class="action-row">
+        <button class="action-btn" id="skipBtn">Пропустить</button>
+        <button class="action-btn primary" id="takeBtn">Принять</button>
+      </div>
+      <div class="bottom-bar">
+        <div class="bottom-bar-item" id="postponeBtn">
+          <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
+          <span class="text">Отложить</span>
+        </div>
+        <div class="divider-vertical"></div>
+        <div class="bottom-bar-item" id="deleteBtn">
+          <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          <span class="text delete-text">Удалить</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
   (function() {
-    const STORAGE_KEY = 'meds_perfect_v4';
+    const STORAGE_KEY = 'meds_final_v9';
     let medications = [];
 
     function loadMeds() {
@@ -692,10 +1055,10 @@
         try { medications = JSON.parse(stored); } catch { medications = []; }
       } else {
         medications = [
-          { id: 1, name: 'Препарат 1', dose: '1 таб.', time: '08:30', status: 'taken', daysTaken: 7, totalDays: 14, food: 'во время еды', lastTaken: '14:03' },
-          { id: 2, name: 'Препарат 2', dose: '1 таб.', time: '08:30', status: 'missed', daysTaken: 3, totalDays: 14, food: 'во время еды', lastTaken: null },
-          { id: 3, name: 'Препарат 3', dose: '1 таб.', time: '09:00', status: 'pending', daysTaken: 0, totalDays: 14, food: 'во время еды', lastTaken: null },
-          { id: 4, name: 'Бак-Сет Форте', dose: '2 таб.', time: '09:00', status: 'taken', daysTaken: 7, totalDays: 14, food: 'во время еды', lastTaken: '09:00' }
+          { id: 1, name: 'Препарат 1', dose: '1 таб.', time: '08:30', status: 'taken', daysTaken: 7, totalDays: 14, food: 'во время еды', lastTaken: '14:03', lastIntake: '10:00 13 июля', users: 'Екатерина, Ольга' },
+          { id: 2, name: 'Препарат 2', dose: '1 таб.', time: '08:30', status: 'missed', daysTaken: 3, totalDays: 14, food: 'во время еды', lastTaken: null, lastIntake: '—', users: 'Екатерина' },
+          { id: 3, name: 'Препарат 3', dose: '1 таб.', time: '09:00', status: 'pending', daysTaken: 0, totalDays: 14, food: 'во время еды', lastTaken: null, lastIntake: '—', users: 'Екатерина' },
+          { id: 4, name: 'Бак-Сет Форте', dose: '2 таб.', time: '09:00', status: 'taken', daysTaken: 7, totalDays: 14, food: 'во время еды', lastTaken: '09:00', lastIntake: '10:00 13 июля', users: 'Екатерина, Ольга' }
         ];
         localStorage.setItem(STORAGE_KEY, JSON.stringify(medications));
       }
@@ -704,10 +1067,13 @@
     function saveMeds() { localStorage.setItem(STORAGE_KEY, JSON.stringify(medications)); }
 
     let currentDate = new Date();
+    let selectedDay = new Date();
     let activeTab = 'home';
     let selectedMedId = null;
     let currentGroupTime = null;
     let startY = 0, currentY = 0;
+    // Массив для хранения свёрнутых групп (время)
+    let collapsedGroups = [];
 
     const weekRow = document.getElementById('weekRow');
     const contentDiv = document.getElementById('content');
@@ -721,32 +1087,39 @@
     const addSheet = document.getElementById('addSheet');
     const navItems = document.querySelectorAll('.nav-item');
 
-    // ---- Функции отображения ----
     function getWeekDays(date) {
       const d = new Date(date);
       const day = d.getDay();
       const diff = (day === 0 ? -6 : 1 - day);
-      const monday = new Date(d); monday.setDate(d.getDate() + diff);
+      const monday = new Date(d);
+      monday.setDate(d.getDate() + diff);
       const week = [];
-      for (let i = 0; i < 7; i++) { let day = new Date(monday); day.setDate(monday.getDate() + i); week.push(day); }
+      for (let i = 0; i < 7; i++) {
+        const day = new Date(monday);
+        day.setDate(monday.getDate() + i);
+        week.push(day);
+      }
       return week;
     }
+
     function renderWeek(centerDate) {
       const week = getWeekDays(centerDate);
       weekRow.innerHTML = '';
+      const today = new Date();
       week.forEach((day) => {
         const chip = document.createElement('div');
         chip.className = 'day-chip';
-        const today = new Date();
-        if (day.toDateString() === today.toDateString()) chip.classList.add('selected');
+        if (day.toDateString() === today.toDateString()) chip.classList.add('today');
+        if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
         chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
         chip.addEventListener('click', () => {
           document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
           chip.classList.add('selected');
+          selectedDay = day;
         });
         weekRow.appendChild(chip);
       });
-      monthLabel.innerText = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ▾';
+      monthLabel.childNodes[0].nodeValue = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
     }
 
     function renderGroups() {
@@ -757,7 +1130,14 @@
 
       contentDiv.innerHTML = '';
       if (sortedTimes.length === 0) {
-        contentDiv.innerHTML = '<div style="text-align:center; color:#7f99bb; padding:30px;">Нет препаратов</div>';
+        contentDiv.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 470 470">
+              <path d="M341 204.29h-57.26c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5h-57.47c-9.65 0-17.5 7.85-17.5 17.5v57.26c0 1.36-1.14 2.5-2.5 2.5H129c-9.65 0-17.5 7.85-17.5 17.5v57.47c0 9.65 7.85 17.5 17.5 17.5h57.26c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5h57.47c9.65 0 17.5-7.85 17.5-17.5v-19.26c0-4.14-3.36-7.5-7.5-7.5s-7.5 3.36-7.5 7.5v19.26c0 1.36-1.14 2.5-2.5 2.5h-57.47c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5H129c-1.36 0-2.5-1.14-2.5-2.5v-57.47c0-1.36 1.14-2.5 2.5-2.5h57.26c9.65 0 17.5-7.85 17.5-17.5v-57.26c0-1.36 1.14-2.5 2.5-2.5h57.47c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5H341c1.36 0 2.5 1.14 2.5 2.5v57.47c0 1.36-1.14 2.5-2.5 2.5h-57.26c-9.65 0-17.5 7.85-17.5 17.5v8c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-8c0-1.36 1.14-2.5 2.5-2.5H341c9.65 0 17.5-7.85 17.5-17.5v-57.47c0-9.65-7.85-17.5-17.5-17.5zM433.5 68.76H299.43V51.04c0-15.88-12.92-28.8-28.8-28.8h-71.25c-15.88 0-28.8 12.92-28.8 28.8l0 17.73H36.5c-20.13 0-36.5 16.37-36.5 36.5v290.53c0 20.13 16.37 36.5 36.5 36.5h36v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h295v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h36c20.13 0 36.5-16.37 36.5-36.5V105.26c0-20.12-16.37-36.5-36.5-36.5zM185.57 51.04c0-7.61 6.19-13.8 13.8-13.8h71.25c7.61 0 13.8 6.19 13.8 13.8v17.73h-98.85V51.04zM455 395.79c0 11.85-9.65 21.5-21.5 21.5h-397c-11.85 0-21.5-9.65-21.5-21.5V105.26c0-11.85 9.65-21.5 21.5-21.5h397c11.85 0 21.5 9.65 21.5 21.5V395.79zM80 63.76h30.62c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5H80c-4.14 0-7.5 3.36-7.5 7.5S75.86 63.76 80 63.76zM359.38 63.76H390c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5h-30.62c-4.14 0-7.5 3.36-7.5 7.5S355.24 63.76 359.38 63.76z"/>
+            </svg>
+            <p>Здесь будут препараты, которые вы принимаете.</p>
+          </div>
+        `;
         return;
       }
 
@@ -765,13 +1145,17 @@
         const groupDiv = document.createElement('div');
         groupDiv.className = 'time-group';
         groupDiv.dataset.time = time;
+        // восстанавливаем состояние сворачивания
+        if (collapsedGroups.includes(time)) {
+          groupDiv.classList.add('collapsed');
+        }
 
         const header = document.createElement('div');
         header.className = 'group-header';
         header.innerHTML = `
           <div class="group-header-left">
             <span class="group-time">${time}</span>
-            <span class="group-arrow">▼</span>
+            <span class="group-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
           </div>
           <button class="btn-outline take-all" data-time="${time}">Принять все</button>
         `;
@@ -779,8 +1163,12 @@
         header.addEventListener('click', (e) => {
           if (e.target.tagName === 'BUTTON') return;
           groupDiv.classList.toggle('collapsed');
-          const arrow = header.querySelector('.group-arrow');
-          arrow.innerText = groupDiv.classList.contains('collapsed') ? '▶' : '▼';
+          // обновляем массив свёрнутых групп
+          if (groupDiv.classList.contains('collapsed')) {
+            if (!collapsedGroups.includes(time)) collapsedGroups.push(time);
+          } else {
+            collapsedGroups = collapsedGroups.filter(t => t !== time);
+          }
         });
 
         const cardsDiv = document.createElement('div');
@@ -788,18 +1176,30 @@
 
         groups[time].forEach(med => {
           const card = document.createElement('div');
-          card.className = `med-item ${med.status}`;
+          card.className = `med-card ${med.status}`;
           card.dataset.id = med.id;
+
           let statusHtml = '';
-          if (med.status === 'taken') statusHtml = `<span class="status-taken">✔ Принято в ${med.lastTaken || '08:30'}, сегодня</span>`;
-          else if (med.status === 'missed') statusHtml = `<span class="status-missed">✖ Пропущено</span>`;
-          else statusHtml = `<span class="status-pending">🟢 Ожидается</span>`;
+          if (med.status === 'taken') {
+            statusHtml = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято в ${med.lastTaken || '08:30'}, сегодня</span>`;
+          } else if (med.status === 'missed') {
+            statusHtml = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
+          } else {
+            statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg> Ожидается</span>`;
+          }
 
           card.innerHTML = `
-            <div class="med-icon">${med.name[0]}</div>
-            <div class="med-details">
+            <div class="med-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+              </svg>
+            </div>
+            <div class="med-info">
               <div class="med-name">${med.name}</div>
-              <div class="med-dose">${med.dose} · ${med.food || 'во время еды'}</div>
+              <div class="med-desc">
+                <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
+                ${med.dose} · ${med.food}
+              </div>
               <div class="med-status">${statusHtml}</div>
             </div>
           `;
@@ -821,87 +1221,67 @@
       });
     }
 
-    // Bottom sheet детальный
     function openSheet(id) {
       const med = medications.find(m => m.id === id);
       if (!med) return;
       selectedMedId = id;
-      document.getElementById('sheetIcon').innerText = med.name[0];
       document.getElementById('sheetName').innerText = med.name;
-      document.getElementById('sheetTime').innerText = `Напоминание: ${med.time}`;
+      document.getElementById('sheetSub').innerText = `Последний приём в ${med.lastIntake || '—'}\nПринимают: ${med.users || 'Екатерина'}`;
       document.getElementById('sheetProgressText').innerText = `${med.daysTaken || 0}/${med.totalDays || 14} дней принято`;
       const percent = ((med.daysTaken || 0) / (med.totalDays || 14)) * 100;
       document.getElementById('sheetProgressFill').style.width = percent + '%';
       document.getElementById('sheetDose').innerText = `Дозировка: ${med.dose}`;
-      document.getElementById('sheetWhen').innerText = `Сегодня, ${med.time} · ${med.food || 'во время еды'}`;
+      document.getElementById('sheetDay').innerText = 'Сегодня';
+      document.getElementById('sheetWhen').innerText = med.food;
       sheetOverlay.style.display = 'flex';
     }
 
-    // Свайп для закрытия detail sheet
-    detailSheet.addEventListener('touchstart', (e) => {
-      startY = e.touches[0].clientY;
-    }, { passive: true });
+    detailSheet.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
     detailSheet.addEventListener('touchmove', (e) => {
       currentY = e.touches[0].clientY;
       const diff = currentY - startY;
-      if (diff > 0) {
-        detailSheet.style.transform = `translateY(${diff}px)`;
-      }
+      if (diff > 0) detailSheet.style.transform = `translateY(${diff}px)`;
     }, { passive: true });
     detailSheet.addEventListener('touchend', () => {
-      const diff = currentY - startY;
-      if (diff > 80) {
-        sheetOverlay.style.display = 'none';
-      }
+      if (currentY - startY > 80) sheetOverlay.style.display = 'none';
       detailSheet.style.transform = '';
       startY = 0; currentY = 0;
     });
 
-    // ---- Модальные bottom sheets ----
     document.getElementById('takeAllConfirm').addEventListener('click', () => {
       if (currentGroupTime) {
         medications.forEach(m => { if (m.time === currentGroupTime && m.status !== 'taken') { m.status = 'taken'; m.lastTaken = new Date().toLocaleTimeString('ru', { hour:'2-digit', minute:'2-digit' }); m.daysTaken = Math.min(m.totalDays, (m.daysTaken||0)+1); } });
-        saveMeds(); renderGroups();
+        saveMeds();
+        renderGroups(); // перерисовываем с сохранением collapsedGroups
       }
       takeAllSheet.style.display = 'none';
     });
     document.getElementById('skipAllConfirm').addEventListener('click', () => {
       if (currentGroupTime) {
         medications.forEach(m => { if (m.time === currentGroupTime) { m.status = 'missed'; m.lastTaken = null; } });
-        saveMeds(); renderGroups();
+        saveMeds();
+        renderGroups();
       }
       takeAllSheet.style.display = 'none';
     });
-    document.getElementById('postponeAllConfirm').addEventListener('click', () => {
-      alert('Перенести всё (демо)');
-      takeAllSheet.style.display = 'none';
-    });
+    document.getElementById('postponeAllConfirm').addEventListener('click', () => { alert('Перенести всё'); takeAllSheet.style.display = 'none'; });
     document.getElementById('cancelTakeAll').addEventListener('click', () => { takeAllSheet.style.display = 'none'; });
-
-    document.getElementById('plusBtn').addEventListener('click', () => {
-      addSheet.style.display = 'flex';
-    });
+    document.getElementById('plusBtn').addEventListener('click', () => { addSheet.style.display = 'flex'; });
     document.getElementById('addNewMed').addEventListener('click', () => {
       addSheet.style.display = 'none';
       const name = prompt('Название препарата:', 'Новый препарат');
       if (!name) return;
       const time = prompt('Время (например 08:30):', '08:30');
       if (!time) return;
-      const newMed = { id: Date.now(), name, dose: '1 таб.', time, status: 'pending', daysTaken: 0, totalDays: 14, food: 'во время еды', lastTaken: null };
+      const newMed = { id: Date.now(), name, dose: '1 таб.', time, status: 'pending', daysTaken: 0, totalDays: 14, food: 'во время еды', lastTaken: null, lastIntake: '—', users: 'Екатерина' };
       medications.push(newMed); saveMeds(); renderGroups();
     });
-    document.getElementById('addNewCourse').addEventListener('click', () => {
-      alert('Добавить курс (заглушка)');
-      addSheet.style.display = 'none';
-    });
+    document.getElementById('addNewCourse').addEventListener('click', () => { alert('Добавить курс'); addSheet.style.display = 'none'; });
     document.getElementById('cancelAdd').addEventListener('click', () => { addSheet.style.display = 'none'; });
-
-    // Закрытие модальных окон по клику на фон
     [takeAllSheet, addSheet].forEach(sheet => {
       sheet.addEventListener('click', (e) => { if (e.target === sheet) sheet.style.display = 'none'; });
     });
 
-    // Действия в детальном sheet
     document.getElementById('skipBtn').addEventListener('click', () => {
       if (selectedMedId) { let m = medications.find(m => m.id === selectedMedId); if(m){ m.status='missed'; m.lastTaken=null; saveMeds(); renderGroups(); sheetOverlay.style.display='none'; } }
     });
@@ -912,10 +1292,12 @@
       if (selectedMedId) { medications = medications.filter(m => m.id !== selectedMedId); saveMeds(); renderGroups(); sheetOverlay.style.display='none'; }
     });
     document.getElementById('postponeBtn').addEventListener('click', () => { alert('Отложено на 15 мин'); sheetOverlay.style.display='none'; });
-    sheetOverlay.addEventListener('click', (e) => { if (e.target === sheetOverlay) sheetOverlay.style.display = 'none'; });
     document.getElementById('editMed').addEventListener('click', () => alert('Редактирование'));
+    document.getElementById('btnBack').addEventListener('click', () => sheetOverlay.style.display='none');
+    document.getElementById('btnInfo').addEventListener('click', () => alert('Информация о препарате'));
 
-    // Календарь
+    sheetOverlay.addEventListener('click', (e) => { if (e.target === sheetOverlay) sheetOverlay.style.display = 'none'; });
+
     let calDate = new Date();
     function renderCalendar() {
       calMonthYear.innerText = calDate.toLocaleString('ru', { month: 'long', year: 'numeric' });
@@ -924,42 +1306,76 @@
       let startDay = firstDay.getDay(); startDay = startDay === 0 ? 6 : startDay - 1;
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       calGrid.innerHTML = '';
-      for (let i = 0; i < startDay; i++) calGrid.innerHTML += '<div class="cal-cell empty"></div>';
+      for (let i = 0; i < startDay; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'cal-cell empty';
+        calGrid.appendChild(empty);
+      }
+      const today = new Date();
       for (let d = 1; d <= daysInMonth; d++) {
         const cell = document.createElement('div');
         cell.className = 'cal-cell';
         cell.innerText = d;
-        if (d === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear()) cell.classList.add('selected');
+        const cellDate = new Date(year, month, d);
+        if (cellDate.toDateString() === today.toDateString()) cell.classList.add('today');
+        if (selectedDay && cellDate.toDateString() === selectedDay.toDateString()) cell.classList.add('selected');
         cell.addEventListener('click', () => {
-          currentDate = new Date(year, month, d);
+          document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
+          cell.classList.add('selected');
+          selectedDay = new Date(year, month, d);
+          currentDate = new Date(selectedDay);
           renderWeek(currentDate);
           calendarPopup.style.display = 'none';
         });
         calGrid.appendChild(cell);
       }
     }
-    monthLabel.addEventListener('click', (e) => { e.stopPropagation(); calendarPopup.style.display = 'block'; renderCalendar(); });
+    monthLabel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      calendarPopup.style.display = 'block';
+      renderCalendar();
+    });
     document.addEventListener('click', (e) => {
       if (!calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
     });
-    document.getElementById('calPrevMonth').addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth()-1); renderCalendar(); });
-    document.getElementById('calNextMonth').addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth()+1); renderCalendar(); });
-    document.getElementById('prevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()-1); renderWeek(currentDate); });
-    document.getElementById('nextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth()+1); renderWeek(currentDate); });
-
-    // Навигация по вкладкам
-    navItems.forEach(item => {
-      item.addEventListener('click', () => {
-        navItems.forEach(n => n.classList.remove('active'));
-        item.classList.add('active');
-        activeTab = item.dataset.tab;
-        if (activeTab === 'home') { contentDiv.innerHTML = ''; renderGroups(); }
-        else if (activeTab === 'stats') contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">📊 Статистика (заглушка)</div>';
-        else contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">👤 Профиль (заглушка)</div>';
-      });
+    document.getElementById('calPrevMonth').addEventListener('click', (e) => {
+      e.stopPropagation();
+      calDate.setMonth(calDate.getMonth()-1);
+      renderCalendar();
+    });
+    document.getElementById('calNextMonth').addEventListener('click', (e) => {
+      e.stopPropagation();
+      calDate.setMonth(calDate.getMonth()+1);
+      renderCalendar();
     });
 
-    // Инициализация
+    document.getElementById('prevWeek').addEventListener('click', () => {
+      currentDate.setDate(currentDate.getDate() - 7);
+      renderWeek(currentDate);
+    });
+    document.getElementById('nextWeek').addEventListener('click', () => {
+      currentDate.setDate(currentDate.getDate() + 7);
+      renderWeek(currentDate);
+    });
+
+    function setActiveTab(tabId) {
+      navItems.forEach(item => item.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      activeTab = tabId.replace('nav', '').toLowerCase();
+      if (activeTab === 'home') {
+        contentDiv.innerHTML = '';
+        renderGroups();
+      } else if (activeTab === 'stats') {
+        contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">📊 Курсы (заглушка)</div>';
+      } else {
+        contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">👤 Профиль (заглушка)</div>';
+      }
+    }
+
+    document.getElementById('navHome').addEventListener('click', () => setActiveTab('navHome'));
+    document.getElementById('navStats').addEventListener('click', () => setActiveTab('navStats'));
+    document.getElementById('navProfile').addEventListener('click', () => setActiveTab('navProfile'));
+
     renderWeek(new Date());
     renderGroups();
   })();
