@@ -1546,37 +1546,75 @@
         }
 
         async function markReminderAsSkipped(reminderId) {
+            console.log('🚀 markReminderAsSkipped начат, reminderId =', reminderId);
+
             try {
                 const reminder = reminders.find(r => r.id === reminderId);
-                if (!reminder) return;
+                console.log('📌 Найден reminder:', reminder?.id, reminder?.medicine?.name);
 
-                const dateKey = selectedDay.toISOString().split('T')[0];
-
-                let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
-
-                if (!historyEntry) {
-                    const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
-                    const scheduledTime = new Date(selectedDay);
-                    scheduledTime.setHours(hour, minute, 0, 0);
-
-                    historyEntry = await apiFetch('/medicine-history/schedule', {
-                        method: 'POST',
-                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
-                    });
-
-                    if (!historyEntry || !historyEntry.id) return;
-
-                    if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                    historyMap.get(dateKey).push(historyEntry);
+                if (!reminder) {
+                    console.log('❌ reminder не найден');
+                    return;
                 }
 
-                await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, { method: 'PATCH' });
+                const dateKey = selectedDay.toISOString().split('T')[0];
+                console.log('📅 dateKey =', dateKey);
+
+                let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
+                console.log('📜 Существующая запись истории:', historyEntry ? `найдена (id=${historyEntry.id})` : 'не найдена');
+
+                if (!historyEntry) {
+                    console.log('🆕 Создаём новую запись истории...');
+
+                    const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
+                    console.log('⏰ Время напоминания:', hour, minute);
+
+                    const scheduledTime = new Date(selectedDay);
+                    scheduledTime.setHours(hour, minute, 0, 0);
+                    console.log('📆 scheduledTime =', scheduledTime.toISOString());
+
+                    try {
+                        historyEntry = await apiFetch('/medicine-history/schedule', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                reminderId,
+                                scheduledTime: scheduledTime.toISOString()
+                            })
+                        });
+                        console.log('✅ Ответ от schedule:', historyEntry);
+                        console.log('✅ ID созданной записи:', historyEntry?.id);
+
+                        if (!historyEntry || !historyEntry.id) {
+                            console.log('❌ Нет ID в ответе');
+                            return;
+                        }
+
+                        if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                        historyMap.get(dateKey).push(historyEntry);
+                        console.log('📚 Запись добавлена в historyMap');
+
+                    } catch (err) {
+                        console.log('❌ Ошибка при создании записи:', err);
+                        return;
+                    }
+                }
+
+                console.log('✏️ Отправляем запрос на пропуск для historyId =', historyEntry.id);
+
+                await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
+                    method: 'POST'
+                });
+
+                console.log('✅ Запрос на пропуск успешен');
 
                 historyEntry.status = 'skipped';
+                console.log('🔄 Обновляем статус локально');
+
                 renderGroupsForDate(selectedDay);
+                console.log('🎨 Интерфейс обновлён');
 
             } catch (err) {
-                console.error('markReminderAsSkipped', err);
+                console.error('❌ Финальная ошибка:', err);
             }
         }
 
