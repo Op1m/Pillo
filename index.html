@@ -1546,38 +1546,38 @@
         }
 
         async function markReminderAsSkipped(reminderId) {
-            const reminder = reminders.find(r => r.id === reminderId);
-            if (!reminder) return;
+            try {
+                const reminder = reminders.find(r => r.id === reminderId);
+                if (!reminder) return;
 
-            const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
-            const scheduledTime = new Date(selectedDay);
-            scheduledTime.setHours(hour, minute, 0, 0);
+                const dateKey = selectedDay.toISOString().split('T')[0];
 
-            let history = getHistoryForReminder(reminder, selectedDay);
+                let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
 
-            if (!history) {
-                history = await apiFetch('/medicine-history/schedule', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        reminderId,
-                        scheduledTime: scheduledTime.toISOString()
-                    })
-                });
+                if (!historyEntry) {
+                    const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
+                    const scheduledTime = new Date(selectedDay);
+                    scheduledTime.setHours(hour, minute, 0, 0);
+
+                    historyEntry = await apiFetch('/medicine-history/schedule', {
+                        method: 'POST',
+                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
+                    });
+
+                    if (!historyEntry || !historyEntry.id) return;
+
+                    if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                    historyMap.get(dateKey).push(historyEntry);
+                }
+
+                await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, { method: 'PATCH' });
+
+                historyEntry.status = 'skipped';
+                renderGroupsForDate(selectedDay);
+
+            } catch (err) {
+                console.error('markReminderAsSkipped', err);
             }
-
-            if (!history?.id) return;
-
-            await apiFetch(`/medicine-history/${history.id}/mark-skipped`, {
-                method: 'PATCH',
-                body: JSON.stringify({ notes: '' })
-            });
-
-            historyMap.get(selectedDay.toISOString().split('T')[0])
-                .find(h => h.reminder.id === reminderId).status = 'skipped';
-
-            renderGroupsForDate(selectedDay);
-
-            await loadHistoryForDate(selectedDay);
         }
 
 
