@@ -62,7 +62,6 @@
         .user-info {
             flex: 1;
         }
-
         .user-name {
             font-weight: 800;
             font-size: 16px;
@@ -87,7 +86,6 @@
             justify-content: center;
             flex-shrink: 0;
         }
-
         .app-logo img {
             width: 55px !important;
             height: 55px !important;
@@ -342,9 +340,8 @@
             justify-content: center;
             flex-shrink: 0;
         }
-
         .med-icon svg {
-            width: 10px;
+            width: 30px;
             height: 30px;
             fill: #2e7aff;
         }
@@ -473,13 +470,11 @@
             color: #2f4b70;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-
         .nav-item.active {
             background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
             color: white;
             flex: 1 1 auto;
         }
-
         .nav-item:not(.active) {
             color: #4DA9FF;
         }
@@ -837,22 +832,6 @@
         .create-sheet input:focus, .create-sheet select:focus {
             border-color: #2e7aff;
         }
-        .status-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            vertical-align: middle;
-        }
-        .status-icon svg {
-            width: 1.2em;
-            height: 1.2em;
-            vertical-align: middle;
-        }
-        .med-status {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
         .create-sheet .action-row {
             margin-top: 24px;
         }
@@ -970,7 +949,6 @@
 </head>
 <body>
 <div class="app" id="app">
-
     <div class="top-pill">
         <div class="avatar" id="avatarContainer">
             <svg id="avatarPlaceholder" viewBox="0 0 24 24" style="display: block;">
@@ -985,7 +963,6 @@
             <img src="logo.PNG" alt="Logo">
         </div>
     </div>
-
     <div class="month-bar">
         <span class="month-left" id="monthLabel">
           Февраль 2026
@@ -996,7 +973,6 @@
             <button id="nextWeek"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
         </div>
     </div>
-
     <div class="calendar-popup" id="calendarPopup">
         <div class="cal-header">
             <button id="calPrevMonth"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
@@ -1008,12 +984,9 @@
         </div>
         <div class="cal-grid" id="calGrid"></div>
     </div>
-
     <div class="week-row" id="weekRow"></div>
     <div class="divider-light"></div>
-
     <div class="content" id="content"></div>
-
     <div class="bottom-nav">
         <div class="nav-items">
             <div class="nav-item active" id="navHome">
@@ -1056,7 +1029,6 @@
             </svg>
         </button>
     </div>
-
     <div class="modal-sheet-overlay" id="takeAllSheet">
         <div class="modal-sheet">
             <div class="modal-card">
@@ -1072,7 +1044,6 @@
             <div class="modal-cancel-btn" id="cancelTakeAll">Отменить</div>
         </div>
     </div>
-
     <div class="modal-sheet-overlay" id="addChoiceSheet">
         <div class="modal-sheet">
             <div class="modal-card">
@@ -1086,7 +1057,6 @@
             <div class="modal-cancel-btn" id="cancelAddChoice">Отменить</div>
         </div>
     </div>
-
     <div class="sheet-overlay" id="createMedSheet">
         <div class="bottom-sheet-detail create-sheet" id="createSheetDetail">
             <div class="sheet-handle"></div>
@@ -1106,7 +1076,6 @@
                 </svg>
             </div>
             <div class="sheet-detail-title">Новый препарат</div>
-
             <div class="input-group">
                 <label>Название</label>
                 <input type="text" id="medName" placeholder="например, Парацетамол" value="Новый препарат">
@@ -1128,14 +1097,12 @@
                     <option value="независимо">Независимо от еды</option>
                 </select>
             </div>
-
             <div class="action-row">
                 <button class="action-btn" id="cancelCreateMed">Отмена</button>
                 <button class="action-btn primary" id="saveCreateMed">Создать</button>
             </div>
         </div>
     </div>
-
     <div class="sheet-overlay" id="userSwitchSheet">
         <div class="bottom-sheet-detail user-switch-sheet">
             <div class="sheet-handle"></div>
@@ -1143,7 +1110,6 @@
             <div id="userSwitchList" style="margin-top: 16px;"></div>
         </div>
     </div>
-
     <div class="sheet-overlay" id="sheetOverlay">
         <div class="bottom-sheet-detail" id="detailSheet">
             <div class="sheet-handle"></div>
@@ -1210,18 +1176,24 @@
         </div>
     </div>
 </div>
-
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
     (function() {
         const API_BASE = 'https://medicine-reminder-app-t3u9.onrender.com/api';
         const TOKEN_KEY = 'med_token';
         const USER_KEY = 'med_user';
+        const CACHE_TTL = 5 * 60 * 1000;
 
         let currentUser = null;
         let authToken = localStorage.getItem(TOKEN_KEY);
         let reminders = [];
         let historyMap = new Map();
+        let remindersCache = {
+            data: null,
+            timestamp: null,
+            ttl: CACHE_TTL
+        };
+        let historyCache = new Map();
 
         const $ = id => document.getElementById(id);
         const avatarContainer = $('avatarContainer');
@@ -1277,7 +1249,12 @@
             try { return JSON.parse(str); } catch (e) { return null; }
         }
 
-        async function apiFetch(endpoint, options = {}) {
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return str || '';
+            return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+        }
+
+        async function apiFetch(endpoint, options = {}, useCache = false) {
             const headers = {
                 'Content-Type': 'application/json',
                 ...(options.headers || {})
@@ -1292,7 +1269,7 @@
             try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
 
             if (!res.ok) {
-                throw new Error(`HTTP ${res.status} ${res.statusText} ${text ? ' — ' + text : ''}`);
+                throw new Error(`HTTP ${res.status} ${res.statusText}`);
             }
             if (res.status === 204) return {};
             return body;
@@ -1335,44 +1312,28 @@
                 updateUserInfo(currentUser);
                 await loadReminders();
             } catch (err) {
-                currentUser = { id: 1, firstName: 'Ошибка', lastName: '', username: 'error', photoUrl: null };
-                updateUserInfo(currentUser);
+                console.error('Ошибка входа', err);
             }
         }
 
-        async function loadReminders() {
-            if (!currentUser) {
+        async function loadReminders(force = false) {
+            if (!currentUser) return;
+
+            const now = Date.now();
+            if (!force && remindersCache.data && remindersCache.timestamp && (now - remindersCache.timestamp < remindersCache.ttl)) {
+                reminders = remindersCache.data;
+                await loadHistoryForDate(selectedDay);
                 return;
             }
 
             try {
-                const headers = { 'Content-Type': 'application/json' };
-                if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
-
-                const res = await fetch(API_BASE + `/reminders/user/${currentUser.id}`, { method: 'GET', headers });
-
-                const text = await res.text();
-
-                if (!res.ok) {
-                    return;
-                }
-
-                let data;
-                try { data = JSON.parse(text); } catch (e) {
-                    reminders = [];
-                    await loadHistoryForDate(selectedDay);
-                    return;
-                }
-
-                if (!Array.isArray(data)) {
-                    reminders = [];
-                } else {
-                    reminders = data;
-                }
-
+                const data = await apiFetch(`/reminders/user/${currentUser.id}`, { method: 'GET' });
+                reminders = Array.isArray(data) ? data : [];
+                remindersCache.data = reminders;
+                remindersCache.timestamp = now;
                 await loadHistoryForDate(selectedDay);
-
             } catch (err) {
+                console.warn('Ошибка загрузки напоминаний', err);
             }
         }
 
@@ -1383,16 +1344,26 @@
             start.setHours(0,0,0,0);
             const end = new Date(date);
             end.setHours(23,59,59,999);
+            const dateKey = date.toISOString().split('T')[0];
+
+            const cache = historyCache.get(dateKey);
+            const now = Date.now();
+            if (cache && now - cache.timestamp < CACHE_TTL) {
+                historyMap.set(dateKey, cache.data);
+                renderGroupsForDate(date);
+                return;
+            }
 
             try {
                 const history = await apiFetch(
                     `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
                 );
-
-                const dateKey = date.toISOString().split('T')[0];
-                historyMap.set(dateKey, Array.isArray(history) ? history : []);
+                const data = Array.isArray(history) ? history : [];
+                historyMap.set(dateKey, data);
+                historyCache.set(dateKey, { data, timestamp: now });
                 renderGroupsForDate(date);
             } catch (err) {
+                console.warn('Ошибка загрузки истории', err);
                 renderGroupsForDate(date);
             }
         }
@@ -1421,13 +1392,13 @@
 
             if (filtered.length === 0) {
                 contentDiv.innerHTML = `
-            <div class="empty-state">
-                <svg viewBox="0 0 470 470">
-                    <path d="M341 204.29h-57.26c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5h-57.47c-9.65 0-17.5 7.85-17.5 17.5v57.26c0 1.36-1.14 2.5-2.5 2.5H129c-9.65 0-17.5 7.85-17.5 17.5v57.47c0 9.65 7.85 17.5 17.5 17.5h57.26c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5h57.47c9.65 0 17.5-7.85 17.5-17.5v-19.26c0-4.14-3.36-7.5-7.5-7.5s-7.5 3.36-7.5 7.5v19.26c0 1.36-1.14 2.5-2.5 2.5h-57.47c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5H129c-1.36 0-2.5-1.14-2.5-2.5v-57.47c0-1.36 1.14-2.5 2.5-2.5h57.26c9.65 0 17.5-7.85 17.5-17.5v-57.26c0-1.36 1.14-2.5 2.5-2.5h57.47c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5H341c1.36 0 2.5 1.14 2.5 2.5v57.47c0 1.36-1.14 2.5-2.5 2.5h-57.26c-9.65 0-17.5 7.85-17.5 17.5v8c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-8c0-1.36 1.14-2.5 2.5-2.5H341c9.65 0 17.5-7.85 17.5-17.5v-57.47c0-9.65-7.85-17.5-17.5-17.5zM433.5 68.76H299.43V51.04c0-15.88-12.92-28.8-28.8-28.8h-71.25c-15.88 0-28.8 12.92-28.8 28.8l0 17.73H36.5c-20.13 0-36.5 16.37-36.5 36.5v290.53c0 20.13 16.37 36.5 36.5 36.5h36v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h295v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h36c20.13 0 36.5-16.37 36.5-36.5V105.26c0-20.12-16.37-36.5-36.5-36.5zM185.57 51.04c0-7.61 6.19-13.8 13.8-13.8h71.25c7.61 0 13.8 6.19 13.8 13.8v17.73h-98.85V51.04zM455 395.79c0 11.85-9.65 21.5-21.5 21.5h-397c-11.85 0-21.5-9.65-21.5-21.5V105.26c0-11.85 9.65-21.5 21.5-21.5h397c11.85 0 21.5 9.65 21.5 21.5V395.79zM80 63.76h30.62c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5H80c-4.14 0-7.5 3.36-7.5 7.5S75.86 63.76 80 63.76zM359.38 63.76H390c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5h-30.62c-4.14 0-7.5 3.36-7.5 7.5S355.24 63.76 359.38 63.76z"/>
-                </svg>
-                <p>На этот день нет запланированных препаратов.</p>
-            </div>
-        `;
+                    <div class="empty-state">
+                        <svg viewBox="0 0 470 470">
+                            <path d="M341 204.29h-57.26c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5h-57.47c-9.65 0-17.5 7.85-17.5 17.5v57.26c0 1.36-1.14 2.5-2.5 2.5H129c-9.65 0-17.5 7.85-17.5 17.5v57.47c0 9.65 7.85 17.5 17.5 17.5h57.26c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5h57.47c9.65 0 17.5-7.85 17.5-17.5v-19.26c0-4.14-3.36-7.5-7.5-7.5s-7.5 3.36-7.5 7.5v19.26c0 1.36-1.14 2.5-2.5 2.5h-57.47c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5H129c-1.36 0-2.5-1.14-2.5-2.5v-57.47c0-1.36 1.14-2.5 2.5-2.5h57.26c9.65 0 17.5-7.85 17.5-17.5v-57.26c0-1.36 1.14-2.5 2.5-2.5h57.47c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5H341c1.36 0 2.5 1.14 2.5 2.5v57.47c0 1.36-1.14 2.5-2.5 2.5h-57.26c-9.65 0-17.5 7.85-17.5 17.5v8c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-8c0-1.36 1.14-2.5 2.5-2.5H341c9.65 0 17.5-7.85 17.5-17.5v-57.47c0-9.65-7.85-17.5-17.5-17.5zM433.5 68.76H299.43V51.04c0-15.88-12.92-28.8-28.8-28.8h-71.25c-15.88 0-28.8 12.92-28.8 28.8l0 17.73H36.5c-20.13 0-36.5 16.37-36.5 36.5v290.53c0 20.13 16.37 36.5 36.5 36.5h36v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h295v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h36c20.13 0 36.5-16.37 36.5-36.5V105.26c0-20.12-16.37-36.5-36.5-36.5zM185.57 51.04c0-7.61 6.19-13.8 13.8-13.8h71.25c7.61 0 13.8 6.19 13.8 13.8v17.73h-98.85V51.04zM455 395.79c0 11.85-9.65 21.5-21.5 21.5h-397c-11.85 0-21.5-9.65-21.5-21.5V105.26c0-11.85 9.65-21.5 21.5-21.5h397c11.85 0 21.5 9.65 21.5 21.5V395.79zM80 63.76h30.62c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5H80c-4.14 0-7.5 3.36-7.5 7.5S75.86 63.76 80 63.76zM359.38 63.76H390c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5h-30.62c-4.14 0-7.5 3.36-7.5 7.5S355.24 63.76 359.38 63.76z"/>
+                        </svg>
+                        <p>На этот день нет запланированных препаратов.</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -1450,12 +1421,12 @@
                 const header = document.createElement('div');
                 header.className = 'group-header';
                 header.innerHTML = `
-            <div class="group-header-left">
-                <span class="group-time">${time}</span>
-                <span class="group-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
-            </div>
-            <button class="btn-outline take-all" data-time="${time}">Принять все</button>
-        `;
+                    <div class="group-header-left">
+                        <span class="group-time">${time}</span>
+                        <span class="group-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+                    </div>
+                    <button class="btn-outline take-all" data-time="${time}">Принять все</button>
+                `;
                 header.addEventListener('click', (e) => {
                     if (e.target.tagName === 'BUTTON') return;
                     groupDiv.classList.toggle('collapsed');
@@ -1492,24 +1463,23 @@
                     }
 
                     card.innerHTML = `
-                <div class="med-icon">
-                    <svg viewBox="0 0 24 24" fill="#2e7aff" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.59996 6C2.92854 5.27154 3.3921 4.58912 3.99066 3.99057C6.64475 1.33648 10.9479 1.33648 13.602 3.99057L20.0095 10.3981C21.0291 11.4177 21.657 12.6807 21.8932 14M2.10693 10C2.34316 11.3193 2.97106 12.5823 3.99066 13.6019L10.3982 20.0094C13.0523 22.6635 17.3554 22.6635 20.0095 20.0094C20.6081 19.4109 21.0716 18.7285 21.4002 18" stroke="#2e7aff" stroke-width="2" stroke-linecap="round"/>
-                        <path d="M16.8057 7.19434C16.8057 7.19434 16.2649 9.99999 13.1322 13.1327C9.99952 16.2653 7.19434 16.8057 7.19434 16.8057" stroke="#2e7aff" stroke-width="2"/>
-                    </svg>
-                </div>
-                <div class="med-info">
-                    <div class="med-name">${escapeHtml(med.name)}</div>
-                    <div class="med-desc">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
-                            <path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#8FA9C6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span style="vertical-align: middle;">${escapeHtml(med.dosage || '')} · ${escapeHtml(med.instructions || 'не указано')}</span>
-                    </div>
-                    <div class="med-status">${statusHtml}</div>
-                </div>
-            `;
-
+                        <div class="med-icon">
+                            <svg viewBox="0 0 24 24" fill="#2e7aff" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2.59996 6C2.92854 5.27154 3.3921 4.58912 3.99066 3.99057C6.64475 1.33648 10.9479 1.33648 13.602 3.99057L20.0095 10.3981C21.0291 11.4177 21.657 12.6807 21.8932 14M2.10693 10C2.34316 11.3193 2.97106 12.5823 3.99066 13.6019L10.3982 20.0094C13.0523 22.6635 17.3554 22.6635 20.0095 20.0094C20.6081 19.4109 21.0716 18.7285 21.4002 18" stroke="#2e7aff" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M16.8057 7.19434C16.8057 7.19434 16.2649 9.99999 13.1322 13.1327C9.99952 16.2653 7.19434 16.8057 7.19434 16.8057" stroke="#2e7aff" stroke-width="2"/>
+                            </svg>
+                        </div>
+                        <div class="med-info">
+                            <div class="med-name">${escapeHtml(med.name)}</div>
+                            <div class="med-desc">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                                    <path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#8FA9C6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span style="vertical-align: middle;">${escapeHtml(med.dosage || '')} · ${escapeHtml(med.instructions || 'не указано')}</span>
+                            </div>
+                            <div class="med-status">${statusHtml}</div>
+                        </div>
+                    `;
                     card.addEventListener('click', () => openDetailSheet(r.id));
                     cardsDiv.appendChild(card);
                 });
@@ -1535,11 +1505,6 @@
                     if (takeAllSheet) takeAllSheet.style.display = 'flex';
                 });
             });
-        }
-
-        function escapeHtml(str) {
-            if (typeof str !== 'string') return str || '';
-            return str.replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
         }
 
         function openDetailSheet(reminderId) {
@@ -1577,8 +1542,11 @@
                     }),
                 });
                 reminders.push(reminder);
+                remindersCache.data = reminders;
+                remindersCache.timestamp = Date.now();
                 await loadHistoryForDate(selectedDay);
             } catch (err) {
+                console.warn('Ошибка создания', err);
             }
         }
 
@@ -1601,95 +1569,65 @@
             if (!history) {
                 history = await apiFetch('/medicine-history/schedule', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        reminderId,
-                        scheduledTime: scheduledTime.toISOString()
-                    })
+                    body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
                 });
+                if (!history || !history.id) return;
+                const dateKey = selectedDay.toISOString().split('T')[0];
+                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                historyMap.get(dateKey).push(history);
             }
-
-            if (!history?.id) return;
 
             await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
                 method: 'PATCH',
                 body: JSON.stringify({ notes: '' })
             });
 
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            historyCache.delete(dateKey);
             await loadHistoryForDate(selectedDay);
         }
 
         async function markReminderAsSkipped(reminderId) {
-
             try {
                 const reminder = reminders.find(r => r.id === reminderId);
+                if (!reminder) return;
 
                 const dateKey = selectedDay.toISOString().split('T')[0];
-
                 let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
                 if (!historyEntry) {
                     const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
                     const scheduledTime = new Date(selectedDay);
                     scheduledTime.setHours(hour, minute, 0, 0);
-
-                    try {
-                        historyEntry = await apiFetch('/medicine-history/schedule', {
-                            method: 'POST',
-                            body: JSON.stringify({
-                                reminderId,
-                                scheduledTime: scheduledTime.toISOString()
-                            })
-                        });
-                        if (!historyEntry || !historyEntry.id) {
-                            return;
-                        }
-                        if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                        historyMap.get(dateKey).push(historyEntry);
-                    } catch (err) {
-                        return;
-                    }
+                    historyEntry = await apiFetch('/medicine-history/schedule', {
+                        method: 'POST',
+                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
+                    });
+                    if (!historyEntry || !historyEntry.id) return;
+                    if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                    historyMap.get(dateKey).push(historyEntry);
                 }
 
-
-                const oldStatus = historyEntry.status;
-
-                const updated = await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
+                await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
                     method: 'PATCH',
                     body: JSON.stringify({})
                 });
 
-                if (updated && updated.id) {
-                    const arr = historyMap.get(dateKey);
-                    const idx = arr.findIndex(h => h.id === updated.id);
-                    if (idx !== -1) arr[idx] = updated;
-                    else arr.push(updated);
-                } else {
-                    historyEntry.status = 'SKIPPED';
-                }
-
-                renderGroupsForDate(selectedDay);
-
+                historyCache.delete(dateKey);
+                await loadHistoryForDate(selectedDay);
             } catch (err) {
-
-                try {
-                    const dateKey = selectedDay.toISOString().split('T')[0];
-                    const historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
-                    if (historyEntry) {
-                        renderGroupsForDate(selectedDay);
-                    }
-                } catch (e2) {
-
-                }
+                console.warn('Ошибка отметки пропуска', err);
             }
         }
-
 
         async function deleteReminder(reminderId) {
             try {
                 await apiFetch(`/reminders/${reminderId}`, { method: 'DELETE' });
                 reminders = reminders.filter(r => r.id !== reminderId);
+                remindersCache.data = reminders;
+                remindersCache.timestamp = Date.now();
                 await loadHistoryForDate(selectedDay);
             } catch (err) {
-
+                console.warn('Ошибка удаления', err);
             }
         }
 
@@ -1777,10 +1715,10 @@
 
         saveCreateMed?.addEventListener('click', () => {
             const name = medNameInput?.value?.trim();
-            if (!name) { console.warn('Название не введено'); return; }
+            if (!name) return;
             const dose = medDoseInput?.value?.trim() || '1 таб.';
             const time = medTimeInput?.value;
-            if (!time) { console.warn('Время не выбрано'); return; }
+            if (!time) return;
             const food = medFoodSelect?.value;
             createMedicineAndReminder(name, dose, time, food);
             closeCreateSheet();
@@ -1877,41 +1815,36 @@
 
         function renderUserSwitchList() {
             if (!currentUser || !userSwitchList) return;
-
             const firstLetter = (currentUser.firstName?.[0] || currentUser.username?.[0] || '?').toUpperCase();
-
             let currentUserHtml = '';
             if (currentUser.photoUrl) {
                 currentUserHtml = `
-            <div class="user-list-item" data-user="current">
-                <div class="user-avatar-small" style="background-image: url('${currentUser.photoUrl}'); background-size: cover; background-position: center; color: transparent;">${firstLetter}</div>
-                <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
-                <span style="margin-left: auto; color: #2e7aff;">✓</span>
-            </div>
-        `;
+                    <div class="user-list-item" data-user="current">
+                        <div class="user-avatar-small" style="background-image: url('${currentUser.photoUrl}'); background-size: cover; background-position: center; color: transparent;">${firstLetter}</div>
+                        <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
+                        <span style="margin-left: auto; color: #2e7aff;">✓</span>
+                    </div>
+                `;
             } else {
                 currentUserHtml = `
-            <div class="user-list-item" data-user="current">
-                <div class="user-avatar-small">${firstLetter}</div>
-                <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
-                <span style="margin-left: auto; color: #2e7aff;">✓</span>
-            </div>
-        `;
+                    <div class="user-list-item" data-user="current">
+                        <div class="user-avatar-small">${firstLetter}</div>
+                        <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
+                        <span style="margin-left: auto; color: #2e7aff;">✓</span>
+                    </div>
+                `;
             }
-
             userSwitchList.innerHTML = currentUserHtml + `
-        <div class="user-list-item" id="addNewUser">
-            <div class="user-avatar-small plus">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
-            </div>
-            <span class="user-name-small">Новый пользователь</span>
-        </div>
-    `;
-
+                <div class="user-list-item" id="addNewUser">
+                    <div class="user-avatar-small plus">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
+                    </div>
+                    <span class="user-name-small">Новый пользователь</span>
+                </div>
+            `;
             userSwitchList.querySelectorAll('.user-list-item[data-user]')?.forEach(item => {
                 item.addEventListener('click', () => { if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
             });
-
             $('addNewUser')?.addEventListener('click', () => { if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
         }
 
@@ -1946,15 +1879,10 @@
 
         let tapCount = 0;
         let tapTimer = null;
-
         document.querySelector('.app-logo').addEventListener('click', () => {
             tapCount++;
-
             if (tapTimer) clearTimeout(tapTimer);
-            tapTimer = setTimeout(() => {
-                tapCount = 0;
-            }, 3000);
-
+            tapTimer = setTimeout(() => tapCount = 0, 3000);
             if (tapCount >= 5) {
                 if (confirm('Очистить все данные и выйти?')) {
                     localStorage.clear();
@@ -1966,8 +1894,6 @@
             }
         });
     })();
-
 </script>
-
 </body>
 </html>
