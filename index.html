@@ -882,6 +882,9 @@
             font-weight: 600;
             color: #1f5080;
             font-size: 16px;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
         }
         .user-avatar-small.plus {
             background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
@@ -1206,13 +1209,6 @@
             </div>
         </div>
     </div>
-
-    <button onClick="localStorage.clear(); alert('localStorage cleared'); location.reload();"
-            style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-                   background: #ff4444; color: white; border: none; border-radius: 30px;
-                   padding: 12px 20px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-        🧹 Очистить хранилище
-    </button>
 </div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -1882,22 +1878,41 @@
 
         function renderUserSwitchList() {
             if (!currentUser || !userSwitchList) return;
-            userSwitchList.innerHTML = `
-                <div class="user-list-item" data-user="current">
-                    <div class="user-avatar-small">${(currentUser.firstName?.[0] || currentUser.username?.[0] || '?').toUpperCase()}</div>
-                    <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
-                    <span style="margin-left: auto; color: #2e7aff;">✓</span>
-                </div>
-                <div class="user-list-item" id="addNewUser">
-                    <div class="user-avatar-small plus">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
-                    </div>
-                    <span class="user-name-small">Новый пользователь</span>
-                </div>
-            `;
+
+            const firstLetter = (currentUser.firstName?.[0] || currentUser.username?.[0] || '?').toUpperCase();
+
+            let currentUserHtml = '';
+            if (currentUser.photoUrl) {
+                currentUserHtml = `
+            <div class="user-list-item" data-user="current">
+                <div class="user-avatar-small" style="background-image: url('${currentUser.photoUrl}'); background-size: cover; background-position: center; color: transparent;">${firstLetter}</div>
+                <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
+                <span style="margin-left: auto; color: #2e7aff;">✓</span>
+            </div>
+        `;
+            } else {
+                currentUserHtml = `
+            <div class="user-list-item" data-user="current">
+                <div class="user-avatar-small">${firstLetter}</div>
+                <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
+                <span style="margin-left: auto; color: #2e7aff;">✓</span>
+            </div>
+        `;
+            }
+
+            userSwitchList.innerHTML = currentUserHtml + `
+        <div class="user-list-item" id="addNewUser">
+            <div class="user-avatar-small plus">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
+            </div>
+            <span class="user-name-small">Новый пользователь</span>
+        </div>
+    `;
+
             userSwitchList.querySelectorAll('.user-list-item[data-user]')?.forEach(item => {
                 item.addEventListener('click', () => { if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
             });
+
             $('addNewUser')?.addEventListener('click', () => { if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
         }
 
