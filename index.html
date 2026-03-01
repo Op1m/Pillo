@@ -1275,6 +1275,7 @@
                     method: 'POST',
                     body: JSON.stringify({ initData: tg.initData })
                 });
+                alert(JSON.stringify(data.user));
                 authToken = data.token;
                 currentUser = data.user;
                 localStorage.setItem(TOKEN_KEY, authToken);
