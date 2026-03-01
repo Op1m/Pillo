@@ -1319,7 +1319,7 @@
                 await loadHistoryForDate(selectedDay);
 
             } catch (err) {
-                try { alert('Exception in loadReminders:\n\n' + (err.message || err)); } catch (e) { }
+                try { alert('Exception in loadReminders:\n\n' + (err.message || err)); } catch (e) { /* ignore */ }
                 console.error(err);
             }
         }
@@ -1374,13 +1374,10 @@
 
             if (filtered.length === 0) {
                 contentDiv.innerHTML = `
-                    <div class="empty-state">
-                        <svg viewBox="0 0 470 470">
-                            <path d="M341 204.29h-57.26c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5h-57.47c-9.65 0-17.5 7.85-17.5 17.5v57.26c0 1.36-1.14 2.5-2.5 2.5H129c-9.65 0-17.5 7.85-17.5 17.5v57.47c0 9.65 7.85 17.5 17.5 17.5h57.26c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5h57.47c9.65 0 17.5-7.85 17.5-17.5v-19.26c0-4.14-3.36-7.5-7.5-7.5s-7.5 3.36-7.5 7.5v19.26c0 1.36-1.14 2.5-2.5 2.5h-57.47c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5H129c-1.36 0-2.5-1.14-2.5-2.5v-57.47c0-1.36 1.14-2.5 2.5-2.5h57.26c9.65 0 17.5-7.85 17.5-17.5v-57.26c0-1.36 1.14-2.5 2.5-2.5h57.47c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5H341c1.36 0 2.5 1.14 2.5 2.5v57.47c0 1.36-1.14 2.5-2.5 2.5h-57.26c-9.65 0-17.5 7.85-17.5 17.5v8c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-8c0-1.36 1.14-2.5 2.5-2.5H341c9.65 0 17.5-7.85 17.5-17.5v-57.47c0-9.65-7.85-17.5-17.5-17.5zM433.5 68.76H299.43V51.04c0-15.88-12.92-28.8-28.8-28.8h-71.25c-15.88 0-28.8 12.92-28.8 28.8l0 17.73H36.5c-20.13 0-36.5 16.37-36.5 36.5v290.53c0 20.13 16.37 36.5 36.5 36.5h36v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h295v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h36c20.13 0 36.5-16.37 36.5-36.5V105.26c0-20.12-16.37-36.5-36.5-36.5zM185.57 51.04c0-7.61 6.19-13.8 13.8-13.8h71.25c7.61 0 13.8 6.19 13.8 13.8v17.73h-98.85V51.04zM455 395.79c0 11.85-9.65 21.5-21.5 21.5h-397c-11.85 0-21.5-9.65-21.5-21.5V105.26c0-11.85 9.65-21.5 21.5-21.5h397c11.85 0 21.5 9.65 21.5 21.5V395.79zM80 63.76h30.62c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5H80c-4.14 0-7.5 3.36-7.5 7.5S75.86 63.76 80 63.76zM359.38 63.76H390c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5h-30.62c-4.14 0-7.5 3.36-7.5 7.5S355.24 63.76 359.38 63.76z"/>
-                        </svg>
-                        <p>На этот день нет запланированных препаратов.</p>
-                    </div>
-                `;
+                <div class="empty-state">
+                    <p>На этот день нет запланированных препаратов.</p>
+                </div>
+            `;
                 return;
             }
 
@@ -1403,12 +1400,12 @@
                 const header = document.createElement('div');
                 header.className = 'group-header';
                 header.innerHTML = `
-                    <div class="group-header-left">
-                        <span class="group-time">${time}</span>
-                        <span class="group-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
-                    </div>
-                    <button class="btn-outline take-all" data-time="${time}">Принять все</button>
-                `;
+                <div class="group-header-left">
+                    <span class="group-time">${time}</span>
+                    <span class="group-arrow">▾</span>
+                </div>
+                <button class="btn-outline take-all" data-time="${time}">Принять все</button>
+            `;
                 header.addEventListener('click', (e) => {
                     if (e.target.tagName === 'BUTTON') return;
                     groupDiv.classList.toggle('collapsed');
@@ -1431,29 +1428,19 @@
                     const med = r.medicine || (r.medicineId ? { id: r.medicineId, name: 'Препарат #' + r.medicineId, dosage: '', instructions: '' } : { name: 'Неизвестно', dosage: '', instructions: '' });
 
                     let statusHtml = '';
-                    if (status === 'taken') {
-                        statusHtml = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
-                    } else if (status === 'missed') {
-                        statusHtml = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
-                    } else {
-                        statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg> Ожидается</span>`;
-                    }
+                    if (status === 'taken') statusHtml = `<span class="status-taken">Принято</span>`;
+                    else if (status === 'missed') statusHtml = `<span class="status-missed">Пропущено</span>`;
+                    else statusHtml = `<span class="status-pending">Ожидается</span>`;
 
                     card.innerHTML = `
-                        <div class="med-icon">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
-                            </svg>
-                        </div>
-                        <div class="med-info">
-                            <div class="med-name">${escapeHtml(med.name)}</div>
-                            <div class="med-desc">
-                                <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
-                                ${escapeHtml(med.dosage || '')} · ${escapeHtml(med.instructions || 'не указано')}
-                            </div>
-                            <div class="med-status">${statusHtml}</div>
-                        </div>
-                    `;
+                    <div class="med-icon">💊</div>
+                    <div class="med-info">
+                        <div class="med-name">${escapeHtml(med.name)}</div>
+                        <div class="med-desc">${escapeHtml(med.dosage || '')} · ${escapeHtml(med.instructions || 'не указано')}</div>
+                        <div class="med-status">${statusHtml}</div>
+                    </div>
+                `;
+
                     card.addEventListener('click', () => openDetailSheet(r.id));
                     cardsDiv.appendChild(card);
                 });
@@ -1529,6 +1516,16 @@
             }
         }
 
+        function shortRepr(x, max = 200) {
+            try {
+                const s = (typeof x === 'string') ? x : JSON.stringify(x);
+                return s.length > max ? s.substring(0, max) + '…' : s;
+            } catch (e) {
+                return String(x).shortRepr(0, max);
+            }
+        }
+
+
         async function markReminderAsTaken(reminderId) {
             try {
                 const reminder = reminders.find(r => r.id === reminderId);
@@ -1538,10 +1535,7 @@
                 }
 
                 const now = new Date();
-                const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00')
-                    .split(':')
-                    .map(Number);
-
+                const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
                 const scheduledTime = new Date(now);
                 scheduledTime.setHours(hour, minute, 0, 0);
                 const scheduledISO = scheduledTime.toISOString();
@@ -1555,35 +1549,54 @@
                             scheduledTime: scheduledISO
                         })
                     });
-                    alert('Schedule создан. id: ' + (history && history.id ? history.id : JSON.stringify(history)).slice(0, 200));
                 } catch (e) {
                     alert('Ошибка при создании schedule:\n' + (e.message || e));
                     console.error('schedule error', e);
-                    throw e;
+                    return;
+                }
+
+                let historyId = null;
+                if (history == null) {
+                    alert('Ответ от /schedule пустой: ' + shortRepr(history));
+                    return;
+                } else if (typeof history === 'object') {
+                    if ('id' in history) historyId = history.id;
+                    else {
+                        for (const k of Object.keys(history)) {
+                            if (typeof history[k] === 'number') { historyId = history[k]; break; }
+                        }
+                    }
+                } else {
+                    historyId = history;
+                }
+
+                alert('Schedule создан: ' + shortRepr(history));
+
+                if (!historyId) {
+                    alert('Не удалось найти id созданной записи (history). Ответ сервера: ' + shortRepr(history));
+                    return;
                 }
 
                 try {
-                    const res = await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
+                    const res = await apiFetch(`/medicine-history/${historyId}/mark-taken`, {
                         method: 'PATCH',
                         body: JSON.stringify({ notes: '' })
                     });
-                    alert('Отметка "принято" успешна.\nОтвет сервера:\n' + JSON.stringify(res).slice(0, 2000));
+                    alert('Отметка "принято" успешна.\nОтвет сервера: ' + shortRepr(res, 2000));
                 } catch (e) {
                     alert('Ошибка при mark-taken:\n' + (e.message || e));
                     console.error('mark-taken error', e);
-                    throw e;
+                    return;
                 }
 
-                try {
-                    await loadHistoryForDate(selectedDay);
-                } catch (e) {
-                    console.warn('loadHistoryForDate failed after mark-taken', e);
-                }
+                try { await loadHistoryForDate(selectedDay); } catch (e) { console.warn('loadHistory after taken failed', e); }
+
             } catch (err) {
                 alert('Ошибка при отметке принятия:\n' + (err.message || err));
                 console.error(err);
             }
         }
+
 
         async function markReminderAsSkipped(reminderId) {
             try {
@@ -1592,6 +1605,7 @@
                     alert('Напоминание не найдено (id=' + reminderId + ')');
                     return;
                 }
+
                 const now = new Date();
                 const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
                 const scheduledTime = new Date(now);
@@ -1604,32 +1618,51 @@
                         method: 'POST',
                         body: JSON.stringify({ reminderId, scheduledTime: scheduledISO })
                     });
-                    alert('Schedule создан (skip). id: ' + (history && history.id ? history.id : JSON.stringify(history)).slice(0,200));
                 } catch (e) {
                     alert('Ошибка при создании schedule (skip):\n' + (e.message || e));
-                    console.error('schedule (skip) error', e);
-                    throw e;
+                    console.error('create schedule (skip) error', e);
+                    return;
+                }
+
+                let historyId = null;
+                if (history == null) {
+                    alert('Ответ от /schedule пустой: ' + shortRepr(history));
+                    return;
+                } else if (typeof history === 'object') {
+                    if ('id' in history) historyId = history.id;
+                    else {
+                        for (const k of Object.keys(history)) {
+                            if (typeof history[k] === 'number') { historyId = history[k]; break; }
+                        }
+                    }
+                } else {
+                    historyId = history;
+                }
+
+                alert('Schedule создан (skip): ' + shortRepr(history));
+
+                if (!historyId) {
+                    alert('Не удалось найти id созданной записи (history). Ответ сервера: ' + shortRepr(history));
+                    return;
                 }
 
                 try {
-                    const res = await apiFetch(`/medicine-history/${history.id}/mark-skipped`, { method: 'PATCH' });
-                    alert('Отметка "пропущено" успешна.\nОтвет сервера:\n' + JSON.stringify(res).slice(0,2000));
+                    const res = await apiFetch(`/medicine-history/${historyId}/mark-skipped`, { method: 'PATCH' });
+                    alert('Отметка "пропущено" успешна.\nОтвет сервера: ' + shortRepr(res, 2000));
                 } catch (e) {
                     alert('Ошибка при mark-skipped:\n' + (e.message || e));
                     console.error('mark-skipped error', e);
-                    throw e;
+                    return;
                 }
 
-                try {
-                    await loadHistoryForDate(selectedDay);
-                } catch (e) {
-                    console.warn('loadHistoryForDate failed after mark-skipped', e);
-                }
+                try { await loadHistoryForDate(selectedDay); } catch (e) { console.warn('loadHistory after skipped failed', e); }
+
             } catch (err) {
                 alert('Ошибка при отметке пропуска:\n' + (err.message || err));
                 console.error(err);
             }
         }
+
 
         async function deleteReminder(reminderId) {
             try {
@@ -1647,9 +1680,11 @@
             if (selectedReminderId) {
                 try {
                     await markReminderAsTaken(selectedReminderId);
+                    // loadHistoryForDate уже вызывается внутри markReminderAsTaken
                     if (sheetOverlay) sheetOverlay.style.display = 'none';
                 } catch (err) {
                     console.error(err);
+                    // markReminderAsTaken уже показывает alert с детальной ошибкой
                 }
             } else {
                 alert('Не выбрано напоминание');
@@ -1778,7 +1813,7 @@
                 chip.className = 'day-chip';
                 if (day.toDateString() === today.toDateString()) chip.classList.add('today');
                 if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
-                chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
+                chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).shortRepr(0,2).toUpperCase()}</div>`;
                 chip.addEventListener('click', () => {
                     document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
                     chip.classList.add('selected');
@@ -1841,18 +1876,18 @@
         function renderUserSwitchList() {
             if (!currentUser || !userSwitchList) return;
             userSwitchList.innerHTML = `
-                <div class="user-list-item" data-user="current">
-                    <div class="user-avatar-small">${(currentUser.firstName?.[0] || currentUser.username?.[0] || '?').toUpperCase()}</div>
-                    <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
-                    <span style="margin-left: auto; color: #2e7aff;">✓</span>
+            <div class="user-list-item" data-user="current">
+                <div class="user-avatar-small">${(currentUser.firstName?.[0] || currentUser.username?.[0] || '?').toUpperCase()}</div>
+                <span class="user-name-small">${currentUser.firstName || currentUser.username || 'Текущий пользователь'}</span>
+                <span style="margin-left: auto; color: #2e7aff;">✓</span>
+            </div>
+            <div class="user-list-item" id="addNewUser">
+                <div class="user-avatar-small plus">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
                 </div>
-                <div class="user-list-item" id="addNewUser">
-                    <div class="user-avatar-small plus">
-                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
-                    </div>
-                    <span class="user-name-small">Новый пользователь</span>
-                </div>
-            `;
+                <span class="user-name-small">Новый пользователь</span>
+            </div>
+        `;
             userSwitchList.querySelectorAll('.user-list-item[data-user]')?.forEach(item => {
                 item.addEventListener('click', () => { alert('Переключение (заглушка)'); if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
             });
