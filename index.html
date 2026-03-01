@@ -1328,7 +1328,6 @@
                     method: 'POST',
                     body: JSON.stringify({ initData: tg.initData })
                 });
-                alert(JSON.stringify(data.user));
                 authToken = data.token;
                 currentUser = data.user;
                 localStorage.setItem(TOKEN_KEY, authToken);
@@ -1944,7 +1943,30 @@
             if (!currentUser) await loginWithTelegram();
             renderWeek(new Date());
         })();
+
+        let tapCount = 0;
+        let tapTimer = null;
+
+        document.querySelector('.app-logo').addEventListener('click', () => {
+            tapCount++;
+
+            if (tapTimer) clearTimeout(tapTimer);
+            tapTimer = setTimeout(() => {
+                tapCount = 0;
+            }, 3000);
+
+            if (tapCount >= 5) {
+                if (confirm('Очистить все данные и выйти?')) {
+                    localStorage.clear();
+                    alert('Данные очищены');
+                    location.reload();
+                }
+                tapCount = 0;
+                clearTimeout(tapTimer);
+            }
+        });
     })();
+
 </script>
 
 </body>
