@@ -1509,60 +1509,77 @@
             }
         }
 
+        function getHistoryForReminder(reminder, date) {
+            const dateKey = date.toISOString().split('T')[0];
+            const histories = historyMap.get(dateKey) || [];
+            return histories.find(h => h.reminder && h.reminder.id === reminder.id);
+        }
+
         async function markReminderAsTaken(reminderId) {
-            try {
-                const reminder = reminders.find(r => r.id === reminderId);
-                if (!reminder) return;
+            const reminder = reminders.find(r => r.id === reminderId);
+            if (!reminder) return;
 
-                const now = new Date();
-                const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
-                const scheduledTime = new Date(now);
-                scheduledTime.setHours(hour, minute, 0, 0);
-                const scheduledISO = scheduledTime.toISOString();
+            const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
+            const scheduledTime = new Date(selectedDay);
+            scheduledTime.setHours(hour, minute, 0, 0);
 
-                const history = await apiFetch('/medicine-history/schedule', {
+            let history = getHistoryForReminder(reminder, selectedDay);
+
+            if (!history) {
+                history = await apiFetch('/medicine-history/schedule', {
                     method: 'POST',
-                    body: JSON.stringify({ reminderId, scheduledTime: scheduledISO })
+                    body: JSON.stringify({
+                        reminderId,
+                        scheduledTime: scheduledTime.toISOString()
+                    })
                 });
-
-                if (!history || !history.id) return;
-
-                await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ notes: '' })
-                });
-
-                await loadHistoryForDate(selectedDay);
-            } catch (err) {
-                console.error('markReminderAsTaken', err);
             }
+
+            if (!history?.id) return;
+
+            await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
+                method: 'PATCH',
+                body: JSON.stringify({ notes: '' })
+            });
+
+            await loadHistoryForDate(selectedDay);
         }
 
         async function markReminderAsSkipped(reminderId) {
-            try {
-                const reminder = reminders.find(r => r.id === reminderId);
-                if (!reminder) return;
+            const reminder = reminders.find(r => r.id === reminderId);
+            if (!reminder) return;
 
-                const now = new Date();
-                const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
-                const scheduledTime = new Date(now);
-                scheduledTime.setHours(hour, minute, 0, 0);
-                const scheduledISO = scheduledTime.toISOString();
+            const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
+            const scheduledTime = new Date(selectedDay);
+            scheduledTime.setHours(hour, minute, 0, 0);
 
-                const history = await apiFetch('/medicine-history/schedule', {
+            let history = getHistoryForReminder(reminder, selectedDay);
+
+            if (!history) {
+                history = await apiFetch('/medicine-history/schedule', {
                     method: 'POST',
-                    body: JSON.stringify({ reminderId, scheduledTime: scheduledISO })
+                    body: JSON.stringify({
+                        reminderId,
+                        scheduledTime: scheduledTime.toISOString()
+                    })
                 });
-
-                if (!history || !history.id) return;
-
-                await apiFetch(`/medicine-history/${history.id}/mark-skipped`, { method: 'PATCH' });
-
-                await loadHistoryForDate(selectedDay);
-            } catch (err) {
-                console.error('markReminderAsSkipped', err);
             }
+
+            if (!history?.id) return;
+
+            await apiFetch(`/medicine-history/${history.id}/mark-skipped`, {
+                method: 'PATCH',
+                body: JSON.stringify({ notes: '' })
+            });
+
+            historyMap.get(selectedDay.toISOString().split('T')[0])
+                .find(h => h.reminder.id === reminderId).status = 'skipped';
+
+            renderGroupsForDate(selectedDay);
+
+            await loadHistoryForDate(selectedDay);
         }
+
 
         async function deleteReminder(reminderId) {
             try {
