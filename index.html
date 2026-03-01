@@ -62,6 +62,7 @@
         .user-info {
             flex: 1;
         }
+
         .user-name {
             font-weight: 800;
             font-size: 16px;
@@ -317,6 +318,10 @@
             border-color: #a0ddc0;
         }
         .med-card.missed {
+            background: #e3443c;
+            border-color: #ffc9c2;
+        }
+        .med-card.skipped {
             background: #ffeceb;
             border-color: #ffc9c2;
         }
@@ -895,6 +900,21 @@
             .bottom-bar-item svg { width: 24px; height: 24px; }
             .bottom-bar-item .text { font-size: 17px; }
         }
+        @media (max-width: 768px) {
+            .app {
+                border-radius: 0;
+            }
+            .top-pill {
+                padding: 12px 16px;
+            }
+            .bottom-nav {
+                margin-top: -5px;
+                padding: 12px 16px;
+            }
+            .content {
+                padding: 0 16px 0;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1214,7 +1234,7 @@
             try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
 
             if (!res.ok) {
-                throw new Error(`HTTP ${res.status} ${res.statusText}`);
+                throw new Error(`HTTP ${res.status} ${res.statusText} ${text ? ' — ' + text : ''}`);
             }
             if (res.status === 204) return {};
             return body;
@@ -1241,7 +1261,6 @@
         async function loginWithTelegram() {
             const tg = window.Telegram?.WebApp;
             if (!tg || !tg.initData) {
-                console.log('Telegram WebApp not found — falling back to test user');
                 currentUser = { id: 1, firstName: 'Тест', lastName: '', username: 'test', photoUrl: null };
                 authToken = 'fake-token';
                 localStorage.setItem(TOKEN_KEY, authToken);
@@ -1263,7 +1282,6 @@
                 updateUserInfo(currentUser);
                 await loadReminders();
             } catch (err) {
-                console.error('loginWithTelegram error', err);
                 currentUser = { id: 1, firstName: 'Ошибка', lastName: '', username: 'error', photoUrl: null };
                 updateUserInfo(currentUser);
             }
@@ -1271,7 +1289,6 @@
 
         async function loadReminders() {
             if (!currentUser) {
-                console.error('loadReminders: currentUser = null');
                 return;
             }
 
@@ -1284,20 +1301,17 @@
                 const text = await res.text();
 
                 if (!res.ok) {
-                    console.error('Ошибка загрузки напоминаний', res.status, text);
                     return;
                 }
 
                 let data;
                 try { data = JSON.parse(text); } catch (e) {
-                    console.error('Сервер вернул не-JSON', text);
                     reminders = [];
                     await loadHistoryForDate(selectedDay);
                     return;
                 }
 
                 if (!Array.isArray(data)) {
-                    console.warn('Сервер вернул не массив', data);
                     reminders = [];
                 } else {
                     reminders = data;
@@ -1306,7 +1320,6 @@
                 await loadHistoryForDate(selectedDay);
 
             } catch (err) {
-                console.error('Exception in loadReminders', err);
             }
         }
 
@@ -1327,7 +1340,6 @@
                 historyMap.set(dateKey, Array.isArray(history) ? history : []);
                 renderGroupsForDate(date);
             } catch (err) {
-                console.error('Ошибка загрузки истории', err);
                 renderGroupsForDate(date);
             }
         }
@@ -1405,17 +1417,22 @@
                 cardsDiv.className = 'med-cards';
 
                 groups[time].forEach(r => {
-                    const status = getStatusForReminderOnDate(r, date);
+                    const statusRaw = getStatusForReminderOnDate(r, date);
+                    const status = (statusRaw || '').toString().toLowerCase();
+                    const med = r.medicine || (
+                        r.medicineId
+                            ? { id: r.medicineId, name: 'Препарат #' + r.medicineId, dosage: '', instructions: '' }
+                            : { name: 'Неизвестно', dosage: '', instructions: '' }
+                    );
+
                     const card = document.createElement('div');
                     card.className = `med-card ${status}`;
                     card.dataset.id = r.id;
 
-                    const med = r.medicine || (r.medicineId ? { id: r.medicineId, name: 'Препарат #' + r.medicineId, dosage: '', instructions: '' } : { name: 'Неизвестно', dosage: '', instructions: '' });
-
                     let statusHtml = '';
                     if (status === 'taken') {
                         statusHtml = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
-                    } else if (status === 'missed') {
+                    } else if (status === 'skipped' || status === 'missed') {
                         statusHtml = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
                     } else {
                         statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg> Ожидается</span>`;
@@ -1505,7 +1522,6 @@
                 reminders.push(reminder);
                 await loadHistoryForDate(selectedDay);
             } catch (err) {
-                console.error('createMedicineAndReminder', err);
             }
         }
 
@@ -1546,32 +1562,17 @@
         }
 
         async function markReminderAsSkipped(reminderId) {
-            console.log('🚀 markReminderAsSkipped начат, reminderId =', reminderId);
 
             try {
                 const reminder = reminders.find(r => r.id === reminderId);
-                console.log('📌 Найден reminder:', reminder?.id, reminder?.medicine?.name);
-
-                if (!reminder) {
-                    console.log('❌ reminder не найден');
-                    return;
-                }
 
                 const dateKey = selectedDay.toISOString().split('T')[0];
-                console.log('📅 dateKey =', dateKey);
 
                 let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
-                console.log('📜 Существующая запись истории:', historyEntry ? `найдена (id=${historyEntry.id})` : 'не найдена');
-
                 if (!historyEntry) {
-                    console.log('🆕 Создаём новую запись истории...');
-
                     const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
-                    console.log('⏰ Время напоминания:', hour, minute);
-
                     const scheduledTime = new Date(selectedDay);
                     scheduledTime.setHours(hour, minute, 0, 0);
-                    console.log('📆 scheduledTime =', scheduledTime.toISOString());
 
                     try {
                         historyEntry = await apiFetch('/medicine-history/schedule', {
@@ -1581,40 +1582,46 @@
                                 scheduledTime: scheduledTime.toISOString()
                             })
                         });
-                        console.log('✅ Ответ от schedule:', historyEntry);
-                        console.log('✅ ID созданной записи:', historyEntry?.id);
-
                         if (!historyEntry || !historyEntry.id) {
-                            console.log('❌ Нет ID в ответе');
                             return;
                         }
-
                         if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
                         historyMap.get(dateKey).push(historyEntry);
-                        console.log('📚 Запись добавлена в historyMap');
-
                     } catch (err) {
-                        console.log('❌ Ошибка при создании записи:', err);
                         return;
                     }
                 }
 
-                console.log('✏️ Отправляем запрос на пропуск для historyId =', historyEntry.id);
 
-                await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
-                    method: 'POST'
+                const oldStatus = historyEntry.status;
+
+                const updated = await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({})
                 });
 
-                console.log('✅ Запрос на пропуск успешен');
-
-                historyEntry.status = 'skipped';
-                console.log('🔄 Обновляем статус локально');
+                if (updated && updated.id) {
+                    const arr = historyMap.get(dateKey);
+                    const idx = arr.findIndex(h => h.id === updated.id);
+                    if (idx !== -1) arr[idx] = updated;
+                    else arr.push(updated);
+                } else {
+                    historyEntry.status = 'SKIPPED';
+                }
 
                 renderGroupsForDate(selectedDay);
-                console.log('🎨 Интерфейс обновлён');
 
             } catch (err) {
-                console.error('❌ Финальная ошибка:', err);
+
+                try {
+                    const dateKey = selectedDay.toISOString().split('T')[0];
+                    const historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
+                    if (historyEntry) {
+                        renderGroupsForDate(selectedDay);
+                    }
+                } catch (e2) {
+
+                }
             }
         }
 
@@ -1625,7 +1632,7 @@
                 reminders = reminders.filter(r => r.id !== reminderId);
                 await loadHistoryForDate(selectedDay);
             } catch (err) {
-                console.error('deleteReminder', err);
+
             }
         }
 
