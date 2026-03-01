@@ -76,18 +76,25 @@
             cursor: pointer;
         }
         .app-logo {
-            width: 40px;
-            height: 40px;
-            background: #ffffff;
-            border-radius: 12px;
-            display: flex;
+            width: 65px !important;
+            height: 65px !important;
+            min-width: 48px;
+            min-height: 48px;
+            background: #d2e6ff;
+            border-radius: 14px;
+            display: flex !important;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            flex-shrink: 0;
         }
-        .app-logo svg {
-            width: 32px;
-            height: 32px;
+
+        .app-logo img {
+            width: 55px !important;
+            height: 55px !important;
+            max-width: none;
+            max-height: none;
+            object-fit: contain;
+            filter: brightness(0) saturate(100%) invert(0.5) sepia(1) saturate(5) hue-rotate(170deg);
         }
         .month-bar {
             display: flex;
@@ -133,7 +140,7 @@
         }
         .calendar-popup {
             position: absolute;
-            top: 70px;
+            top: 90px;
             left: 20px;
             right: 20px;
             background: white;
@@ -318,7 +325,7 @@
             border-color: #a0ddc0;
         }
         .med-card.missed {
-            background: #e3443c;
+            background: #ffeceb;
             border-color: #ffc9c2;
         }
         .med-card.skipped {
@@ -326,18 +333,19 @@
             border-color: #ffc9c2;
         }
         .med-icon {
-            width: 65px;
-            height: 65px;
+            width: 50px;
+            height: 50px;
             background: #f0f7ff;
-            border-radius: 18px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
         }
+
         .med-icon svg {
-            width: 40px;
-            height: 40px;
+            width: 10px;
+            height: 30px;
             fill: #2e7aff;
         }
         .med-info {
@@ -380,7 +388,28 @@
         }
         .status-taken svg { stroke: #0f9d6a; fill: none; }
         .status-missed svg { stroke: #e74c3c; fill: none; }
-        .status-pending svg { fill: #7a8fa8; }
+        .status-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+        .status-icon svg {
+            width: 1.2em;
+            height: 1.2em;
+            vertical-align: middle;
+        }
+        .med-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .status-pending {
+            color: #7a8fa8;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
         .empty-state {
             display: flex;
             flex-direction: column;
@@ -444,10 +473,15 @@
             color: #2f4b70;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
+
         .nav-item.active {
             background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
             color: white;
             flex: 1 1 auto;
+        }
+
+        .nav-item:not(.active) {
+            color: #4DA9FF;
         }
         .nav-item .icon {
             display: flex;
@@ -803,6 +837,22 @@
         .create-sheet input:focus, .create-sheet select:focus {
             border-color: #2e7aff;
         }
+        .status-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
+        }
+        .status-icon svg {
+            width: 1.2em;
+            height: 1.2em;
+            vertical-align: middle;
+        }
+        .med-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
         .create-sheet .action-row {
             margin-top: 24px;
         }
@@ -849,8 +899,6 @@
             .avatar svg { width: 42px; height: 42px; }
             .user-name { font-size: 22px; }
             .user-switch { font-size: 16px; }
-            .app-logo { width: 50px; height: 50px; }
-            .app-logo svg { width: 38px; height: 38px; }
             .month-bar { padding: 14px 30px 10px; }
             .month-left { font-size: 22px; }
             .month-left svg { width: 26px; height: 26px; }
@@ -883,7 +931,7 @@
             .nav-item .text { font-size: 16px; }
             .plus-button { width: 56px; height: 56px; border-radius: 32px; }
             .plus-button svg { width: 34px; height: 34px; }
-            .calendar-popup { top: 100px; width: 380px; padding: 20px; }
+            .calendar-popup { top: 120px; width: 380px; padding: 20px; }
             .cal-header button { width: 40px; height: 40px; }
             .cal-header button svg { width: 26px; height: 26px; }
             .cal-weekdays { font-size: 15px; }
@@ -931,11 +979,7 @@
             <div class="user-switch" id="userSwitchBtn">Сменить пользователя</div>
         </div>
         <div class="app-logo">
-            <svg viewBox="0 0 108 108">
-                <path fill="#3DDC84" d="M0 0h108v108H0z"/>
-                <path fill="#FFFFFF" d="M31 63.928c0 0 6.4-11 12.1-13.1 7.2-2.6 26-1.4 26-1.4l38.1 38.1L107 108.928l-32-1L31 63.928z"/>
-                <path fill="#FFFFFF" d="M65.3 45.828l3.8-6.6c0.2-0.4 0.1-0.9-0.3-1.1-0.4-0.2-0.9-0.1-1.1 0.3l-3.9 6.7c-6.3-2.8-13.4-2.8-19.7 0l-3.9-6.7c-0.2-0.4-0.7-0.5-1.1-0.3-0.4 0.2-0.5 0.7-0.3 1.1l3.8 6.6c-6.5 4.6-11 11.2-11.7 19.1h46c-0.7-7.9-5.2-14.5-11.7-19.1zM43.4 57.328c-0.8 0-1.5-0.5-1.8-1.2-0.3-0.7-0.1-1.5 0.4-2.1 0.5-0.5 1.4-0.7 2.1-0.4 0.7 0.3 1.2 1 1.2 1.8 0 1.1-0.9 1.9-1.9 1.9zM64.6 57.328c-0.8 0-1.5-0.5-1.8-1.2-0.3-0.7-0.1-1.5 0.4-2.1 0.5-0.5 1.4-0.7 2.1-0.4 0.7 0.3 1.2 1 1.2 1.8 0 1.1-0.9 1.9-1.9 1.9z"/>
-            </svg>
+            <img src="images/logo.PNG" alt="Logo">
         </div>
     </div>
 
@@ -971,7 +1015,7 @@
         <div class="nav-items">
             <div class="nav-item active" id="navHome">
                 <span class="icon">
-                    <svg viewBox="0 0 19 19">
+                    <svg viewBox="0 0 19 19" fill="currentColor">
                         <path d="M15.875 16.212c0 .552-.476.788-1.062.788h-1.063c-.586 0-1.062-.236-1.062-.788v-1c0-1.105-.951-2.212-2.125-2.212h-2.125c-1.175 0-2.125 1.107-2.125 2.212v1c0 .552-.477.788-1.063.788H4.188c-.586 0-1.062-.236-1.062-.788V8.149c0-.133.056-.26.155-.354l5.457-5.136c.416-.391 1.088-.391 1.503 0l5.48 5.156c.099.094.155.221.155.353v8.044zM18 7.625c0-.265-.112-.518-.309-.706l-6.693-6.33c-.829-.783-2.175-.786-3.007-.006L1.312 6.848c-.199.188-.312.442-.312.708V17.212c0 1.105.951 1.788 2.125 1.788h3.188c1.174 0 2.125-.683 2.125-1.788v-1c0-.552.476-1 1.062-1 .586 0 1.063.448 1.063 1v1c0 1.105.95 1.788 2.125 1.788h3.187c1.174 0 2.125-.683 2.125-1.788V7.625z"/>
                     </svg>
                 </span>
@@ -979,23 +1023,34 @@
             </div>
             <div class="nav-item" id="navStats">
                 <span class="icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 3.99 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18.01 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                   <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18 11.9999H17.1986C16.3689 11.9999 15.9541 11.9999 15.6102 12.1946C15.2664 12.3893 15.0529 12.745 14.6261 13.4564L14.5952 13.5079C14.1976 14.1706 13.9987 14.502 13.7095 14.4965C13.4202 14.4911 13.2339 14.1525 12.8615 13.4753L11.1742 10.4075C10.8269 9.77606 10.6533 9.46034 10.3759 9.44537C10.0986 9.43039 9.892 9.72558 9.47875 10.3159L9.19573 10.7203C8.75681 11.3473 8.53734 11.6608 8.21173 11.8303C7.88612 11.9999 7.50342 11.9999 6.73803 11.9999H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M8.96173 18.9108L9.42605 18.3219L8.96173 18.9108ZM12 5.5006L11.4596 6.0207C11.601 6.1676 11.7961 6.2506 12 6.2506C12.2039 6.2506 12.399 6.1676 12.5404 6.0207L12 5.5006ZM15.0383 18.9109L15.5026 19.4999V19.4999L15.0383 18.9109ZM12 20.4859L12 19.7359L12 20.4859ZM2.65666 13.3964C2.87558 13.748 3.33811 13.8556 3.68974 13.6367C4.04137 13.4178 4.14895 12.9552 3.93003 12.6036L2.65666 13.3964ZM6.52969 15.7718C6.23645 15.4793 5.76158 15.4798 5.46903 15.7731C5.17649 16.0663 5.17706 16.5412 5.47031 16.8337L6.52969 15.7718ZM2.75 9.13707C2.75 6.33419 4.00722 4.59507 5.57921 3.99711C7.15546 3.39753 9.35129 3.8302 11.4596 6.0207L12.5404 4.9805C10.1489 2.49583 7.3447 1.72069 5.04591 2.59512C2.74286 3.47116 1.25 5.88785 1.25 9.13707H2.75ZM15.5026 19.4999C16.9949 18.3234 18.7837 16.7461 20.2061 14.9838C21.6126 13.2412 22.75 11.2089 22.75 9.13703H21.25C21.25 10.688 20.3777 12.3829 19.0389 14.0417C17.716 15.6807 16.0239 17.1788 14.574 18.3219L15.5026 19.4999ZM22.75 9.13703C22.75 5.88784 21.2571 3.47115 18.9541 2.59511C16.6553 1.7207 13.8511 2.49583 11.4596 4.9805L12.5404 6.0207C14.6487 3.8302 16.8445 3.39753 18.4208 3.99711C19.9928 4.59506 21.25 6.33418 21.25 9.13703H22.75ZM8.49742 19.4998C9.77172 20.5044 10.6501 21.2359 12 21.2359L12 19.7359C11.2693 19.7359 10.8157 19.4174 9.42605 18.3219L8.49742 19.4998ZM14.574 18.3219C13.1843 19.4174 12.7307 19.7359 12 19.7359L12 21.2359C13.3499 21.2359 14.2283 20.5044 15.5026 19.4999L14.574 18.3219ZM3.93003 12.6036C3.18403 11.4054 2.75 10.2312 2.75 9.13707H1.25C1.25 10.617 1.83054 12.0695 2.65666 13.3964L3.93003 12.6036ZM9.42605 18.3219C8.50908 17.599 7.49093 16.7307 6.52969 15.7718L5.47031 16.8337C6.48347 17.8445 7.54819 18.7515 8.49742 19.4998L9.42605 18.3219Z" fill="currentColor"/>
                     </svg>
                 </span>
                 <span class="text">Курсы</span>
             </div>
             <div class="nav-item" id="navProfile">
                 <span class="icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M5 21c0-3.866 3.134-7 7-7s7 3.134 7 7M16 7c0 2.209-1.791 4-4 4s-4-1.791-4-4 1.791-4 4-4 4 1.791 4 4z"/>
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g clip-path="url(#clip0_429_11217)">
+                            <path d="M4 18C4 15.7908 5.79086 14 8 14H16C18.2091 14 20 15.7908 20 18V18C20 19.1045 19.1046 20 18 20H6C4.89543 20 4 19.1045 4 18V18Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+                            <circle cx="12" cy="6.99997" r="3" stroke="currentColor" stroke-width="2.5"/>
+                        </g>
+                        <defs>
+                            <clipPath id="clip0_429_11217">
+                                <rect width="24" height="24" fill="white"/>
+                            </clipPath>
+                        </defs>
                     </svg>
                 </span>
                 <span class="text">Профиль</span>
             </div>
         </div>
         <button class="plus-button" id="plusBtn">
-            <svg viewBox="0 0 24 24"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>
+            <svg viewBox="0 0 8 8" fill="white" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M3 3V0.83333C3 0.3731 3.4477 0 4 0C4.5523 0 5 0.3731 5 0.83333V3H7.1667C7.6269 3 8 3.4477 8 4C8 4.5523 7.6269 5 7.1667 5H5V7.1667C5 7.6269 4.5523 8 4 8C3.4477 8 3 7.6269 3 7.1667V5H0.83333C0.3731 5 0 4.5523 0 4C0 3.4477 0.3731 3 0.83333 3H3z" fill="white"/>
+            </svg>
         </button>
     </div>
 
@@ -1115,11 +1170,18 @@
                         <span class="info-text" id="sheetDose">Дозировка: 2 таб.</span>
                     </div>
                     <div class="info-row">
-                        <svg viewBox="0 0 24 24"><path d="M3 9h18M7 3v2M17 3v2M6 13h2M6 17h2M11 13h2M11 17h2M16 13h2M16 17h2M6.2 21h11.6c1.12 0 1.68 0 2.108-.218.376-.192.682-.498.874-.874C21 19.48 21 18.92 21 17.8V8.2c0-1.12 0-1.68-.218-2.108a2 2 0 0 0-.874-.874C19.48 5 18.92 5 17.8 5H6.2c-1.12 0-1.68 0-2.108.218a2 2 0 0 0-.874.874C3 6.52 3 7.08 3 8.2v9.6c0 1.12 0 1.68.218 2.108.192.376.498.682.874.874C4.52 21 5.08 21 6.2 21z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 12C2 8.22876 2 6.34315 3.17157 5.17157C4.34315 4 6.22876 4 10 4H14C17.7712 4 19.6569 4 20.8284 5.17157C22 6.34315 22 8.22876 22 12V14C22 17.7712 22 19.6569 20.8284 20.8284C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.8284C2 19.6569 2 17.7712 2 14V12Z" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M7 4V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M17 4V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M2.5 9H21.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
                         <span class="info-text" id="sheetDay">Сегодня</span>
                     </div>
                     <div class="info-row">
-                        <svg viewBox="0 0 24 24"><path d="M11 2v11c0 2.21-1.79 4-4 4s-4-1.79-4-4V2h2v11c0 1.1.9 2 2 2s2-.9 2-2V2h2zM21 6h-2v9c0 1.66-1.34 3-3 3s-3-1.34-3-3V6h-2v13h2v-6c0-1.66 1.34-3 3-3s3 1.34 3 3v6h2V6z"/></svg>
+                        <svg viewBox="0 -3.84 122.88 122.88" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M29.03,100.46l20.79-25.21l9.51,12.13L41,110.69C33.98,119.61,20.99,110.21,29.03,100.46L29.03,100.46z M53.31,43.05 c1.98-6.46,1.07-11.98-6.37-20.18L28.76,1c-2.58-3.03-8.66,1.42-6.12,5.09L37.18,24c2.75,3.34-2.36,7.76-5.2,4.32L16.94,9.8 c-2.8-3.21-8.59,1.03-5.66,4.7c4.24,5.1,10.8,13.43,15.04,18.53c2.94,2.99-1.53,7.42-4.43,3.69L6.96,18.32 c-2.19-2.38-5.77-0.9-6.72,1.88c-1.02,2.97,1.49,5.14,3.2,7.34L20.1,49.06c5.17,5.99,10.95,9.54,17.67,7.53 c1.03-0.31,2.29-0.94,3.64-1.77l44.76,57.78c2.41,3.11,7.06,3.44,10.08,0.93l0.69-0.57c3.4-2.83,3.95-8,1.04-11.34L50.58,47.16 C51.96,45.62,52.97,44.16,53.31,43.05L53.31,43.05z M65.98,55.65l7.37-8.94C63.87,23.21,99-8.11,116.03,6.29 C136.72,23.8,105.97,66,84.36,55.57l-8.73,11.09L65.98,55.65L65.98,55.65z"/>
+                        </svg>
                         <span class="info-text" id="sheetWhen">Во время еды</span>
                     </div>
                 </div>
@@ -1261,12 +1323,7 @@
         async function loginWithTelegram() {
             const tg = window.Telegram?.WebApp;
             if (!tg || !tg.initData) {
-                currentUser = { id: 1, firstName: 'Тест', lastName: '', username: 'test', photoUrl: null };
-                authToken = 'fake-token';
-                localStorage.setItem(TOKEN_KEY, authToken);
-                localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-                updateUserInfo(currentUser);
-                await loadReminders().catch(e => console.error(e));
+                alert('Это приложение работает только внутри Telegram WebApp');
                 return;
             }
 
@@ -1369,13 +1426,13 @@
 
             if (filtered.length === 0) {
                 contentDiv.innerHTML = `
-                    <div class="empty-state">
-                        <svg viewBox="0 0 470 470">
-                            <path d="M341 204.29h-57.26c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5h-57.47c-9.65 0-17.5 7.85-17.5 17.5v57.26c0 1.36-1.14 2.5-2.5 2.5H129c-9.65 0-17.5 7.85-17.5 17.5v57.47c0 9.65 7.85 17.5 17.5 17.5h57.26c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5h57.47c9.65 0 17.5-7.85 17.5-17.5v-19.26c0-4.14-3.36-7.5-7.5-7.5s-7.5 3.36-7.5 7.5v19.26c0 1.36-1.14 2.5-2.5 2.5h-57.47c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5H129c-1.36 0-2.5-1.14-2.5-2.5v-57.47c0-1.36 1.14-2.5 2.5-2.5h57.26c9.65 0 17.5-7.85 17.5-17.5v-57.26c0-1.36 1.14-2.5 2.5-2.5h57.47c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5H341c1.36 0 2.5 1.14 2.5 2.5v57.47c0 1.36-1.14 2.5-2.5 2.5h-57.26c-9.65 0-17.5 7.85-17.5 17.5v8c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-8c0-1.36 1.14-2.5 2.5-2.5H341c9.65 0 17.5-7.85 17.5-17.5v-57.47c0-9.65-7.85-17.5-17.5-17.5zM433.5 68.76H299.43V51.04c0-15.88-12.92-28.8-28.8-28.8h-71.25c-15.88 0-28.8 12.92-28.8 28.8l0 17.73H36.5c-20.13 0-36.5 16.37-36.5 36.5v290.53c0 20.13 16.37 36.5 36.5 36.5h36v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h295v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h36c20.13 0 36.5-16.37 36.5-36.5V105.26c0-20.12-16.37-36.5-36.5-36.5zM185.57 51.04c0-7.61 6.19-13.8 13.8-13.8h71.25c7.61 0 13.8 6.19 13.8 13.8v17.73h-98.85V51.04zM455 395.79c0 11.85-9.65 21.5-21.5 21.5h-397c-11.85 0-21.5-9.65-21.5-21.5V105.26c0-11.85 9.65-21.5 21.5-21.5h397c11.85 0 21.5 9.65 21.5 21.5V395.79zM80 63.76h30.62c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5H80c-4.14 0-7.5 3.36-7.5 7.5S75.86 63.76 80 63.76zM359.38 63.76H390c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5h-30.62c-4.14 0-7.5 3.36-7.5 7.5S355.24 63.76 359.38 63.76z"/>
-                        </svg>
-                        <p>На этот день нет запланированных препаратов.</p>
-                    </div>
-                `;
+            <div class="empty-state">
+                <svg viewBox="0 0 470 470">
+                    <path d="M341 204.29h-57.26c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5h-57.47c-9.65 0-17.5 7.85-17.5 17.5v57.26c0 1.36-1.14 2.5-2.5 2.5H129c-9.65 0-17.5 7.85-17.5 17.5v57.47c0 9.65 7.85 17.5 17.5 17.5h57.26c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5h57.47c9.65 0 17.5-7.85 17.5-17.5v-19.26c0-4.14-3.36-7.5-7.5-7.5s-7.5 3.36-7.5 7.5v19.26c0 1.36-1.14 2.5-2.5 2.5h-57.47c-1.36 0-2.5-1.14-2.5-2.5v-57.26c0-9.65-7.85-17.5-17.5-17.5H129c-1.36 0-2.5-1.14-2.5-2.5v-57.47c0-1.36 1.14-2.5 2.5-2.5h57.26c9.65 0 17.5-7.85 17.5-17.5v-57.26c0-1.36 1.14-2.5 2.5-2.5h57.47c1.36 0 2.5 1.14 2.5 2.5v57.26c0 9.65 7.85 17.5 17.5 17.5H341c1.36 0 2.5 1.14 2.5 2.5v57.47c0 1.36-1.14 2.5-2.5 2.5h-57.26c-9.65 0-17.5 7.85-17.5 17.5v8c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-8c0-1.36 1.14-2.5 2.5-2.5H341c9.65 0 17.5-7.85 17.5-17.5v-57.47c0-9.65-7.85-17.5-17.5-17.5zM433.5 68.76H299.43V51.04c0-15.88-12.92-28.8-28.8-28.8h-71.25c-15.88 0-28.8 12.92-28.8 28.8l0 17.73H36.5c-20.13 0-36.5 16.37-36.5 36.5v290.53c0 20.13 16.37 36.5 36.5 36.5h36v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h295v7.97c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5v-7.97h36c20.13 0 36.5-16.37 36.5-36.5V105.26c0-20.12-16.37-36.5-36.5-36.5zM185.57 51.04c0-7.61 6.19-13.8 13.8-13.8h71.25c7.61 0 13.8 6.19 13.8 13.8v17.73h-98.85V51.04zM455 395.79c0 11.85-9.65 21.5-21.5 21.5h-397c-11.85 0-21.5-9.65-21.5-21.5V105.26c0-11.85 9.65-21.5 21.5-21.5h397c11.85 0 21.5 9.65 21.5 21.5V395.79zM80 63.76h30.62c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5H80c-4.14 0-7.5 3.36-7.5 7.5S75.86 63.76 80 63.76zM359.38 63.76H390c4.14 0 7.5-3.36 7.5-7.5s-3.36-7.5-7.5-7.5h-30.62c-4.14 0-7.5 3.36-7.5 7.5S355.24 63.76 359.38 63.76z"/>
+                </svg>
+                <p>На этот день нет запланированных препаратов.</p>
+            </div>
+        `;
                 return;
             }
 
@@ -1398,12 +1455,12 @@
                 const header = document.createElement('div');
                 header.className = 'group-header';
                 header.innerHTML = `
-                    <div class="group-header-left">
-                        <span class="group-time">${time}</span>
-                        <span class="group-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
-                    </div>
-                    <button class="btn-outline take-all" data-time="${time}">Принять все</button>
-                `;
+            <div class="group-header-left">
+                <span class="group-time">${time}</span>
+                <span class="group-arrow"><svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></span>
+            </div>
+            <button class="btn-outline take-all" data-time="${time}">Принять все</button>
+        `;
                 header.addEventListener('click', (e) => {
                     if (e.target.tagName === 'BUTTON') return;
                     groupDiv.classList.toggle('collapsed');
@@ -1436,24 +1493,28 @@
                     } else if (status === 'skipped' || status === 'missed') {
                         statusHtml = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
                     } else {
-                        statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg> Ожидается</span>`;
+                        statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
                     }
 
                     card.innerHTML = `
-                        <div class="med-icon">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
-                            </svg>
-                        </div>
-                        <div class="med-info">
-                            <div class="med-name">${escapeHtml(med.name)}</div>
-                            <div class="med-desc">
-                                <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
-                                ${escapeHtml(med.dosage || '')} · ${escapeHtml(med.instructions || 'не указано')}
-                            </div>
-                            <div class="med-status">${statusHtml}</div>
-                        </div>
-                    `;
+                <div class="med-icon">
+                    <svg viewBox="0 0 24 24" fill="#2e7aff" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.59996 6C2.92854 5.27154 3.3921 4.58912 3.99066 3.99057C6.64475 1.33648 10.9479 1.33648 13.602 3.99057L20.0095 10.3981C21.0291 11.4177 21.657 12.6807 21.8932 14M2.10693 10C2.34316 11.3193 2.97106 12.5823 3.99066 13.6019L10.3982 20.0094C13.0523 22.6635 17.3554 22.6635 20.0095 20.0094C20.6081 19.4109 21.0716 18.7285 21.4002 18" stroke="#2e7aff" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M16.8057 7.19434C16.8057 7.19434 16.2649 9.99999 13.1322 13.1327C9.99952 16.2653 7.19434 16.8057 7.19434 16.8057" stroke="#2e7aff" stroke-width="2"/>
+                    </svg>
+                </div>
+                <div class="med-info">
+                    <div class="med-name">${escapeHtml(med.name)}</div>
+                    <div class="med-desc">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                            <path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#8FA9C6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span style="vertical-align: middle;">${escapeHtml(med.dosage || '')} · ${escapeHtml(med.instructions || 'не указано')}</span>
+                    </div>
+                    <div class="med-status">${statusHtml}</div>
+                </div>
+            `;
+
                     card.addEventListener('click', () => openDetailSheet(r.id));
                     cardsDiv.appendChild(card);
                 });
@@ -1658,10 +1719,10 @@
             }
         });
 
-        postponeBtn?.addEventListener('click', () => { /* заглушка */ });
-        editMed?.addEventListener('click', () => { /* заглушка */ });
+        postponeBtn?.addEventListener('click', () => {  });
+        editMed?.addEventListener('click', () => {  });
         btnBack?.addEventListener('click', () => { if (sheetOverlay) sheetOverlay.style.display = 'none'; });
-        btnInfo?.addEventListener('click', () => { /* заглушка */ });
+        btnInfo?.addEventListener('click', () => {  });
 
         sheetOverlay?.addEventListener('click', (e) => { if (e.target === sheetOverlay) sheetOverlay.style.display = 'none'; });
 
@@ -1706,7 +1767,7 @@
 
         $('plusBtn')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'flex'; });
         $('chooseNewMed')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'none'; openCreateSheet(); });
-        $('chooseNewCourse')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'none'; /* заглушка */ });
+        $('chooseNewCourse')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'none';  });
         $('cancelAddChoice')?.addEventListener('click', () => { if (addChoiceSheet) addChoiceSheet.style.display = 'none'; });
         addChoiceSheet?.addEventListener('click', (e) => { if (e.target === addChoiceSheet) addChoiceSheet.style.display = 'none'; });
 
@@ -1731,7 +1792,7 @@
         });
         cancelCreateMed?.addEventListener('click', closeCreateSheet);
         closeCreateMed?.addEventListener('click', closeCreateSheet);
-        infoCreateMed?.addEventListener('click', () => { /* заглушка */ });
+        infoCreateMed?.addEventListener('click', () => {  });
         createMedSheet?.addEventListener('click', (e) => { if (e.target === createMedSheet) closeCreateSheet(); });
 
         function getWeekDays(date) {
