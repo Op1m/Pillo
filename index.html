@@ -14,7 +14,7 @@
         :root {
             --tg-safe-area-top: 0px;
             --tg-safe-area-bottom: 0px;
-            --tg-header-height: 0px; /* будет заполнено скриптом для режима popup */
+            --tg-header-height: 0px;
         }
         body {
             background: #eef2f6;
@@ -37,12 +37,10 @@
             box-shadow: 0 20px 40px rgba(0,20,50,0.15);
             position: relative;
         }
-        /* Полноэкранный режим Telegram — убираем скругление */
         .tg-fullscreen .app {
             border-radius: 0;
             max-width: 100%;
         }
-        /* Попап-режим — добавляем отступ для панели браузера */
         .tg-popup .top-pill {
             padding-top: calc(12px + var(--tg-safe-area-top) + var(--tg-header-height, 0px)) !important;
         }
@@ -1187,6 +1185,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
     (function() {
+        // === Telegram WebApp инициализация и адаптация ===
         const tg = window.Telegram?.WebApp;
         if (tg) {
             tg.expand();
@@ -1215,6 +1214,7 @@
             document.body.classList.add('browser-mode');
         }
 
+        // === ВЕСЬ ТВОЙ ОРИГИНАЛЬНЫЙ КОД НИЖЕ (НЕ ТРОГАЕМ) ===
         const API_BASE = 'https://medicine-reminder-app-t3u9.onrender.com/api';
         const TOKEN_KEY = 'med_token';
         const USER_KEY = 'med_user';
