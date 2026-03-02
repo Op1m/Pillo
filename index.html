@@ -312,7 +312,6 @@
             transition: padding var(--anim-duration) var(--anim-ease);
             position: relative;
         }
-        /* анимации смены дня */
         .content-fade-out {
             animation: fadeOut 0.2s var(--anim-ease) forwards;
         }
@@ -326,7 +325,6 @@
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
-        /* Левая и правая зоны для свайпа дня */
         .content::before {
             content: '';
             position: absolute;
@@ -401,7 +399,6 @@
             display: grid;
             grid-template-rows: 1fr;
             transition: grid-template-rows 0.3s var(--anim-ease);
-            gap: 8px;
         }
         .time-group.collapsed .med-cards {
             grid-template-rows: 0fr;
@@ -409,6 +406,12 @@
         .med-cards > * {
             min-height: 0;
             overflow: hidden;
+        }
+        /* Внутренний контейнер для карточек */
+        .med-cards-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
         .med-card {
             min-height: 78px;
@@ -451,14 +454,14 @@
         .med-card.swiping-left {
             background: linear-gradient(90deg, white, rgba(255,80,80,0.15));
         }
-        /* Анимация улетания */
+        /* Анимация улетания на 60% */
         .med-card.swiped-right {
-            transform: translateX(120%);
+            transform: translateX(60%);
             opacity: 0;
             transition: transform 0.2s ease, opacity 0.2s ease;
         }
         .med-card.swiped-left {
-            transform: translateX(-120%);
+            transform: translateX(-60%);
             opacity: 0;
             transition: transform 0.2s ease, opacity 0.2s ease;
         }
@@ -1582,7 +1585,6 @@
                         }, 200);
                     }
                 } else {
-                    // возвращаем обратно
                     card.style.transform = 'translateX(0)';
                     setTimeout(() => {
                         card.style.transition = '';
@@ -1850,6 +1852,8 @@
 
                 const cardsDiv = document.createElement('div');
                 cardsDiv.className = 'med-cards';
+                const innerDiv = document.createElement('div');
+                innerDiv.className = 'med-cards-inner';
 
                 groups[time].forEach(r => {
                     const statusRaw = getStatusForReminderOnDate(r, date);
@@ -1892,10 +1896,11 @@
                         </div>
                     `;
                     card.addEventListener('click', () => openDetailSheet(r.id));
-                    cardsDiv.appendChild(card);
+                    innerDiv.appendChild(card);
                     attachSwipeToCard(card, r.id);
                 });
 
+                cardsDiv.appendChild(innerDiv);
                 groupDiv.appendChild(header);
                 groupDiv.appendChild(cardsDiv);
                 contentDiv.appendChild(groupDiv);
@@ -2071,21 +2076,32 @@
 
         sheetOverlay?.addEventListener('click', (e) => { if (e.target === sheetOverlay) sheetOverlay.style.display = 'none'; });
 
-        (function addSheetTouch() {
-            if (!detailSheet) return;
+        function addSheetTouchHandlers(sheetElement, overlayElement) {
+            if (!sheetElement) return;
             let startY = 0, currentY = 0;
-            detailSheet.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
-            detailSheet.addEventListener('touchmove', (e) => {
+            sheetElement.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+            }, { passive: true });
+            sheetElement.addEventListener('touchmove', (e) => {
                 currentY = e.touches[0].clientY;
                 const diff = currentY - startY;
-                if (diff > 0) detailSheet.style.transform = `translateY(${diff}px)`;
+                if (diff > 0) {
+                    sheetElement.style.transform = `translateY(${diff}px)`;
+                }
             }, { passive: true });
-            detailSheet.addEventListener('touchend', () => {
-                if (currentY - startY > 80) { if (sheetOverlay) sheetOverlay.style.display = 'none'; }
-                detailSheet.style.transform = '';
+            sheetElement.addEventListener('touchend', () => {
+                if (currentY - startY > 80) {
+                    if (overlayElement) overlayElement.style.display = 'none';
+                }
+                sheetElement.style.transform = '';
                 startY = currentY = 0;
             });
-        })();
+        }
+
+        addSheetTouchHandlers(detailSheet, sheetOverlay);
+        if (createMedSheet) {
+            addSheetTouchHandlers(createMedSheet.querySelector('.bottom-sheet-detail'), createMedSheet);
+        }
 
         $('takeAllConfirm')?.addEventListener('click', async () => {
             if (currentGroupTime) {
