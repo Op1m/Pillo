@@ -67,6 +67,9 @@
             background-position: center;
             transition: transform var(--anim-duration) var(--anim-ease);
         }
+        .avatar:active {
+            transform: scale(0.94);
+        }
         .avatar svg {
             width: 36px;
             height: 36px;
@@ -106,6 +109,9 @@
             flex-shrink: 0;
             transition: transform var(--anim-duration) var(--anim-ease);
         }
+        .app-logo:active {
+            transform: scale(0.94);
+        }
         .app-logo img {
             width: 55px !important;
             height: 55px !important;
@@ -131,6 +137,9 @@
             align-items: center;
             gap: 4px;
             transition: color var(--anim-duration) var(--anim-ease);
+        }
+        .month-left:active {
+            color: #2e7aff;
         }
         .month-left svg {
             width: 20px;
@@ -163,11 +172,14 @@
             height: 24px;
             fill: #2d5980;
         }
+        /* Календарь теперь компактный и центрированный */
         .calendar-popup {
             position: absolute;
-            top: 90px;
-            left: 20px;
-            right: 20px;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            max-width: 90vw;
             background: white;
             border-radius: 32px;
             box-shadow: 0 30px 50px #00000030;
@@ -177,8 +189,8 @@
             animation: popFade 0.2s var(--anim-ease);
         }
         @keyframes popFade {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translate(-50%, -10px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
         }
         .cal-header {
             display: flex;
@@ -299,6 +311,28 @@
             padding: 0 16px 8px;
             scrollbar-width: thin;
             transition: padding var(--anim-duration) var(--anim-ease);
+            position: relative;
+        }
+        /* Левая и правая зоны для свайпа дня */
+        .content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 20%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .content::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 20%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
         }
         .time-group {
             margin-bottom: 18px;
@@ -350,12 +384,20 @@
             transform: scale(0.94);
         }
         .med-cards {
+            max-height: 1000px;
+            opacity: 1;
+            overflow: hidden;
+            transition: max-height 0.4s var(--anim-ease), opacity 0.3s var(--anim-ease), margin 0.3s var(--anim-ease);
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
         .time-group.collapsed .med-cards {
-            display: none;
+            max-height: 0;
+            opacity: 0;
+            margin: 0;
+            gap: 0;
+            pointer-events: none;
         }
         .time-group.collapsed .group-arrow svg {
             transform: rotate(-90deg);
@@ -372,9 +414,11 @@
             cursor: pointer;
             border: 1px solid #e2ecf9;
             transition: all 0.25s var(--anim-ease);
-            touch-action: pan-y; /* разрешаем вертикальную прокрутку, горизонтальные свайпы будем обрабатывать сами */
+            touch-action: pan-y;
             user-select: none;
-            will-change: transform, background;
+            will-change: transform, background, box-shadow;
+            position: relative;
+            overflow: hidden;
         }
         .med-card:active {
             transform: scale(0.98);
@@ -392,11 +436,12 @@
             background: #ffeceb;
             border-color: #ffc9c2;
         }
-        /* Стили для анимации свайпа */
-        .med-card.swiping {
-            transition: none;
-            opacity: 0.8;
-            background: #f0f4fe;
+        /* Анимация свайпа с изменением фона */
+        .med-card.swiping-right {
+            background: linear-gradient(90deg, rgba(0,200,100,0.15), white);
+        }
+        .med-card.swiping-left {
+            background: linear-gradient(90deg, white, rgba(255,80,80,0.15));
         }
         .med-card.swiped-right {
             transform: translateX(120%);
@@ -782,6 +827,9 @@
             align-items: center;
             justify-content: center;
             transition: transform var(--anim-duration) var(--anim-ease);
+        }
+        .pill-image-frame:active {
+            transform: scale(0.96);
         }
         .pill-image-frame svg {
             width: 120px;
@@ -1322,6 +1370,27 @@
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
+
+    const tg = window.Telegram?.WebApp;
+
+    if (tg) {
+        tg.ready();
+
+        tg.expand();
+
+        setTimeout(() => {
+            if (tg.requestFullscreen) {
+                tg.requestFullscreen();
+            }
+
+            if (tg.disableVerticalSwipes) {
+                tg.disableVerticalSwipes();
+            }
+
+            tg.enableClosingConfirmation();
+        }, 100);
+    }
+
     (function() {
         const API_BASE = 'https://medicine-reminder-app-t3u9.onrender.com/api';
         const TOKEN_KEY = 'med_token';
@@ -1392,10 +1461,12 @@
         let touchStartX = 0;
         let touchEndX = 0;
         let touchStartTime = 0;
-        const MIN_SWIPE_DISTANCE = 50;
-        const MAX_SWIPE_TIME = 500;
+        let isSwipingOnCard = false;
 
         contentDiv?.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.med-card')) {
+                return;
+            }
             touchStartX = e.touches[0].clientX;
             touchStartTime = Date.now();
         }, { passive: true });
@@ -1405,7 +1476,7 @@
             touchEndX = e.changedTouches[0].clientX;
             const diffX = touchEndX - touchStartX;
             const diffTime = Date.now() - touchStartTime;
-            if (Math.abs(diffX) > MIN_SWIPE_DISTANCE && diffTime < MAX_SWIPE_TIME) {
+            if (!isSwipingOnCard && Math.abs(diffX) > 50 && diffTime < 500) {
                 if (diffX > 0) {
                     currentDate.setDate(currentDate.getDate() - 1);
                 } else {
@@ -1422,30 +1493,39 @@
             let cardTouchStartY = 0;
             let cardTouchStartTime = 0;
             let swiped = false;
+            let currentOffset = 0;
 
             const onTouchStart = (e) => {
                 cardTouchStartX = e.touches[0].clientX;
                 cardTouchStartY = e.touches[0].clientY;
                 cardTouchStartTime = Date.now();
-                card.classList.remove('swiped-right', 'swiped-left');
+                card.classList.remove('swiped-right', 'swiped-left', 'swiping-right', 'swiping-left');
                 swiped = false;
+                currentOffset = 0;
             };
 
             const onTouchMove = (e) => {
                 if (swiped) return;
                 const dx = e.touches[0].clientX - cardTouchStartX;
                 const dy = e.touches[0].clientY - cardTouchStartY;
-                if (Math.abs(dx) > 20 && Math.abs(dx) > Math.abs(dy)) {
+                if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
                     e.preventDefault();
-                    card.classList.add('swiping');
+                    if (dx > 0) {
+                        card.classList.add('swiping-right');
+                        card.classList.remove('swiping-left');
+                    } else {
+                        card.classList.add('swiping-left');
+                        card.classList.remove('swiping-right');
+                    }
                     card.style.transform = `translateX(${dx}px)`;
+                    currentOffset = dx;
                 }
             };
 
             const onTouchEnd = (e) => {
                 const diffX = e.changedTouches[0].clientX - cardTouchStartX;
                 const diffTime = Date.now() - cardTouchStartTime;
-                card.classList.remove('swiping');
+                card.classList.remove('swiping-right', 'swiping-left');
                 card.style.transform = '';
 
                 if (Math.abs(diffX) > 50 && diffTime < 500) {
