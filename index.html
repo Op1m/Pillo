@@ -5,16 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Таблетки • финальная версия</title>
     <style>
+        :root{
+            --tg-top-offset: 0px;
+            --tg-left-offset: 0px;
+        }
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-        :root {
-            --tg-safe-area-top: 0px;
-            --tg-safe-area-bottom: 0px;
-            --tg-header-height: 0px;
         }
         body {
             background: #eef2f6;
@@ -32,28 +31,19 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            height: -webkit-fill-available;
+            height: calc(100vh - var(--tg-top-offset));
             box-shadow: 0 20px 40px rgba(0,20,50,0.15);
             position: relative;
-        }
-        .tg-fullscreen .app {
-            border-radius: 0;
-            max-width: 100%;
-        }
-        .tg-popup .top-pill {
-            padding-top: calc(12px + var(--tg-safe-area-top) + var(--tg-header-height, 0px)) !important;
         }
         .top-pill {
             background: #d2e6ff;
             border-radius: 0 0 32px 32px;
-            padding: calc(12px + var(--tg-safe-area-top)) 16px 12px 16px;
+            padding: calc(18px + env(safe-area-inset-top) + var(--tg-top-offset)) 20px 18px 20px;
             display: flex;
             align-items: center;
             gap: 12px;
             box-shadow: 0 4px 12px rgba(0, 100, 200, 0.1);
             position: relative;
-            transition: padding-top 0.2s;
         }
         .avatar {
             width: 52px;
@@ -464,9 +454,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 16px calc(12px + var(--tg-safe-area-bottom));
+            padding: 12px 16px;
             background: transparent;
-            transition: padding-bottom 0.2s;
         }
         .nav-items {
             display: flex;
@@ -890,8 +879,8 @@
             color: #0a2540;
         }
         @media (min-width: 600px) {
-            .app { max-width: 700px; height: 900px; border-radius: 40px; }
-            .top-pill { padding: 20px 30px; }
+            .app { max-width: 700px; height: calc(900px - var(--tg-top-offset)); border-radius: 40px; }
+            .top-pill { padding: calc(20px + env(safe-area-inset-top) + var(--tg-top-offset)) 30px; }
             .avatar { width: 64px; height: 64px; }
             .avatar svg { width: 42px; height: 42px; }
             .user-name { font-size: 22px; }
@@ -950,6 +939,22 @@
                 max-width: none;
                 border-radius: 0;
             }
+            .top-pill {
+                padding: calc(42px + env(safe-area-inset-top) + var(--tg-top-offset)) 16px 12px 16px;
+            }
+            .bottom-nav {
+                padding: 12px 16px calc(32px + env(safe-area-inset-bottom));
+            }
+        }
+        html.tg-has-offset body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: var(--tg-top-offset);
+            width: 100%;
+            pointer-events: none;
+            z-index: 9999;
         }
     </style>
 </head>
@@ -1185,36 +1190,6 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
     (function() {
-        // === Telegram WebApp инициализация и адаптация ===
-        const tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.expand();
-            tg.setHeaderColor('transparent');
-
-            const safeTop = tg.safeAreaInset?.top || 0;
-            const safeBottom = tg.safeAreaInset?.bottom || 0;
-
-            document.documentElement.style.setProperty('--tg-safe-area-top', safeTop + 'px');
-            document.documentElement.style.setProperty('--tg-safe-area-bottom', safeBottom + 'px');
-
-            const isFullscreen = tg.isExpanded && tg.viewportHeight > window.innerHeight - 50;
-            document.body.classList.add(isFullscreen ? 'tg-fullscreen' : 'tg-popup');
-
-            if (!isFullscreen) {
-                document.documentElement.style.setProperty('--tg-header-height', '44px');
-            }
-
-            tg.onEvent('viewportChanged', () => {
-                const newSafeTop = tg.safeAreaInset?.top || 0;
-                const newSafeBottom = tg.safeAreaInset?.bottom || 0;
-                document.documentElement.style.setProperty('--tg-safe-area-top', newSafeTop + 'px');
-                document.documentElement.style.setProperty('--tg-safe-area-bottom', newSafeBottom + 'px');
-            });
-        } else {
-            document.body.classList.add('browser-mode');
-        }
-
-        // === ВЕСЬ ТВОЙ ОРИГИНАЛЬНЫЙ КОД НИЖЕ (НЕ ТРОГАЕМ) ===
         const API_BASE = 'https://medicine-reminder-app-t3u9.onrender.com/api';
         const TOKEN_KEY = 'med_token';
         const USER_KEY = 'med_user';
@@ -1280,6 +1255,82 @@
         let currentDate = new Date();
         let selectedDay = new Date();
         let collapsedGroups = [];
+
+        (function tgUiHelper(){
+            const appElSelector = '#app';
+            const topPillSelector = '.top-pill';
+
+            document.documentElement.style.setProperty('--tg-top-offset', '0px');
+
+            function readEnvSafeInsetTop() {
+
+                return '';
+            }
+
+            function computeOffset() {
+                const vv = window.visualViewport;
+                let offset = 0;
+
+                if (vv && typeof vv.offsetTop === 'number') {
+                    offset = Math.max(0, Math.round(vv.offsetTop));
+                } else {
+                    const app = document.querySelector(appElSelector);
+                    if (app) {
+                        const r = app.getBoundingClientRect();
+                        if (r.top > 0) offset = Math.round(r.top);
+                    }
+                    if (!offset && window.outerHeight && window.innerHeight) {
+                        const diff = Math.max(0, Math.round(window.outerHeight - window.innerHeight));
+                        if (diff > 20) offset = diff;
+                    }
+                }
+                return offset;
+            }
+
+            function applyOffset() {
+                try {
+                    const offset = computeOffset();
+                    document.documentElement.style.setProperty('--tg-top-offset', offset + 'px');
+                    document.documentElement.classList.toggle('tg-has-offset', offset > 0);
+                    window.__tgUi = window.__tgUi || {};
+                    window.__tgUi.lastOffset = offset;
+                    window.__tgUi.vv = window.visualViewport ? {
+                        height: window.visualViewport.height,
+                        offsetTop: window.visualViewport.offsetTop,
+                        pageTop: window.visualViewport.pageTop
+                    } : null;
+                } catch (e) {
+                    console.warn('tgUiHelper.applyOffset error', e);
+                }
+            }
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', applyOffset, { passive: true });
+                window.visualViewport.addEventListener('scroll', applyOffset, { passive: true });
+            }
+            window.addEventListener('resize', applyOffset, { passive: true });
+
+            const tg = window.Telegram && window.Telegram.WebApp;
+            if (tg) {
+                try {
+                    if (typeof tg.ready === 'function') tg.ready();
+                    if (typeof tg.onEvent === 'function') {
+                        try { tg.onEvent('viewportChanged', applyOffset); } catch (e) {  }
+                        try { tg.onEvent('mainButtonClicked', () => {}); } catch (e) {  }
+                    }
+                } catch (e) {  }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => { applyOffset(); setTimeout(applyOffset, 300); });
+            } else {
+                applyOffset();
+                setTimeout(applyOffset, 300);
+            }
+
+            window.__tgUi = window.__tgUi || {};
+            window.__tgUi.recompute = applyOffset;
+        })();
 
         function safeJSONParse(str) {
             try { return JSON.parse(str); } catch (e) { return null; }
