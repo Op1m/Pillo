@@ -394,7 +394,6 @@
             background: #d4e3ff;
             transform: scale(0.94);
         }
-        /* Используем grid для анимации сворачивания */
         .med-cards {
             display: grid;
             grid-template-rows: 1fr;
@@ -407,7 +406,6 @@
             min-height: 0;
             overflow: hidden;
         }
-        /* Внутренний контейнер для карточек */
         .med-cards-inner {
             display: flex;
             flex-direction: column;
@@ -447,14 +445,12 @@
             background: #ffeceb;
             border-color: #ffc9c2;
         }
-        /* Фон при свайпе */
         .med-card.swiping-right {
             background: linear-gradient(90deg, rgba(0,200,100,0.15), white);
         }
         .med-card.swiping-left {
             background: linear-gradient(90deg, white, rgba(255,80,80,0.15));
         }
-        /* Анимация улетания на 60% */
         .med-card.swiped-right {
             transform: translateX(60%);
             opacity: 0;
@@ -2329,6 +2325,82 @@
                 clearTimeout(tapTimer);
             }
         });
+    })();
+</script>
+
+<script>
+    (function(){
+        const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if(prefersReduced) { window.__perfHelpers = {noop:true}; return; }
+
+        const raf = window.requestAnimationFrame.bind(window);
+
+        function pointerGesture(target, handlers){
+            let active=false, id=null;
+            let start={x:0,y:0,time:0}, last={x:0,y:0,time:0}, rafId=null;
+            function down(e){
+                if(e.pointerType==='mouse' && e.button!==0) return;
+                try{ target.setPointerCapture?.(e.pointerId); }catch(e){};
+                active=true; id=e.pointerId;
+                start.x=e.clientX; start.y=e.clientY; start.time=Date.now();
+                last.x=start.x; last.y=start.y; last.time=start.time;
+                handlers.onStart && handlers.onStart(e);
+            }
+            function move(e){
+                if(!active || e.pointerId!==id) return;
+                last.x=e.clientX; last.y=e.clientY; last.time=Date.now();
+                if(rafId) return;
+                rafId = raf(()=>{ rafId=null; handlers.onMove && handlers.onMove({clientX:last.x, clientY:last.y, time:last.time}); });
+            }
+            function up(e){
+                if(!active || e.pointerId!==id) return;
+                active=false; id=null;
+                handlers.onEnd && handlers.onEnd({clientX:e.clientX, clientY:e.clientY, time:Date.now()});
+            }
+            target.addEventListener('pointerdown', down, {passive:true});
+            window.addEventListener('pointermove', move, {passive:true});
+            window.addEventListener('pointerup', up, {passive:true});
+            window.addEventListener('pointercancel', up, {passive:true});
+            return { destroy(){ target.removeEventListener('pointerdown', down); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); } };
+        }
+
+        function attachCardSwipe(card, onAccept, onSkip){
+            if(!card) return ()=>{};
+            let startX=0, startY=0, isDragging=false, startTime=0, translateX=0;
+            const threshold = 56;
+            const setX = (x)=>{ card.style.transform = `translate3d(${x}px,0,0)`; card.style.willChange='transform'; };
+            const clear = ()=>{ card.style.transform=''; card.dataset.swipe=''; card.classList.remove('is-swiping'); card.style.willChange=''; };
+
+            const handlers = pointerGesture(card, {
+                onStart(e){ startX=e.clientX; startY=e.clientY; startTime=Date.now(); isDragging=false; card.style.transition='none'; },
+                onMove(pos){ const dx = pos.clientX - startX; const dy = pos.clientY - startY; if(!isDragging){ if(Math.abs(dx)>8 && Math.abs(dx)>Math.abs(dy)) isDragging=true; else return; } card.classList.add('is-swiping'); translateX = dx; setX(dx); card.dataset.swipe = dx>0?'right':'left'; },
+                onEnd(pos){ if(!isDragging){ clear(); return; } const total = pos.clientX - startX; const dt = Math.max(1, Date.now()-startTime); const velocity = total / dt; card.style.transition='transform 200ms cubic-bezier(.2,.9,.4,1)'; if(total>threshold || velocity>0.5){ card.classList.add('removed'); card.style.transform='translate3d(60%,0,0)'; card.style.opacity=0; setTimeout(()=>{ onAccept && onAccept(); try{ card.remove(); }catch(e){} },220); } else if(total < -threshold || velocity < -0.5){ card.classList.add('removed'); card.style.transform='translate3d(-60%,0,0)'; card.style.opacity=0; setTimeout(()=>{ onSkip && onSkip(); try{ card.remove(); }catch(e){} },220); } else { card.style.transform='translate3d(0,0,0)'; setTimeout(()=>{ clear(); card.style.transition=''; },220); } }
+            });
+            return ()=>handlers.destroy();
+        }
+
+        function attachDaySwipe(container, onDir){
+            if(!container) return ()=>{};
+            let sX=0, sY=0, sT=0, tracking=false;
+            container.addEventListener('pointerdown', (e)=>{ sX=e.clientX; sY=e.clientY; sT=Date.now(); tracking=true; }, {passive:true});
+            container.addEventListener('pointermove', (e)=>{ if(!tracking) return; const dx = e.clientX - sX; const dy = e.clientY - sY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>30){ } }, {passive:true});
+            container.addEventListener('pointerup', (e)=>{ if(!tracking) return; tracking=false; const dx = e.clientX - sX; const dt = Date.now()-sT; if(Math.abs(dx)>80 && dt<600){ onDir && onDir(dx>0? -1:1); } }, {passive:true});
+            return ()=>{};
+        }
+
+        function attachSheetDrag(overlay, sheet){
+            if(!overlay || !sheet) return ()=>{};
+            let startY=0, curY=0, dragging=false, activeId=null;
+            const openSheet = ()=>{ overlay.style.display='flex'; requestAnimationFrame(()=> sheet.classList.add('sheet-open')); };
+            const closeSheet = ()=>{ sheet.classList.remove('sheet-open'); setTimeout(()=> overlay.style.display='none', 260); };
+            sheet.querySelectorAll('*').forEach(el=> el.style.touchAction = 'none');
+            sheet.addEventListener('pointerdown', (e)=>{ sheet.setPointerCapture?.(e.pointerId); activeId=e.pointerId; startY=e.clientY; dragging=true; sheet.style.transition='none'; }, {passive:true});
+            window.addEventListener('pointermove', (e)=>{ if(!dragging || e.pointerId!==activeId) return; curY=e.clientY; const dy = Math.max(0, curY-startY); sheet.style.transform = `translateY(${dy}px)`; }, {passive:true});
+            window.addEventListener('pointerup', (e)=>{ if(!dragging || e.pointerId!==activeId) return; dragging=false; sheet.style.transition='transform 220ms cubic-bezier(.2,.9,.4,1)'; const dy = Math.max(0, curY-startY); if(dy>120) closeSheet(); else sheet.style.transform='translateY(0)'; }, {passive:true});
+            return { open: openSheet, close: closeSheet };
+        }
+
+        window.__perfHelpers = { pointerGesture, attachCardSwipe, attachDaySwipe, attachSheetDrag };
     })();
 </script>
 </body>
