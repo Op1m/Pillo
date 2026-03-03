@@ -263,6 +263,7 @@
             gap: 6px;
             justify-content: space-between;
             padding: 0 16px 10px;
+            transition: opacity 0.25s var(--anim-ease);
         }
         .day-chip {
             flex: 1;
@@ -1188,6 +1189,14 @@
             from { transform: translateX(-30%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
+        .week-fade-out {
+            opacity: 0;
+            transition: opacity 0.25s var(--anim-ease);
+        }
+        .week-fade-in {
+            opacity: 1;
+            transition: opacity 0.25s var(--anim-ease);
+        }
     </style>
 </head>
 <body>
@@ -1550,15 +1559,19 @@
             const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
             const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
 
+            weekRow.style.opacity = '0';
+            weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
             contentDiv.classList.add(outClass);
             setTimeout(() => {
                 currentDate = newDate;
                 renderWeek(currentDate);
                 onDateSelected(currentDate).then(() => {
+                    weekRow.style.opacity = '1';
                     contentDiv.classList.remove(outClass);
                     contentDiv.classList.add(inClass);
                     setTimeout(() => {
                         contentDiv.classList.remove(inClass);
+                        weekRow.style.transition = '';
                         isAnimatingDayChange = false;
                     }, 250);
                 });
@@ -2531,6 +2544,11 @@
                 function enhanceSheet(sheetElement, overlayElement){
                     if(!sheetElement || sheetElement.__enhanced) return;
                     sheetElement.__enhanced = true;
+
+                    sheetElement.querySelectorAll('*').forEach(el => {
+                        el.style.touchAction = 'none';
+                    });
+
                     let startY = 0, currentY = 0, dragging = false, pointerId = null;
                     const onDown = (e) => {
                         if(e.pointerType === 'mouse' && e.button !== 0) return;
