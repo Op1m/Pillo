@@ -2403,6 +2403,7 @@
         window.__perfHelpers = { pointerGesture, attachCardSwipe, attachDaySwipe, attachSheetDrag };
     })();
 </script>
+
 <style>
     .nav-item {
         padding-left: 10px;
@@ -2615,5 +2616,169 @@
     })();
 </script>
 
+<style>
+    .calendar-popup {
+        max-width: calc(100vw - 24px) !important;
+        width: auto !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        box-sizing: border-box;
+    }
+
+    .bottom-nav .nav-items { align-items: center; }
+    .bottom-nav .nav-item {
+        min-width: 44px;
+        width: 44px;
+        padding: 0;
+        display: inline-flex;
+        justify-content: center;
+        transition: width 260ms var(--anim-ease), padding 260ms var(--anim-ease), background 260ms var(--anim-ease), box-shadow 260ms var(--anim-ease);
+        overflow: hidden;
+    }
+    .bottom-nav .nav-item .icon { padding: 10px; display: inline-flex; align-items: center; justify-content: center; }
+    .bottom-nav .nav-item .text {
+        display: inline-block;
+        opacity: 0;
+        transform: translateX(-6px);
+        transition: opacity 260ms var(--anim-ease), transform 260ms var(--anim-ease);
+        white-space: nowrap;
+        pointer-events: none;
+        margin-left: 8px;
+    }
+    .bottom-nav .nav-item.active {
+        width: auto;
+        min-width: 110px;
+        padding: 8px 14px;
+        flex: 1 1 auto;
+        display: inline-flex;
+        align-items: center;
+    }
+    .bottom-nav .nav-item.active .text {
+        opacity: 1;
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+
+    .top-pill { z-index: 40; position: relative; }
+    .top-pill.top-pill--nudge {
+        padding-top: calc(18px + env(safe-area-inset-top) + var(--tg-top-offset) + 18px);
+        transition: padding-top 240ms var(--anim-ease);
+    }
+
+    #avatarContainer, #userSwitchBtn {
+        position: relative;
+        z-index: 45;
+    }
+
+    .calendar-popup.align-right { transform: translateX(0) !important; }
+</style>
+
+<script>
+    (function(){
+        function onceReady(cb){
+            if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cb);
+            else cb();
+        }
+
+        onceReady(() => {
+            const monthLabel = document.getElementById('monthLabel');
+            const calendarPopup = document.getElementById('calendarPopup');
+
+            function clampCalendarPosition(){
+                if(!calendarPopup || !monthLabel) return;
+                const wasDisplay = calendarPopup.style.display;
+                const wasVisibility = calendarPopup.style.visibility;
+                const wasPosition = calendarPopup.style.position;
+                calendarPopup.style.visibility = 'hidden';
+                calendarPopup.style.display = 'block';
+                calendarPopup.style.position = 'fixed';
+
+                const viewportW = Math.max(window.innerWidth || document.documentElement.clientWidth, 320);
+                let popupW = calendarPopup.offsetWidth || calendarPopup.getBoundingClientRect().width;
+                const maxAllowed = Math.max(viewportW - 24, 200);
+                if(popupW > maxAllowed) {
+                    calendarPopup.style.width = (maxAllowed) + 'px';
+                    popupW = maxAllowed;
+                } else {
+                    calendarPopup.style.width = Math.min(popupW, maxAllowed) + 'px';
+                }
+
+                const r = monthLabel.getBoundingClientRect();
+                let centerX = r.left + r.width / 2;
+
+                const half = popupW / 2;
+                const minCenter = 12 + half;
+                const maxCenter = viewportW - 12 - half;
+                if(centerX < minCenter) centerX = minCenter;
+                if(centerX > maxCenter) centerX = maxCenter;
+
+                calendarPopup.style.left = (centerX) + 'px';
+                calendarPopup.style.transform = 'translateX(-50%)';
+                calendarPopup.classList.remove('align-right');
+
+                const rect = calendarPopup.getBoundingClientRect();
+                if(rect.left < 8) {
+                    const newLeft = half + 12;
+                    calendarPopup.style.left = newLeft + 'px';
+                }
+                if(rect.right > viewportW - 8) {
+                    const newLeft = viewportW - 12 - half;
+                    calendarPopup.style.left = newLeft + 'px';
+                    calendarPopup.style.transform = 'translateX(-50%)';
+                }
+                calendarPopup.style.display = wasDisplay;
+                calendarPopup.style.visibility = wasVisibility;
+                calendarPopup.style.position = wasPosition;
+            }
+
+            if(calendarPopup && monthLabel) {
+                const mo = new MutationObserver(clampCalendarPosition);
+                mo.observe(calendarPopup, { attributes: true, attributeFilter: ['style', 'class'] });
+                window.addEventListener('resize', clampCalendarPosition, { passive: true });
+                window.addEventListener('orientationchange', clampCalendarPosition, { passive: true });
+                window.addEventListener('scroll', clampCalendarPosition, { passive: true });
+                setTimeout(clampCalendarPosition, 80);
+            }
+
+            try {
+                const navItems = Array.from(document.querySelectorAll('.bottom-nav .nav-item'));
+                navItems.forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        if(item.classList.contains('active')) {
+                            return;
+                        }
+                        navItems.forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+                    });
+                });
+            } catch(e){ console.warn('nav items binding failed', e); }
+
+            try {
+                const topPill = document.querySelector('.top-pill');
+                const avatar = document.getElementById('avatarContainer');
+                function adjustTopPill(){
+                    if(!topPill || !avatar) return;
+                    const vh = Math.max(window.innerHeight || document.documentElement.clientHeight, 600);
+                    const avatarRect = avatar.getBoundingClientRect();
+                    if(vh >= 900 || avatarRect.top < 18) {
+                        topPill.classList.add('top-pill--nudge');
+                    } else {
+                        topPill.classList.remove('top-pill--nudge');
+                    }
+                }
+                adjustTopPill();
+                window.addEventListener('resize', adjustTopPill, { passive: true });
+                window.addEventListener('orientationchange', adjustTopPill, { passive: true });
+                const observer = new MutationObserver(adjustTopPill);
+                observer.observe(document.body, { childList:true, subtree:true, attributes:true });
+            } catch(e){ console.warn('top-pill adjust failed', e); }
+
+            setTimeout(() => {
+                try { clampCalendarPosition(); } catch(e) {}
+            }, 300);
+
+        });
+    })();
+</script>
 </body>
 </html>
