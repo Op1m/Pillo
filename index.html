@@ -451,16 +451,6 @@
         .med-card.swiping-left {
             background: linear-gradient(90deg, white, rgba(255,80,80,0.15));
         }
-        .med-card.swiped-right {
-            transform: translateX(60%);
-            opacity: 0;
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
-        .med-card.swiped-left {
-            transform: translateX(-60%);
-            opacity: 0;
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
         .med-icon {
             width: 50px;
             height: 50px;
@@ -1547,17 +1537,15 @@
             let cardTouchStartY = 0;
             let cardTouchStartTime = 0;
             let swiped = false;
-            let currentOffset = 0;
             let isSwiping = false;
 
             const onTouchStart = (e) => {
                 cardTouchStartX = e.touches[0].clientX;
                 cardTouchStartY = e.touches[0].clientY;
                 cardTouchStartTime = Date.now();
-                card.classList.remove('swiped-right', 'swiped-left', 'swiping-right', 'swiping-left');
+                card.classList.remove('swiping-right', 'swiping-left');
                 card.style.transition = 'none';
                 swiped = false;
-                currentOffset = 0;
                 isSwiping = false;
             };
 
@@ -1576,7 +1564,6 @@
                         card.classList.remove('swiping-right');
                     }
                     card.style.transform = `translateX(${dx}px)`;
-                    currentOffset = dx;
                 }
             };
 
@@ -1587,32 +1574,16 @@
                 card.style.transition = 'transform 0.2s ease';
 
                 if (Math.abs(diffX) > 50 && diffTime < 500) {
-                    swiped = true;
                     if (diffX > 0) {
-                        card.classList.add('swiped-right');
-                        setTimeout(() => {
-                            markReminderAsTaken(reminderId).then(() => {
-                                card.classList.remove('swiped-right');
-                                card.style.transition = '';
-                                card.style.transform = '';
-                            });
-                        }, 200);
+                        markReminderAsTaken(reminderId);
                     } else {
-                        card.classList.add('swiped-left');
-                        setTimeout(() => {
-                            markReminderAsSkipped(reminderId).then(() => {
-                                card.classList.remove('swiped-left');
-                                card.style.transition = '';
-                                card.style.transform = '';
-                            });
-                        }, 200);
+                        markReminderAsSkipped(reminderId);
                     }
-                } else {
-                    card.style.transform = 'translateX(0)';
-                    setTimeout(() => {
-                        card.style.transition = '';
-                    }, 200);
                 }
+                card.style.transform = 'translateX(0)';
+                setTimeout(() => {
+                    card.style.transition = '';
+                }, 200);
                 cardTouchStartX = 0;
             };
 
