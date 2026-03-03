@@ -2403,5 +2403,217 @@
         window.__perfHelpers = { pointerGesture, attachCardSwipe, attachDaySwipe, attachSheetDrag };
     })();
 </script>
+<style>
+    .nav-item {
+        padding-left: 10px;
+        padding-right: 10px;
+        transition: padding 280ms var(--anim-ease), box-shadow 280ms var(--anim-ease), background 280ms var(--anim-ease);
+        will-change: padding, box-shadow;
+    }
+    .nav-item .text {
+        opacity: 0;
+        transform: translateX(-6px);
+        transition: opacity 240ms var(--anim-ease), transform 240ms var(--anim-ease);
+        display: inline-block;
+        pointer-events: none;
+    }
+    .nav-item.active {
+        padding-left: 18px;
+        padding-right: 18px;
+        box-shadow: 0 10px 22px rgba(30,107,255,0.12);
+    }
+    .nav-item.active .text { opacity: 1; transform: translateX(0); pointer-events: auto; }
+
+    .group-arrow svg { transition: transform 320ms var(--anim-ease); transform-origin: center; }
+    .time-group.collapsed .group-arrow svg { transform: rotate(-180deg); }
+
+    .med-cards {
+        overflow: hidden;
+        max-height: 9999px;
+        transition: max-height 320ms var(--anim-ease), opacity 220ms var(--anim-ease);
+    }
+    .time-group.collapsed .med-cards { max-height: 0; opacity: 0; }
+
+    @keyframes rubber-return {
+        0% { transform: translateX(60%); }
+        55% { transform: translateX(-10%); }
+        85% { transform: translateX(4%); }
+        100% { transform: translateX(0); }
+    }
+    .med-card.swiped-right, .med-card.swiped-left {
+        animation: rubber-return 420ms cubic-bezier(0.2,0.9,0.3,1) both;
+        opacity: 1 !important;
+        transform: translateX(0) !important;
+    }
+
+    .med-card.is-dragging { box-shadow: 0 10px 24px rgba(12,36,80,0.08); transform-origin: left center; }
+
+    .calendar-popup {
+        transition: transform 220ms var(--anim-ease), opacity 220ms var(--anim-ease);
+        will-change: transform, left, top, opacity;
+    }
+
+    .bottom-sheet-detail {
+        transition: transform 320ms cubic-bezier(0.2,0.9,0.3,1);
+        will-change: transform;
+    }
+</style>
+
+<script>
+    (function(){
+        function onceReady(cb){
+            if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cb);
+            else cb();
+        }
+
+        onceReady(() => {
+            try {
+                const monthLabel = document.getElementById('monthLabel');
+                const calendarPopup = document.getElementById('calendarPopup');
+                if(monthLabel && calendarPopup){
+                    const reposition = () => {
+                        const style = getComputedStyle(calendarPopup);
+                        if(style.display === 'none') return;
+                        const r = monthLabel.getBoundingClientRect();
+                        calendarPopup.style.position = 'fixed';
+                        calendarPopup.style.left = (r.left + r.width/2) + 'px';
+                        calendarPopup.style.top = (r.bottom + 8) + 'px';
+                        calendarPopup.style.transform = 'translateX(-50%)';
+                    };
+                    const mo = new MutationObserver(() => reposition());
+                    mo.observe(calendarPopup, { attributes: true, attributeFilter: ['style', 'class'] });
+                    window.addEventListener('resize', reposition, {passive:true});
+                    window.addEventListener('scroll', reposition, {passive:true});
+                    reposition();
+                }
+            } catch(e){ console.warn('calendar reposition patch failed', e); }
+
+            try {
+                function bakeGroupHeights() {
+                    document.querySelectorAll('.time-group').forEach(group => {
+                        const cards = group.querySelector('.med-cards');
+                        if(!cards) return;
+                        const inner = cards.querySelector('.med-cards-inner');
+                        if(!inner) return;
+                        cards.style.maxHeight = '';
+                        const h = inner.scrollHeight;
+                        if(!group.classList.contains('collapsed')) {
+                            cards.style.maxHeight = (h + 16) + 'px';
+                            cards.style.opacity = '1';
+                        } else {
+                            cards.style.maxHeight = '0px';
+                            cards.style.opacity = '0';
+                        }
+                    });
+                }
+                const content = document.getElementById('content');
+                if(content){
+                    const mo2 = new MutationObserver(() => {
+                        clearTimeout(window.__groupHeightTimeout);
+                        window.__groupHeightTimeout = setTimeout(bakeGroupHeights, 40);
+                    });
+                    mo2.observe(content, { childList:true, subtree:true });
+                    bakeGroupHeights();
+                    window.addEventListener('resize', () => setTimeout(bakeGroupHeights, 70), {passive:true});
+                    document.addEventListener('click', (e) => {
+                        const header = e.target.closest('.group-header');
+                        if(!header) return;
+                        const group = header.closest('.time-group');
+                        if(!group) return;
+                        setTimeout(() => {
+                            const cards = group.querySelector('.med-cards');
+                            const inner = cards && cards.querySelector('.med-cards-inner');
+                            if(!cards || !inner) return;
+                            if(group.classList.contains('collapsed')) {
+                                cards.style.maxHeight = '0px';
+                                cards.style.opacity = '0';
+                            } else {
+                                const h = inner.scrollHeight;
+                                cards.style.maxHeight = (h + 16) + 'px';
+                                cards.style.opacity = '1';
+                            }
+                        }, 10);
+                    }, true);
+                }
+            } catch(e){ console.warn('group collapse patch failed', e); }
+
+            try {
+                function enhanceSheet(sheetElement, overlayElement){
+                    if(!sheetElement || sheetElement.__enhanced) return;
+                    sheetElement.__enhanced = true;
+                    let startY = 0, currentY = 0, dragging = false, pointerId = null;
+                    const onDown = (e) => {
+                        if(e.pointerType === 'mouse' && e.button !== 0) return;
+                        dragging = true;
+                        pointerId = e.pointerId;
+                        startY = e.clientY;
+                        currentY = startY;
+                        sheetElement.style.transition = 'none';
+                        sheetElement.setPointerCapture && sheetElement.setPointerCapture(pointerId);
+                    };
+                    const onMove = (e) => {
+                        if(!dragging || e.pointerId !== pointerId) return;
+                        currentY = e.clientY;
+                        const diff = Math.max(0, currentY - startY);
+                        sheetElement.style.transform = `translateY(${diff}px)`;
+                    };
+                    const onUp = (e) => {
+                        if(!dragging || e.pointerId !== pointerId) return;
+                        dragging = false;
+                        const diff = currentY - startY;
+                        sheetElement.style.transition = 'transform 320ms cubic-bezier(0.2,0.9,0.3,1)';
+                        if(diff > 90) {
+                            sheetElement.style.transform = 'translateY(110%)';
+                            if(overlayElement) {
+                                overlayElement.style.transition = 'opacity 260ms linear';
+                                overlayElement.style.opacity = '0';
+                                setTimeout(() => {
+                                    overlayElement.style.display = 'none';
+                                    if(overlayElement) overlayElement.style.opacity = '';
+                                }, 300);
+                            }
+                        } else {
+                            sheetElement.style.transform = '';
+                        }
+                        try { sheetElement.releasePointerCapture && sheetElement.releasePointerCapture(pointerId); } catch(e){}
+                        pointerId = null;
+                    };
+                    sheetElement.addEventListener('pointerdown', onDown, {passive:true});
+                    window.addEventListener('pointermove', onMove, {passive:true});
+                    window.addEventListener('pointerup', onUp, {passive:true});
+                }
+
+                const detail = document.getElementById('detailSheet');
+                const sheetOverlay = document.getElementById('sheetOverlay');
+                if(detail && sheetOverlay) enhanceSheet(detail, sheetOverlay);
+
+                const createSheetOverlay = document.getElementById('createMedSheet');
+                const createInner = createSheetOverlay && createSheetOverlay.querySelector('.bottom-sheet-detail');
+                if(createInner && createSheetOverlay) enhanceSheet(createInner, createSheetOverlay);
+            } catch(e){ console.warn('sheet enhancement failed', e); }
+
+            try {
+                document.addEventListener('pointerdown', (e) => {
+                    const card = e.target.closest && e.target.closest('.med-card');
+                    if(!card) return;
+                    card.classList.add('is-dragging');
+                    const onUp = () => { card.classList.remove('is-dragging'); window.removeEventListener('pointerup', onUp); };
+                    window.addEventListener('pointerup', onUp, {passive:true});
+                }, {passive:true});
+            } catch(e){ console.warn('med-card rubber patch failed', e); }
+
+            try {
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    if(item.classList.contains('active')){
+                        item.classList.add('force-text-visible');
+                        setTimeout(()=> item.classList.remove('force-text-visible'), 400);
+                    }
+                });
+            } catch(e){}
+
+        });
+    })();
+</script>
+
 </body>
 </html>
