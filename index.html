@@ -1632,21 +1632,84 @@
 
                 if (Math.abs(diffX) > 50 && diffTime < 500) {
                     if (diffX > 0) {
-                        markReminderAsTaken(reminderId);
+                        optimisticMarkTaken(reminderId, card);
                     } else {
-                        markReminderAsSkipped(reminderId);
+                        optimisticMarkSkipped(reminderId, card);
                     }
+                } else {
+                    card.style.transform = 'translateX(0)';
+                    setTimeout(() => {
+                        card.style.transition = '';
+                    }, 200);
                 }
-                card.style.transform = 'translateX(0)';
-                setTimeout(() => {
-                    card.style.transition = '';
-                }, 200);
                 cardTouchStartX = 0;
             };
 
             card.addEventListener('touchstart', onTouchStart, { passive: true });
             card.addEventListener('touchmove', onTouchMove, { passive: false });
             card.addEventListener('touchend', onTouchEnd, { passive: true });
+        }
+
+        function optimisticMarkTaken(reminderId, card) {
+            const reminder = reminders.find(r => r.id === reminderId);
+            if (!reminder) return;
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
+            if (!historyEntry) {
+                historyEntry = { reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
+                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                historyMap.get(dateKey).push(historyEntry);
+            } else {
+                historyEntry.status = 'taken';
+            }
+            card.classList.add('taken');
+            card.classList.remove('pending', 'skipped', 'missed');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
+            }
+            card.style.transform = 'translateX(0)';
+            setTimeout(() => { card.style.transition = ''; }, 200);
+            markReminderAsTaken(reminderId).catch(() => {
+                if (historyEntry) historyEntry.status = 'pending';
+                card.classList.remove('taken');
+                card.classList.add('pending');
+                const statusSpan = card.querySelector('.med-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                }
+            });
+        }
+
+        function optimisticMarkSkipped(reminderId, card) {
+            const reminder = reminders.find(r => r.id === reminderId);
+            if (!reminder) return;
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
+            if (!historyEntry) {
+                historyEntry = { reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
+                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                historyMap.get(dateKey).push(historyEntry);
+            } else {
+                historyEntry.status = 'skipped';
+            }
+            card.classList.add('skipped');
+            card.classList.remove('pending', 'taken', 'missed');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
+            }
+            card.style.transform = 'translateX(0)';
+            setTimeout(() => { card.style.transition = ''; }, 200);
+            markReminderAsSkipped(reminderId).catch(() => {
+                if (historyEntry) historyEntry.status = 'pending';
+                card.classList.remove('skipped');
+                card.classList.add('pending');
+                const statusSpan = card.querySelector('.med-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                }
+            });
         }
 
         (function tgUiHelper(){
@@ -2035,24 +2098,33 @@
             let history = getHistoryForReminder(reminder, selectedDay);
 
             if (!history) {
-                history = await apiFetch('/medicine-history/schedule', {
-                    method: 'POST',
-                    body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
-                });
+                try {
+                    history = await apiFetch('/medicine-history/schedule', {
+                        method: 'POST',
+                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
+                    });
+                } catch (err) {
+                    console.warn('Ошибка создания истории', err);
+                    return;
+                }
                 if (!history || !history.id) return;
                 const dateKey = selectedDay.toISOString().split('T')[0];
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
                 historyMap.get(dateKey).push(history);
             }
 
-            await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
-                method: 'PATCH',
-                body: JSON.stringify({ notes: '' })
-            });
+            try {
+                await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ notes: '' })
+                });
+            } catch (err) {
+                console.warn('Ошибка отметки принятия', err);
+                throw err;
+            }
 
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
-            await loadHistoryForDate(selectedDay);
         }
 
         async function markReminderAsSkipped(reminderId) {
@@ -2081,9 +2153,9 @@
                 });
 
                 historyCache.delete(dateKey);
-                await loadHistoryForDate(selectedDay);
             } catch (err) {
                 console.warn('Ошибка отметки пропуска', err);
+                throw err;
             }
         }
 
@@ -2101,14 +2173,20 @@
 
         takeBtn?.addEventListener('click', async () => {
             if (selectedReminderId) {
-                await markReminderAsTaken(selectedReminderId);
+                const card = document.querySelector(`.med-card[data-id="${selectedReminderId}"]`);
+                if (card) {
+                    optimisticMarkTaken(selectedReminderId, card);
+                }
                 if (sheetOverlay) sheetOverlay.style.display = 'none';
             }
         });
 
         skipBtn?.addEventListener('click', async () => {
             if (selectedReminderId) {
-                await markReminderAsSkipped(selectedReminderId);
+                const card = document.querySelector(`.med-card[data-id="${selectedReminderId}"]`);
+                if (card) {
+                    optimisticMarkSkipped(selectedReminderId, card);
+                }
                 if (sheetOverlay) sheetOverlay.style.display = 'none';
             }
         });
@@ -2157,7 +2235,11 @@
         $('takeAllConfirm')?.addEventListener('click', async () => {
             if (currentGroupTime) {
                 const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime||'').substring(0,5) === currentGroupTime);
-                for (const r of groupReminders) await markReminderAsTaken(r.id);
+                for (const r of groupReminders) {
+                    const card = document.querySelector(`.med-card[data-id="${r.id}"]`);
+                    if (card) optimisticMarkTaken(r.id, card);
+                }
+                await Promise.all(groupReminders.map(r => markReminderAsTaken(r.id).catch(err => console.warn(err))));
                 await loadHistoryForDate(selectedDay);
             }
             if (takeAllSheet) takeAllSheet.style.display = 'none';
@@ -2166,7 +2248,11 @@
         $('skipAllConfirm')?.addEventListener('click', async () => {
             if (currentGroupTime) {
                 const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime||'').substring(0,5) === currentGroupTime);
-                for (const r of groupReminders) await markReminderAsSkipped(r.id);
+                for (const r of groupReminders) {
+                    const card = document.querySelector(`.med-card[data-id="${r.id}"]`);
+                    if (card) optimisticMarkSkipped(r.id, card);
+                }
+                await Promise.all(groupReminders.map(r => markReminderAsSkipped(r.id).catch(err => console.warn(err))));
                 await loadHistoryForDate(selectedDay);
             }
             if (takeAllSheet) takeAllSheet.style.display = 'none';
@@ -2291,8 +2377,12 @@
 
         monthLabel?.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (calendarPopup) calendarPopup.style.display = 'block';
-            renderCalendar();
+            if (calendarPopup.style.display === 'block') {
+                calendarPopup.style.display = 'none';
+            } else {
+                calendarPopup.style.display = 'block';
+                renderCalendar();
+            }
         });
         document.addEventListener('click', (e) => {
             if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
