@@ -1483,7 +1483,6 @@
         const addChoiceSheet = $('addChoiceSheet');
         const createMedSheet = $('createMedSheet');
         const userSwitchSheet = $('userSwitchSheet');
-        const userSwitchInner = userSwitchSheet?.querySelector('.bottom-sheet-detail.user-switch-sheet') || userSwitchSheet?.querySelector('.bottom-sheet-detail');
         const userSwitchList = $('userSwitchList');
         const sheetOverlay = $('sheetOverlay');
         const detailSheet = $('detailSheet');
@@ -1525,6 +1524,92 @@
         let isSwipingOnCard = false;
         let isAnimatingDayChange = false;
 
+        // ---------- новые функции из эталона ----------
+        function getWeekDays(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = (day === 0 ? -6 : 1 - day);
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + diff);
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+                const D = new Date(monday);
+                D.setDate(monday.getDate() + i);
+                week.push(D);
+            }
+            return week;
+        }
+
+        function isSameWeek(date1, date2) {
+            const week1 = getWeekDays(date1);
+            const start = week1[0];
+            const end = week1[6];
+            const d2 = new Date(date2);
+            return d2 >= start && d2 <= end;
+        }
+
+        function changeDayWithAnimation(newDate, direction, animateWeek = false) {
+            if (isAnimatingDayChange) return;
+            if (direction === undefined) {
+                direction = newDate > currentDate ? 1 : -1;
+            }
+            isAnimatingDayChange = true;
+
+            const sameWeek = isSameWeek(currentDate, newDate);
+            const shouldAnimateWeek = animateWeek || !sameWeek;
+
+            const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
+            const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
+
+            if (shouldAnimateWeek) {
+                weekRow.style.opacity = '0';
+                weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
+            }
+            contentDiv.classList.add(outClass);
+            setTimeout(() => {
+                currentDate = newDate;
+                renderWeek(currentDate);
+                onDateSelected(currentDate).then(() => {
+                    if (shouldAnimateWeek) {
+                        weekRow.style.opacity = '1';
+                    }
+                    contentDiv.classList.remove(outClass);
+                    contentDiv.classList.add(inClass);
+                    setTimeout(() => {
+                        contentDiv.classList.remove(inClass);
+                        if (shouldAnimateWeek) {
+                            weekRow.style.transition = '';
+                        }
+                        isAnimatingDayChange = false;
+                    }, 250);
+                });
+            }, 250);
+        }
+
+        function renderWeek(centerDate) {
+            if (!weekRow) return;
+            const week = getWeekDays(centerDate);
+            weekRow.innerHTML = '';
+            const today = new Date();
+            week.forEach((day) => {
+                const chip = document.createElement('div');
+                chip.className = 'day-chip';
+                chip.dataset.date = day.toISOString().split('T')[0];
+                if (day.toDateString() === today.toDateString()) chip.classList.add('today');
+                if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
+                chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
+                chip.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
+                    chip.classList.add('selected');
+                    changeDayWithAnimation(day, undefined, false);
+                });
+                weekRow.appendChild(chip);
+            });
+            if (monthLabel) monthLabel.childNodes[0].nodeValue = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
+        }
+        // ---------------------------------------------
+
         contentDiv?.addEventListener('touchstart', (e) => {
             if (e.target.closest('.med-card')) {
                 return;
@@ -1545,192 +1630,178 @@
                 } else {
                     newDate.setDate(currentDate.getDate() + 1);
                 }
-                changeDayWithAnimation(newDate, diffX > 0 ? -1 : 1);
+                changeDayWithAnimation(newDate, diffX > 0 ? -1 : 1, false);
             }
             touchStartX = 0;
         }, { passive: true });
 
-        function changeDayWithAnimation(newDate, direction) {
-            if (isAnimatingDayChange) return;
-            if (direction === undefined) direction = newDate > currentDate ? 1 : -1;
-
-            const weekStart = (d) => {
-                const c = new Date(d);
-                const day = c.getDay();
-                const diff = (day === 0 ? -6 : 1 - day);
-                c.setDate(c.getDate() + diff);
-                c.setHours(0,0,0,0);
-                return c.toDateString();
-            };
-            const sameWeek = weekStart(newDate) === weekStart(currentDate);
-
-            isAnimatingDayChange = true;
-            const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
-            const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
-
-            if (sameWeek) {
-                const prev = weekRow && weekRow.querySelector('.day-chip.selected');
-                if (prev) prev.classList.remove('selected');
-                selectedDay = new Date(newDate);
-                const dateStr = selectedDay.toISOString().split('T')[0];
-                const newChip = weekRow && weekRow.querySelector(`.day-chip[data-date="${dateStr}"]`);
-                if (newChip) newChip.classList.add('selected');
-                contentDiv.classList.add(outClass);
-                setTimeout(() => {
-                    onDateSelected(selectedDay).then(() => {
-                        contentDiv.classList.remove(outClass);
-                        contentDiv.classList.add(inClass);
-                        setTimeout(() => {
-                            contentDiv.classList.remove(inClass);
-                            isAnimatingDayChange = false;
-                        }, 250);
-                    });
-                }, 10);
-            } else {
-                weekRow.style.opacity = '0';
-                weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
-                contentDiv.classList.add(outClass);
-                setTimeout(() => {
-                    currentDate = new Date(newDate);
-                    renderWeek(currentDate);
-                    onDateSelected(currentDate).then(() => {
-                        weekRow.style.opacity = '1';
-                        contentDiv.classList.remove(outClass);
-                        contentDiv.classList.add(inClass);
-                        setTimeout(() => {
-                            contentDiv.classList.remove(inClass);
-                            weekRow.style.transition = '';
-                            isAnimatingDayChange = false;
-                        }, 250);
-                    });
-                }, 250);
-            }
-        }
-
         function attachSwipeToCard(card, reminderId) {
-            if (!('ontouchstart' in window)) return;
+            let cardTouchStartX = 0;
+            let cardTouchStartY = 0;
+            let cardTouchStartTime = 0;
+            let swiped = false;
+            let isSwiping = false;
 
-            let startX = 0;
-            let startY = 0;
-            let startTime = 0;
-            let swiping = false;
-
-            card.addEventListener('touchstart', (e) => {
-                const t = e.touches[0];
-                startX = t.clientX;
-                startY = t.clientY;
-                startTime = Date.now();
-                swiping = false;
+            const onTouchStart = (e) => {
+                if (card.dataset.processing === 'true') return;
+                cardTouchStartX = e.touches[0].clientX;
+                cardTouchStartY = e.touches[0].clientY;
+                cardTouchStartTime = Date.now();
+                card.classList.remove('swiping-right', 'swiping-left');
                 card.style.transition = 'none';
-            }, { passive: true });
+                swiped = false;
+                isSwiping = false;
+            };
 
-            card.addEventListener('touchmove', (e) => {
-                const t = e.touches[0];
-                const dx = t.clientX - startX;
-                const dy = t.clientY - startY;
-
+            const onTouchMove = (e) => {
+                if (swiped || card.dataset.processing === 'true') return;
+                const dx = e.touches[0].clientX - cardTouchStartX;
+                const dy = e.touches[0].clientY - cardTouchStartY;
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-                    swiping = true;
                     e.preventDefault();
-                    card.style.transform = `translateX(${dx}px)`;
-                }
-            }, { passive: false });
+                    isSwiping = true;
 
-            card.addEventListener('touchend', (e) => {
-                const dx = e.changedTouches[0].clientX - startX;
-                const dt = Date.now() - startTime;
+                    const maxDrag = 80;
+                    let limitedDx = dx;
 
-                card.style.transition = 'transform 200ms ease';
+                    if (Math.abs(dx) > maxDrag) {
+                        const sign = dx > 0 ? 1 : -1;
+                        const excess = Math.abs(dx) - maxDrag;
+                        limitedDx = sign * (maxDrag + excess * 0.25);
+                    }
 
-                if (swiping && Math.abs(dx) > 60) {
                     if (dx > 0) {
+                        card.classList.add('swiping-right');
+                        card.classList.remove('swiping-left');
+                    } else {
+                        card.classList.add('swiping-left');
+                        card.classList.remove('swiping-right');
+                    }
+
+                    card.style.transform = `translateX(${limitedDx}px)`;
+                }
+            };
+
+            const onTouchEnd = (e) => {
+                if (card.dataset.processing === 'true') return;
+                const diffX = e.changedTouches[0].clientX - cardTouchStartX;
+                const diffTime = Date.now() - cardTouchStartTime;
+                card.classList.remove('swiping-right', 'swiping-left');
+                card.style.transition = 'transform 0.2s ease';
+
+                if (Math.abs(diffX) > 50 && diffTime < 500) {
+                    card.dataset.processing = 'true';
+                    if (diffX > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
                         optimisticMarkSkipped(reminderId, card);
                     }
+                } else {
+                    card.style.transform = 'translateX(0)';
+                    setTimeout(() => {
+                        card.style.transition = '';
+                    }, 200);
                 }
+                cardTouchStartX = 0;
+            };
 
-                card.style.transform = 'translateX(0)';
-                setTimeout(() => {
-                    card.style.transition = '';
-                }, 200);
-            }, { passive: true });
+            card.addEventListener('touchstart', onTouchStart, { passive: true });
+            card.addEventListener('touchmove', onTouchMove, { passive: false });
+            card.addEventListener('touchend', onTouchEnd, { passive: true });
         }
 
         function optimisticMarkTaken(reminderId, card) {
-            const rid = String(reminderId);
-            const reminder = reminders.find(r => String(r.id) === rid) || null;
+            if (!card) {
+                card = document.querySelector(`.med-card[data-id="${reminderId}"]`);
+                if (!card) return;
+            }
+            if (card.dataset.processing === 'true') return;
+            card.dataset.processing = 'true';
+
+            const reminder = reminders.find(r => String(r.id) === reminderId);
+            if (!reminder) {
+                card.style.transform = 'translateX(0)';
+                card.style.transition = '';
+                delete card.dataset.processing;
+                return;
+            }
             const dateKey = selectedDay.toISOString().split('T')[0];
-            historyCache.delete(dateKey);
-            let histories = historyMap.get(dateKey) || [];
-            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && String(h.reminder.id) === reminderId);
             if (!historyEntry) {
-                historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
-                histories.push(historyEntry);
-                historyMap.set(dateKey, histories);
+                historyEntry = { reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
+                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                historyMap.get(dateKey).push(historyEntry);
             } else {
                 historyEntry.status = 'taken';
             }
-            if (card) {
-                card.classList.add('taken');
-                card.classList.remove('pending', 'skipped', 'missed');
-                const statusSpan = card.querySelector('.med-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
-                }
-                card.style.transform = 'translateX(0)';
-                setTimeout(()=>{ card.style.transition = ''; }, 200);
+            card.classList.add('taken');
+            card.classList.remove('pending', 'skipped', 'missed');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
             }
-            markReminderAsTaken(reminderId).catch(() => {
-                if (historyEntry) historyEntry.status = 'pending';
-                if (card) {
+            card.style.transform = 'translateX(0)';
+            setTimeout(() => { card.style.transition = ''; }, 200);
+            markReminderAsTaken(reminderId)
+                .catch(() => {
+                    if (historyEntry) historyEntry.status = 'pending';
                     card.classList.remove('taken');
                     card.classList.add('pending');
                     const statusSpan = card.querySelector('.med-status');
                     if (statusSpan) {
-                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
                     }
-                    card.style.transition = '';
-                }
-            });
+                })
+                .finally(() => {
+                    delete card.dataset.processing;
+                });
         }
 
         function optimisticMarkSkipped(reminderId, card) {
-            const rid = String(reminderId);
-            const reminder = reminders.find(r => String(r.id) === rid) || null;
+            if (!card) {
+                card = document.querySelector(`.med-card[data-id="${reminderId}"]`);
+                if (!card) return;
+            }
+            if (card.dataset.processing === 'true') return;
+            card.dataset.processing = 'true';
+
+            const reminder = reminders.find(r => String(r.id) === reminderId);
+            if (!reminder) {
+                card.style.transform = 'translateX(0)';
+                card.style.transition = '';
+                delete card.dataset.processing;
+                return;
+            }
             const dateKey = selectedDay.toISOString().split('T')[0];
-            historyCache.delete(dateKey);
-            let histories = historyMap.get(dateKey) || [];
-            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && String(h.reminder.id) === reminderId);
             if (!historyEntry) {
-                historyEntry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
-                histories.push(historyEntry);
-                historyMap.set(dateKey, histories);
+                historyEntry = { reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
+                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                historyMap.get(dateKey).push(historyEntry);
             } else {
                 historyEntry.status = 'skipped';
             }
-            if (card) {
-                card.classList.add('skipped');
-                card.classList.remove('pending', 'taken', 'missed');
-                const statusSpan = card.querySelector('.med-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
-                }
-                card.style.transform = 'translateX(0)';
-                setTimeout(()=>{ card.style.transition = ''; }, 200);
+            card.classList.add('skipped');
+            card.classList.remove('pending', 'taken', 'missed');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
             }
-            markReminderAsSkipped(reminderId).catch(() => {
-                if (historyEntry) historyEntry.status = 'pending';
-                if (card) {
+            card.style.transform = 'translateX(0)';
+            setTimeout(() => { card.style.transition = ''; }, 200);
+            markReminderAsSkipped(reminderId)
+                .catch(() => {
+                    if (historyEntry) historyEntry.status = 'pending';
                     card.classList.remove('skipped');
                     card.classList.add('pending');
                     const statusSpan = card.querySelector('.med-status');
                     if (statusSpan) {
-                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
                     }
-                    card.style.transition = '';
-                }
-            });
+                })
+                .finally(() => {
+                    delete card.dataset.processing;
+                });
         }
 
         (function tgUiHelper(){
@@ -1740,22 +1811,27 @@
             document.documentElement.style.setProperty('--tg-top-offset', '0px');
 
             function computeOffset() {
-                const vv = window.visualViewport;
+                const tg = window.Telegram?.WebApp;
                 let offset = 0;
-                if (vv && typeof vv.offsetTop === 'number') {
-                    offset = Math.max(0, Math.round(vv.offsetTop));
+                if (tg && typeof tg.contentSafeAreaInset?.top === 'number') {
+                    offset = Math.max(0, Math.round(tg.contentSafeAreaInset.top));
                 } else {
-                    const app = document.querySelector(appElSelector);
-                    if (app) {
-                        const r = app.getBoundingClientRect();
-                        if (r.top > 0) offset = Math.round(r.top);
-                    }
-                    if (!offset && window.outerHeight && window.innerHeight) {
-                        const diff = Math.max(0, Math.round(window.outerHeight - window.innerHeight));
-                        if (diff > 20) offset = diff;
+                    const vv = window.visualViewport;
+                    if (vv && typeof vv.offsetTop === 'number') {
+                        offset = Math.max(0, Math.round(vv.offsetTop));
+                    } else {
+                        const app = document.querySelector(appElSelector);
+                        if (app) {
+                            const r = app.getBoundingClientRect();
+                            if (r.top > 0) offset = Math.round(r.top);
+                        }
+                        if (!offset && window.outerHeight && window.innerHeight) {
+                            const diff = Math.max(0, Math.round(window.outerHeight - window.innerHeight));
+                            if (diff > 20) offset = diff;
+                        }
                     }
                 }
-                return offset;
+                return Math.max(10, offset);
             }
 
             function applyOffset() {
@@ -1929,15 +2005,9 @@
         function getStatusForReminderOnDate(reminder, date) {
             const dateKey = date.toISOString().split('T')[0];
             const histories = historyMap.get(dateKey) || [];
-
-            const history = histories.find(h =>
-                h.reminder &&
-                String(h.reminder.id) === String(reminder.id)
-            );
-
-            if (!history) return 'pending';
-
-            return (history.status || 'pending').toLowerCase();
+            const entry = histories.find(h => h.reminder && String(h.reminder.id) === String(reminder.id));
+            if (entry && entry.status) return String(entry.status).toLowerCase();
+            return 'pending';
         }
 
         function renderGroupsForDate(date) {
@@ -2085,20 +2155,6 @@
 
         async function createMedicineAndReminder(name, dosage, time, food) {
             if (!currentUser) return;
-            const tmpId = 'tmp-' + Date.now();
-            const tempReminder = {
-                id: tmpId,
-                medicine: { id: null, name, dosage, instructions: food },
-                reminderTime: time,
-                userId: currentUser.id,
-                daysOfWeek: 'everyday'
-            };
-            reminders.push(tempReminder);
-            remindersCache.data = reminders;
-            remindersCache.timestamp = Date.now();
-            try {
-                renderGroupsForDate(selectedDay);
-            } catch (e) {}
             try {
                 const medicine = await apiFetch('/medicines', {
                     method: 'POST',
@@ -2113,17 +2169,12 @@
                         daysOfWeek: 'everyday'
                     }),
                 });
-                const idx = reminders.findIndex(r => r.id === tmpId);
-                if (idx !== -1) reminders[idx] = reminder;
-                else reminders.push(reminder);
+                reminders.push(reminder);
                 remindersCache.data = reminders;
                 remindersCache.timestamp = Date.now();
                 await loadHistoryForDate(selectedDay);
             } catch (err) {
-                reminders = reminders.filter(r => r.id !== tmpId);
-                remindersCache.data = reminders;
-                remindersCache.timestamp = Date.now();
-                await loadHistoryForDate(selectedDay).catch(()=>{});
+                console.warn('Ошибка создания', err);
             }
         }
 
@@ -2134,36 +2185,14 @@
         }
 
         async function markReminderAsTaken(reminderId) {
-            const rid = String(reminderId);
-            const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
+            const reminder = reminders.find(r => String(r.id) === reminderId);
+            if (!reminder) return;
+
+            const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
             const scheduledTime = new Date(selectedDay);
             scheduledTime.setHours(hour, minute, 0, 0);
 
-            let history = null;
-            const dateKey = selectedDay.toISOString().split('T')[0];
-            const histories = historyMap.get(dateKey) || [];
-            history = histories.find(h => h.reminder && String(h.reminder.id) === rid);
-
-            if (history && !history.id) {
-                try {
-                    const created = await apiFetch('/medicine-history/schedule', {
-                        method: 'POST',
-                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
-                    });
-                    if (created && created.id) {
-                        history.id = created.id;
-                        Object.assign(history, created);
-                    }
-                } catch (err) {
-                    console.warn('Ошибка отметки принятия', err);
-                    try {
-                        const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
-                        alert('Не удалось отметить принятие: ' + msg);
-                    } catch(e){}
-                    throw err;
-                }
-            }
+            let history = getHistoryForReminder(reminder, selectedDay);
 
             if (!history) {
                 try {
@@ -2173,80 +2202,64 @@
                     });
                 } catch (err) {
                     console.warn('Ошибка создания истории', err);
-                    throw err;
+                    return;
                 }
-                if (!history || !history.id) throw new Error('Не удалось создать историю');
+                if (!history || !history.id) return;
+                const dateKey = selectedDay.toISOString().split('T')[0];
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
                 historyMap.get(dateKey).push(history);
             }
 
-            await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
-                method: 'PATCH',
-                body: JSON.stringify({ notes: '' })
-            });
+            try {
+                await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ notes: '' })
+                });
+            } catch (err) {
+                console.warn('Ошибка отметки принятия', err);
+                throw err;
+            }
 
+            const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
         }
 
         async function markReminderAsSkipped(reminderId) {
-            const rid = String(reminderId);
-            const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
-            const scheduledTime = new Date(selectedDay);
-            scheduledTime.setHours(hour, minute, 0, 0);
+            try {
+                const reminder = reminders.find(r => String(r.id) === reminderId);
+                if (!reminder) return;
 
-            let history = null;
-            const dateKey = selectedDay.toISOString().split('T')[0];
-            const histories = historyMap.get(dateKey) || [];
-            history = histories.find(h => h.reminder && String(h.reminder.id) === rid);
-
-            if (history && !history.id) {
-                try {
-                    const created = await apiFetch('/medicine-history/schedule', {
+                const dateKey = selectedDay.toISOString().split('T')[0];
+                let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && String(h.reminder.id) === reminderId);
+                if (!historyEntry) {
+                    const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
+                    const scheduledTime = new Date(selectedDay);
+                    scheduledTime.setHours(hour, minute, 0, 0);
+                    historyEntry = await apiFetch('/medicine-history/schedule', {
                         method: 'POST',
                         body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
                     });
-                    if (created && created.id) {
-                        history.id = created.id;
-                        Object.assign(history, created);
-                    }
-                } catch (err) {
-                    console.warn('Ошибка отметки пропуска', err);
-                    try {
-                        const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
-                        alert('Не удалось отметить пропуск: ' + msg);
-                    } catch(e){}
-                    throw err;
+                    if (!historyEntry || !historyEntry.id) return;
+                    if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                    historyMap.get(dateKey).push(historyEntry);
                 }
+
+                await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({})
+                });
+
+                historyCache.delete(dateKey);
+            } catch (err) {
+                console.warn('Ошибка отметки пропуска', err);
+                throw err;
             }
-
-            if (!history) {
-                try {
-                    history = await apiFetch('/medicine-history/schedule', {
-                        method: 'POST',
-                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
-                    });
-                } catch (err) {
-                    console.warn('Ошибка создания истории', err);
-                    throw err;
-                }
-                if (!history || !history.id) throw new Error('Не удалось создать историю');
-                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                historyMap.get(dateKey).push(history);
-            }
-
-            await apiFetch(`/medicine-history/${history.id}/mark-skipped`, {
-                method: 'PATCH',
-                body: JSON.stringify({})
-            });
-
-            historyCache.delete(dateKey);
         }
 
         async function deleteReminder(reminderId) {
             try {
                 await apiFetch(`/reminders/${reminderId}`, { method: 'DELETE' });
-                reminders = reminders.filter(r => r.id !== reminderId);
+                reminders = reminders.filter(r => String(r.id) !== reminderId);
                 remindersCache.data = reminders;
                 remindersCache.timestamp = Date.now();
                 await loadHistoryForDate(selectedDay);
@@ -2377,67 +2390,6 @@
         infoCreateMed?.addEventListener('click', () => {  });
         createMedSheet?.addEventListener('click', (e) => { if (e.target === createMedSheet) closeCreateSheet(); });
 
-        function getWeekDays(date) {
-            const d = new Date(date);
-            const day = d.getDay();
-            const diff = (day === 0 ? -6 : 1 - day);
-            const monday = new Date(d);
-            monday.setDate(d.getDate() + diff);
-            const week = [];
-            for (let i = 0; i < 7; i++) {
-                const D = new Date(monday);
-                D.setDate(monday.getDate() + i);
-                week.push(D);
-            }
-            return week;
-        }
-
-        function renderWeek(centerDate) {
-            if (!weekRow) return;
-
-            weekRow.innerHTML = '';
-
-            const center = new Date(centerDate);
-            const wday = center.getDay();
-            const start = new Date(center);
-            const diff = (wday === 0 ? -6 : 1 - wday);
-            start.setDate(center.getDate() + diff);
-
-            for (let i = 0; i < 7; i++) {
-                const day = new Date(start);
-                day.setDate(start.getDate() + i);
-
-                const chip = document.createElement('div');
-                chip.className = 'day-chip';
-                chip.dataset.date = day.toISOString().split('T')[0];
-
-                chip.innerHTML = `
-            <div class="dow">
-                ${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2)}
-            </div>
-            <div class="dom">
-                ${day.getDate()}
-            </div>
-        `;
-
-                if (selectedDay && day.toDateString() === selectedDay.toDateString()) {
-                    chip.classList.add('selected');
-                }
-
-                chip.addEventListener('click', () => {
-                    changeDayWithAnimation(new Date(day));
-                });
-
-                weekRow.appendChild(chip);
-            }
-
-            if (monthLabel) {
-                monthLabel.childNodes[0].nodeValue =
-                    center.toLocaleString('ru', { month: 'long', year: 'numeric' })
-                        .replace(' г.', '') + ' ';
-            }
-        }
-
         let calDate = new Date();
 
         function renderCalendar() {
@@ -2461,7 +2413,7 @@
                 cell.addEventListener('click', () => {
                     document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
-                    changeDayWithAnimation(new Date(year, month, d));
+                    changeDayWithAnimation(new Date(year, month, d), undefined, false);
                     if (calendarPopup) calendarPopup.style.display = 'none';
                 });
                 calGrid.appendChild(cell);
@@ -2476,25 +2428,30 @@
         $('prevWeek')?.addEventListener('click', () => {
             let newDate = new Date(currentDate);
             newDate.setDate(currentDate.getDate() - 7);
-            changeDayWithAnimation(newDate, -1);
+            changeDayWithAnimation(newDate, -1, true);
         });
         $('nextWeek')?.addEventListener('click', () => {
             let newDate = new Date(currentDate);
             newDate.setDate(currentDate.getDate() + 7);
-            changeDayWithAnimation(newDate, 1);
+            changeDayWithAnimation(newDate, 1, true);
         });
 
         monthLabel?.addEventListener('click', (e) => {
             e.stopPropagation();
             if (calendarPopup.style.display === 'block') {
                 calendarPopup.style.display = 'none';
+                monthLabel.classList.remove('calendar-open');
             } else {
                 calendarPopup.style.display = 'block';
+                monthLabel.classList.add('calendar-open');
                 renderCalendar();
             }
         });
         document.addEventListener('click', (e) => {
-            if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
+            if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) {
+                calendarPopup.style.display = 'none';
+                monthLabel.classList.remove('calendar-open');
+            }
         });
         $('calPrevMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() - 1); renderCalendar(); });
         $('calNextMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() + 1); renderCalendar(); });
@@ -2633,53 +2590,14 @@
             return ()=>handlers.destroy();
         }
 
-        (function attachDetailButtons() {
-            document.addEventListener('click', (e) => {
-                const takeBtn = e.target.closest && e.target.closest('.take-btn, .btn-take, .accept-btn');
-                const skipBtn = e.target.closest && e.target.closest('.skip-btn, .btn-skip, .decline-btn');
-                if (takeBtn) {
-                    const rid = takeBtn.getAttribute('data-reminder-id') || takeBtn.dataset.reminderId;
-                    if (!rid) { alert('Ошибка: id напоминания не найден у кнопки "Принять"'); return; }
-                    const card = findCardByReminderId(rid);
-                    optimisticMarkTaken(rid, card);
-                }
-                if (skipBtn) {
-                    const rid = skipBtn.getAttribute('data-reminder-id') || skipBtn.dataset.reminderId;
-                    if (!rid) { alert('Ошибка: id напоминания не найден у кнопки "Пропустить"'); return; }
-                    const card = findCardByReminderId(rid);
-                    optimisticMarkSkipped(rid, card);
-                }
-            }, { passive: true });
-        })();
-
-        (function attachDaySwipe() {
-            const el = contentDiv || document.body;
-            let startX = 0, startY = 0, tracking = false, moved = false, isPointer = false;
-            const onStart = (x, y) => { startX = x; startY = y; tracking = true; moved = false; };
-            const onMove = (x, y) => { if (!tracking) return; if (Math.abs(x - startX) > 8 || Math.abs(y - startY) > 8) moved = true; };
-            const onEnd = (endX, endY) => {
-                if (!tracking) return;
-                tracking = false;
-                if (!moved) return;
-                const dx = endX - startX;
-                const dy = endY - startY;
-                if (Math.abs(dx) > 50 && Math.abs(dy) < 80) {
-                    const direction = dx < 0 ? 1 : -1;
-                    const newDate = new Date(currentDate);
-                    newDate.setDate(currentDate.getDate() + direction);
-                    changeDayWithAnimation(newDate, direction, true);
-                }
-            };
-
-            el.addEventListener('pointerdown', (e) => { isPointer = true; onStart(e.clientX, e.clientY); }, { passive: true });
-            el.addEventListener('pointermove', (e) => { if (isPointer) onMove(e.clientX, e.clientY); }, { passive: true });
-            el.addEventListener('pointerup', (e) => { if (isPointer) { onEnd(e.clientX, e.clientY); isPointer = false; } }, { passive: true });
-            el.addEventListener('pointercancel', () => { tracking = false; isPointer = false; }, { passive: true });
-
-            el.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
-            el.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
-            el.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; onEnd(t.clientX, t.clientY); }, { passive: true });
-        })();
+        function attachDaySwipe(container, onDir){
+            if(!container) return ()=>{};
+            let sX=0, sY=0, sT=0, tracking=false;
+            container.addEventListener('pointerdown', (e)=>{ sX=e.clientX; sY=e.clientY; sT=Date.now(); tracking=true; }, {passive:true});
+            container.addEventListener('pointermove', (e)=>{ if(!tracking) return; const dx = e.clientX - sX; const dy = e.clientY - sY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>30){  } }, {passive:true});
+            container.addEventListener('pointerup', (e)=>{ if(!tracking) return; tracking=false; const dx = e.clientX - sX; const dt = Date.now()-sT; if(Math.abs(dx)>80 && dt<600){ onDir && onDir(dx>0? -1:1); } }, {passive:true});
+            return ()=>{};
+        }
 
         function attachSheetDrag(overlay, sheet){
             if(!overlay || !sheet) return ()=>{};
@@ -2782,10 +2700,6 @@
                 function enhanceSheet(sheetElement, overlayElement){
                     if(!sheetElement || sheetElement.__enhanced) return;
                     sheetElement.__enhanced = true;
-
-                    sheetElement.querySelectorAll('*').forEach(el => {
-                        el.style.touchAction = 'none';
-                    });
 
                     let startY = 0, currentY = 0, dragging = false, pointerId = null;
                     const onDown = (e) => {
