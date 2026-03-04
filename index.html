@@ -1575,6 +1575,7 @@
                 const dateStr = selectedDay.toISOString().split('T')[0];
                 const newChip = weekRow && weekRow.querySelector(`.day-chip[data-date="${dateStr}"]`);
                 if (newChip) newChip.classList.add('selected');
+                currentDate = new Date(newDate);
                 contentDiv.classList.add(outClass);
                 setTimeout(() => {
                     onDateSelected(selectedDay).then(() => {
@@ -1731,6 +1732,54 @@
                     card.style.transition = '';
                 }
             });
+        }
+
+        async function optimisticDeleteReminder(reminderId) {
+            if (!reminderId) return;
+
+            const rid = String(reminderId);
+            const card = document.querySelector(`.med-card[data-id="${rid}"]`);
+
+            const reminderIndex = reminders.findIndex(r => String(r.id) === rid);
+            if (reminderIndex === -1) return;
+            const deletedReminder = reminders[reminderIndex];
+
+            if (card) {
+                card.style.transition = 'transform 0.2s ease, opacity 0.2s ease';
+                card.style.transform = 'translateX(100%)';
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    if (card.parentNode) card.remove();
+                }, 200);
+            }
+
+            reminders.splice(reminderIndex, 1);
+            remindersCache.data = reminders;
+            remindersCache.timestamp = Date.now();
+
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            const histories = historyMap.get(dateKey);
+            if (histories) {
+                const newHistories = histories.filter(h => h.reminder && String(h.reminder.id) !== rid);
+                historyMap.set(dateKey, newHistories);
+                historyCache.delete(dateKey);
+            }
+
+            try {
+                await apiFetch(`/reminders/${reminderId}`, { method: 'DELETE' });
+                await loadHistoryForDate(selectedDay);
+            } catch (err) {
+                console.warn('Ошибка удаления, откат', err);
+                reminders.push(deletedReminder);
+                remindersCache.data = reminders;
+                remindersCache.timestamp = Date.now();
+
+                if (histories) {
+                }
+
+                await loadHistoryForDate(selectedDay);
+                alert('Не удалось удалить препарат');
+            }
         }
 
         (function tgUiHelper(){
@@ -2277,11 +2326,11 @@
 
         deleteBtn?.addEventListener('click', () => {
             if (selectedReminderId && confirm('Удалить этот препарат?')) {
-                deleteReminder(selectedReminderId);
+                optimisticDeleteReminder(selectedReminderId);
                 if (sheetOverlay) sheetOverlay.style.display = 'none';
             }
         });
-
+        
         postponeBtn?.addEventListener('click', () => {  });
         editMed?.addEventListener('click', () => {  });
         btnBack?.addEventListener('click', () => { if (sheetOverlay) sheetOverlay.style.display = 'none'; });
@@ -2394,24 +2443,48 @@
 
         function renderWeek(centerDate) {
             if (!weekRow) return;
-            const week = getWeekDays(centerDate);
+
             weekRow.innerHTML = '';
-            const today = new Date();
-            week.forEach((day) => {
+
+            const center = new Date(centerDate);
+            const wday = center.getDay();
+            const start = new Date(center);
+            const diff = (wday === 0 ? -6 : 1 - wday);
+            start.setDate(center.getDate() + diff);
+
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(start);
+                day.setDate(start.getDate() + i);
+
                 const chip = document.createElement('div');
                 chip.className = 'day-chip';
                 chip.dataset.date = day.toISOString().split('T')[0];
-                if (day.toDateString() === today.toDateString()) chip.classList.add('today');
-                if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
-                chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
-                chip.addEventListener('click', () => {
-                    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
+
+                chip.innerHTML = `
+            <div class="dow">
+                ${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2)}
+            </div>
+            <div class="dom">
+                ${day.getDate()}
+            </div>
+        `;
+
+                if (selectedDay && day.toDateString() === selectedDay.toDateString()) {
                     chip.classList.add('selected');
-                    changeDayWithAnimation(day, undefined, false);
+                }
+
+                chip.addEventListener('click', () => {
+                    changeDayWithAnimation(new Date(day));
                 });
+
                 weekRow.appendChild(chip);
-            });
-            if (monthLabel) monthLabel.childNodes[0].nodeValue = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
+            }
+
+            if (monthLabel) {
+                monthLabel.childNodes[0].nodeValue =
+                    center.toLocaleString('ru', { month: 'long', year: 'numeric' })
+                        .replace(' г.', '') + ' ';
+            }
         }
 
         let calDate = new Date();
