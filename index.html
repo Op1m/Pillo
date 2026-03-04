@@ -145,7 +145,11 @@
             width: 20px;
             height: 20px;
             fill: #2d5980;
-            transition: fill var(--anim-duration) var(--anim-ease);
+            transition: transform 0.3s var(--anim-ease);
+            transform-origin: center;
+        }
+        .month-left.calendar-open svg {
+            transform: rotate(180deg);
         }
         .month-nav {
             display: flex;
@@ -308,7 +312,7 @@
         .content {
             flex: 1;
             overflow-y: auto;
-            padding: 0 16px 8px;
+            padding: 0 16px 80px;
             scrollbar-width: thin;
             transition: padding var(--anim-duration) var(--anim-ease);
             position: relative;
@@ -1083,7 +1087,7 @@
             .day-chip { border-radius: 22px; }
             .day-number { font-size: 22px; }
             .day-name { font-size: 13px; }
-            .content { padding: 0 30px 12px; }
+            .content { padding: 0 30px 80px; }
             .group-time { font-size: 26px; }
             .group-arrow svg { width: 26px; height: 26px; }
             .group-header .btn-outline { font-size: 15px; padding: 6px 16px; }
@@ -1549,29 +1553,74 @@
             touchStartX = 0;
         }, { passive: true });
 
-        function changeDayWithAnimation(newDate, direction) {
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = (day === 0 ? -6 : 1 - day);
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + diff);
+            monday.setHours(0,0,0,0);
+            return monday;
+        }
+
+        function updateMonthLabel(date) {
+            if (monthLabel) {
+                monthLabel.childNodes[0].nodeValue = date.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
+            }
+        }
+
+        function updateSelectedDayInWeek(date) {
+            const chips = document.querySelectorAll('.day-chip');
+            const dateStr = date.toISOString().split('T')[0];
+            chips.forEach(chip => {
+                if (chip.dataset.date === dateStr) {
+                    chip.classList.add('selected');
+                } else {
+                    chip.classList.remove('selected');
+                }
+            });
+        }
+
+        function changeDayWithAnimation(newDate, direction, animateWeek = false) {
             if (isAnimatingDayChange) return;
             if (direction === undefined) {
                 direction = newDate > currentDate ? 1 : -1;
             }
+            const oldWeekStart = getWeekStart(currentDate);
+            const newWeekStart = getWeekStart(newDate);
+            const weekChanged = oldWeekStart.getTime() !== newWeekStart.getTime();
+
             isAnimatingDayChange = true;
 
             const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
             const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
 
-            weekRow.style.opacity = '0';
-            weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
+            if (weekChanged) {
+                weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
+                weekRow.style.opacity = '0';
+            }
+
             contentDiv.classList.add(outClass);
             setTimeout(() => {
                 currentDate = newDate;
-                renderWeek(currentDate);
-                onDateSelected(currentDate).then(() => {
+                selectedDay = newDate;
+
+                if (weekChanged) {
+                    renderWeek(currentDate);
                     weekRow.style.opacity = '1';
+                } else {
+                    updateSelectedDayInWeek(currentDate);
+                }
+                updateMonthLabel(currentDate);
+
+                onDateSelected(currentDate).then(() => {
                     contentDiv.classList.remove(outClass);
                     contentDiv.classList.add(inClass);
                     setTimeout(() => {
                         contentDiv.classList.remove(inClass);
-                        weekRow.style.transition = '';
+                        if (weekChanged) {
+                            weekRow.style.transition = '';
+                        }
                         isAnimatingDayChange = false;
                     }, 250);
                 });
@@ -1586,6 +1635,7 @@
             let isSwiping = false;
 
             const onTouchStart = (e) => {
+                if (card.dataset.processing === 'true') return;
                 cardTouchStartX = e.touches[0].clientX;
                 cardTouchStartY = e.touches[0].clientY;
                 cardTouchStartTime = Date.now();
@@ -1596,7 +1646,7 @@
             };
 
             const onTouchMove = (e) => {
-                if (swiped) return;
+                if (swiped || card.dataset.processing === 'true') return;
                 const dx = e.touches[0].clientX - cardTouchStartX;
                 const dy = e.touches[0].clientY - cardTouchStartY;
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
@@ -1625,12 +1675,14 @@
             };
 
             const onTouchEnd = (e) => {
+                if (card.dataset.processing === 'true') return;
                 const diffX = e.changedTouches[0].clientX - cardTouchStartX;
                 const diffTime = Date.now() - cardTouchStartTime;
                 card.classList.remove('swiping-right', 'swiping-left');
                 card.style.transition = 'transform 0.2s ease';
 
                 if (Math.abs(diffX) > 50 && diffTime < 500) {
+                    card.dataset.processing = 'true';
                     if (diffX > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
@@ -1651,6 +1703,13 @@
         }
 
         function optimisticMarkTaken(reminderId, card) {
+            if (!card) {
+                card = document.querySelector(`.med-card[data-id="${reminderId}"]`);
+                if (!card) return;
+            }
+            if (card.dataset.processing === 'true') return;
+            card.dataset.processing = 'true';
+
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
             const dateKey = selectedDay.toISOString().split('T')[0];
@@ -1678,10 +1737,19 @@
                 if (statusSpan) {
                     statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
                 }
+            }).finally(() => {
+                delete card.dataset.processing;
             });
         }
 
         function optimisticMarkSkipped(reminderId, card) {
+            if (!card) {
+                card = document.querySelector(`.med-card[data-id="${reminderId}"]`);
+                if (!card) return;
+            }
+            if (card.dataset.processing === 'true') return;
+            card.dataset.processing = 'true';
+
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
             const dateKey = selectedDay.toISOString().split('T')[0];
@@ -1709,6 +1777,8 @@
                 if (statusSpan) {
                     statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
                 }
+            }).finally(() => {
+                delete card.dataset.processing;
             });
         }
 
@@ -1719,22 +1789,16 @@
             document.documentElement.style.setProperty('--tg-top-offset', '0px');
 
             function computeOffset() {
-                const vv = window.visualViewport;
+                const tg = window.Telegram?.WebApp;
                 let offset = 0;
-                if (vv && typeof vv.offsetTop === 'number') {
-                    offset = Math.max(0, Math.round(vv.offsetTop));
-                } else {
-                    const app = document.querySelector(appElSelector);
-                    if (app) {
-                        const r = app.getBoundingClientRect();
-                        if (r.top > 0) offset = Math.round(r.top);
-                    }
-                    if (!offset && window.outerHeight && window.innerHeight) {
-                        const diff = Math.max(0, Math.round(window.outerHeight - window.innerHeight));
-                        if (diff > 20) offset = diff;
-                    }
+                if (tg) {
+                    if (tg.safeAreaInset?.top) offset = tg.safeAreaInset.top;
+                    else if (tg.contentSafeAreaInset?.top) offset = tg.contentSafeAreaInset.top;
                 }
-                return offset;
+                if (!offset && window.visualViewport?.offsetTop) {
+                    offset = window.visualViewport.offsetTop;
+                }
+                return Math.max(10, offset);
             }
 
             function applyOffset() {
@@ -2053,11 +2117,29 @@
             if (sheetSub) sheetSub.innerText = `Последний приём: —\nПринимают: ${currentUser?.firstName || 'Вы'}`;
             if (sheetProgressText) sheetProgressText.innerText = '0/14 дней принято';
             if (sheetProgressFill) sheetProgressFill.style.width = '0%';
-            if (sheetOverlay) sheetOverlay.style.display = 'flex';
+            if (sheetOverlay) {
+                sheetOverlay.style.display = 'flex';
+                const sheet = document.getElementById('detailSheet');
+                if (sheet) sheet.style.transform = '';
+            }
         }
 
         async function createMedicineAndReminder(name, dosage, time, food) {
             if (!currentUser) return;
+            const tempId = 'temp-' + Date.now();
+            const tempReminder = {
+                id: tempId,
+                userId: currentUser.id,
+                medicineId: null,
+                reminderTime: time,
+                daysOfWeek: 'everyday',
+                medicine: { name, dosage, instructions: food }
+            };
+            reminders.push(tempReminder);
+            remindersCache.data = reminders;
+            remindersCache.timestamp = Date.now();
+            renderGroupsForDate(selectedDay);
+
             try {
                 const medicine = await apiFetch('/medicines', {
                     method: 'POST',
@@ -2072,12 +2154,22 @@
                         daysOfWeek: 'everyday'
                     }),
                 });
-                reminders.push(reminder);
+                const index = reminders.findIndex(r => r.id === tempId);
+                if (index !== -1) {
+                    reminders[index] = reminder;
+                } else {
+                    reminders.push(reminder);
+                }
                 remindersCache.data = reminders;
                 remindersCache.timestamp = Date.now();
                 await loadHistoryForDate(selectedDay);
             } catch (err) {
                 console.warn('Ошибка создания', err);
+                const index = reminders.findIndex(r => r.id === tempId);
+                if (index !== -1) reminders.splice(index, 1);
+                remindersCache.data = reminders;
+                remindersCache.timestamp = Date.now();
+                renderGroupsForDate(selectedDay);
             }
         }
 
@@ -2240,7 +2332,6 @@
                     if (card) optimisticMarkTaken(r.id, card);
                 }
                 await Promise.all(groupReminders.map(r => markReminderAsTaken(r.id).catch(err => console.warn(err))));
-                await loadHistoryForDate(selectedDay);
             }
             if (takeAllSheet) takeAllSheet.style.display = 'none';
         });
@@ -2253,7 +2344,6 @@
                     if (card) optimisticMarkSkipped(r.id, card);
                 }
                 await Promise.all(groupReminders.map(r => markReminderAsSkipped(r.id).catch(err => console.warn(err))));
-                await loadHistoryForDate(selectedDay);
             }
             if (takeAllSheet) takeAllSheet.style.display = 'none';
         });
@@ -2274,7 +2364,11 @@
             if (medDoseInput) medDoseInput.value = '1 таб.';
             if (medTimeInput) medTimeInput.value = '08:30';
             if (medFoodSelect) medFoodSelect.value = 'во время еды';
-            if (createMedSheet) createMedSheet.style.display = 'flex';
+            if (createMedSheet) {
+                createMedSheet.style.display = 'flex';
+                const sheet = createMedSheet.querySelector('.bottom-sheet-detail');
+                if (sheet) sheet.style.transform = '';
+            }
         }
         function closeCreateSheet() { if (createMedSheet) createMedSheet.style.display = 'none'; }
 
@@ -2316,13 +2410,12 @@
             week.forEach((day) => {
                 const chip = document.createElement('div');
                 chip.className = 'day-chip';
+                chip.dataset.date = day.toISOString().split('T')[0];
                 if (day.toDateString() === today.toDateString()) chip.classList.add('today');
                 if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
                 chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
                 chip.addEventListener('click', () => {
-                    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
-                    chip.classList.add('selected');
-                    changeDayWithAnimation(day);
+                    changeDayWithAnimation(day, undefined, false);
                 });
                 weekRow.appendChild(chip);
             });
@@ -2352,7 +2445,7 @@
                 cell.addEventListener('click', () => {
                     document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
-                    changeDayWithAnimation(new Date(year, month, d));
+                    changeDayWithAnimation(new Date(year, month, d), undefined, false);
                     if (calendarPopup) calendarPopup.style.display = 'none';
                 });
                 calGrid.appendChild(cell);
@@ -2361,31 +2454,36 @@
 
         function onDateSelected(date) {
             selectedDay = date;
-            return loadHistoryForDate(date).then(() => { renderWeek(currentDate); });
+            return loadHistoryForDate(date);
         }
 
         $('prevWeek')?.addEventListener('click', () => {
             let newDate = new Date(currentDate);
             newDate.setDate(currentDate.getDate() - 7);
-            changeDayWithAnimation(newDate, -1);
+            changeDayWithAnimation(newDate, -1, true);
         });
         $('nextWeek')?.addEventListener('click', () => {
             let newDate = new Date(currentDate);
             newDate.setDate(currentDate.getDate() + 7);
-            changeDayWithAnimation(newDate, 1);
+            changeDayWithAnimation(newDate, 1, true);
         });
 
         monthLabel?.addEventListener('click', (e) => {
             e.stopPropagation();
             if (calendarPopup.style.display === 'block') {
                 calendarPopup.style.display = 'none';
+                monthLabel.classList.remove('calendar-open');
             } else {
                 calendarPopup.style.display = 'block';
+                monthLabel.classList.add('calendar-open');
                 renderCalendar();
             }
         });
         document.addEventListener('click', (e) => {
-            if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
+            if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) {
+                calendarPopup.style.display = 'none';
+                monthLabel.classList.remove('calendar-open');
+            }
         });
         $('calPrevMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() - 1); renderCalendar(); });
         $('calNextMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() + 1); renderCalendar(); });
@@ -2425,7 +2523,14 @@
             $('addNewUser')?.addEventListener('click', () => { if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
         }
 
-        $('userSwitchBtn')?.addEventListener('click', () => { renderUserSwitchList(); if (userSwitchSheet) userSwitchSheet.style.display = 'flex'; });
+        $('userSwitchBtn')?.addEventListener('click', () => {
+            renderUserSwitchList();
+            if (userSwitchSheet) {
+                userSwitchSheet.style.display = 'flex';
+                const sheet = userSwitchSheet.querySelector('.bottom-sheet-detail');
+                if (sheet) sheet.style.transform = '';
+            }
+        });
         userSwitchSheet?.addEventListener('click', (e) => { if (e.target === userSwitchSheet) userSwitchSheet.style.display = 'none'; });
 
         function setActiveTab(tabId) {
@@ -2538,7 +2643,6 @@
             let startY=0, curY=0, dragging=false, activeId=null;
             const openSheet = ()=>{ overlay.style.display='flex'; requestAnimationFrame(()=> sheet.classList.add('sheet-open')); };
             const closeSheet = ()=>{ sheet.classList.remove('sheet-open'); setTimeout(()=> overlay.style.display='none', 260); };
-            sheet.querySelectorAll('*').forEach(el=> el.style.touchAction = 'none');
             sheet.addEventListener('pointerdown', (e)=>{ sheet.setPointerCapture?.(e.pointerId); activeId=e.pointerId; startY=e.clientY; dragging=true; sheet.style.transition='none'; }, {passive:true});
             window.addEventListener('pointermove', (e)=>{ if(!dragging || e.pointerId!==activeId) return; curY=e.clientY; const dy = Math.max(0, curY-startY); sheet.style.transform = `translateY(${dy}px)`; }, {passive:true});
             window.addEventListener('pointerup', (e)=>{ if(!dragging || e.pointerId!==activeId) return; dragging=false; sheet.style.transition='transform 220ms cubic-bezier(.2,.9,.4,1)'; const dy = Math.max(0, curY-startY); if(dy>120) closeSheet(); else sheet.style.transform='translateY(0)'; }, {passive:true});
@@ -2634,10 +2738,6 @@
                 function enhanceSheet(sheetElement, overlayElement){
                     if(!sheetElement || sheetElement.__enhanced) return;
                     sheetElement.__enhanced = true;
-
-                    sheetElement.querySelectorAll('*').forEach(el => {
-                        el.style.touchAction = 'none';
-                    });
 
                     let startY = 0, currentY = 0, dragging = false, pointerId = null;
                     const onDown = (e) => {
