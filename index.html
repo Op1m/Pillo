@@ -145,11 +145,7 @@
             width: 20px;
             height: 20px;
             fill: #2d5980;
-            transition: transform 220ms var(--anim-ease), fill var(--anim-duration) var(--anim-ease);
-            transform-origin: center;
-        }
-        .month-left.open svg {
-            transform: rotate(180deg);
+            transition: fill var(--anim-duration) var(--anim-ease);
         }
         .month-nav {
             display: flex;
@@ -1487,6 +1483,7 @@
         const addChoiceSheet = $('addChoiceSheet');
         const createMedSheet = $('createMedSheet');
         const userSwitchSheet = $('userSwitchSheet');
+        const userSwitchInner = userSwitchSheet?.querySelector('.bottom-sheet-detail.user-switch-sheet') || userSwitchSheet?.querySelector('.bottom-sheet-detail');
         const userSwitchList = $('userSwitchList');
         const sheetOverlay = $('sheetOverlay');
         const detailSheet = $('detailSheet');
@@ -1553,43 +1550,48 @@
             touchStartX = 0;
         }, { passive: true });
 
-        function changeDayWithAnimation(newDate, direction, forceNoWeekFade = false) {
+        function changeDayWithAnimation(newDate, direction) {
             if (isAnimatingDayChange) return;
             if (direction === undefined) direction = newDate > currentDate ? 1 : -1;
-            const weekStart = (d) => { const c = new Date(d); const day = c.getDay(); const diff = (day === 0 ? -6 : 1 - day); c.setDate(c.getDate() + diff); c.setHours(0,0,0,0); return c.toDateString(); };
-            const sameWeek = weekStart(newDate) === weekStart(currentDate) || forceNoWeekFade;
+
+            const weekStart = (d) => {
+                const c = new Date(d);
+                const day = c.getDay();
+                const diff = (day === 0 ? -6 : 1 - day);
+                c.setDate(c.getDate() + diff);
+                c.setHours(0,0,0,0);
+                return c.toDateString();
+            };
+            const sameWeek = weekStart(newDate) === weekStart(currentDate);
+
             isAnimatingDayChange = true;
             const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
             const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
+
             if (sameWeek) {
-                const prevSelected = weekRow && weekRow.querySelector('.day-chip.selected');
-                if (prevSelected) prevSelected.classList.remove('selected');
-                currentDate = newDate;
-                renderWeek(currentDate);
-                if (weekRow && !weekRow.__clickHandlerAttached) {
-                    weekRow.__clickHandlerAttached = true;
-                    weekRow.addEventListener('click', (ev) => {
-                        const el = ev.target.closest && ev.target.closest('.day-chip');
-                        if (!el) return;
-                        const dateIso = el.getAttribute('data-date');
-                        if (!dateIso) return;
-                        const newDate = new Date(dateIso + 'T00:00:00');
-                        changeDayWithAnimation(newDate);
-                    }, { passive: true });
-                }
-                const newSelected = weekRow && weekRow.querySelector('.day-chip.selected');
-                if (newSelected) {
-                    newSelected.classList.add('selected');
-                    setTimeout(()=> { isAnimatingDayChange = false; }, 220);
+                const prev = weekRow && weekRow.querySelector('.day-chip.selected');
+                if (prev) prev.classList.remove('selected');
+                currentDate = new Date(newDate);
+                selectedDay = new Date(newDate);
+                const dateStr = selectedDay.toISOString().split('T')[0];
+                const newChip = weekRow && weekRow.querySelector(`.day-chip[data-date="${dateStr}"]`);
+                if (newChip) {
+                    newChip.classList.add('selected');
+                    onDateSelected(selectedDay).then(() => {
+                        setTimeout(() => { isAnimatingDayChange = false; }, 200);
+                    });
                 } else {
-                    onDateSelected(newDate).then(()=> { isAnimatingDayChange = false; }).catch(()=> { isAnimatingDayChange = false; });
+                    renderWeek(currentDate);
+                    onDateSelected(selectedDay).then(() => {
+                        setTimeout(() => { isAnimatingDayChange = false; }, 200);
+                    });
                 }
             } else {
                 weekRow.style.opacity = '0';
                 weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
                 contentDiv.classList.add(outClass);
                 setTimeout(() => {
-                    currentDate = newDate;
+                    currentDate = new Date(newDate);
                     renderWeek(currentDate);
                     onDateSelected(currentDate).then(() => {
                         weekRow.style.opacity = '1';
@@ -1600,12 +1602,6 @@
                             weekRow.style.transition = '';
                             isAnimatingDayChange = false;
                         }, 250);
-                    }).catch(()=> {
-                        weekRow.style.opacity = '1';
-                        contentDiv.classList.remove(outClass);
-                        contentDiv.classList.remove(inClass);
-                        weekRow.style.transition = '';
-                        isAnimatingDayChange = false;
                     });
                 }, 250);
             }
@@ -1626,6 +1622,7 @@
                 card.style.transition = 'none';
                 swiped = false;
                 isSwiping = false;
+                isSwipingOnCard = true;
             };
 
             const onTouchMove = (e) => {
@@ -1635,16 +1632,13 @@
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
                     e.preventDefault();
                     isSwiping = true;
-
                     const maxDrag = 80;
                     let limitedDx = dx;
-
                     if (Math.abs(dx) > maxDrag) {
                         const sign = dx > 0 ? 1 : -1;
                         const excess = Math.abs(dx) - maxDrag;
                         limitedDx = sign * (maxDrag + excess * 0.25);
                     }
-
                     if (dx > 0) {
                         card.classList.add('swiping-right');
                         card.classList.remove('swiping-left');
@@ -1652,7 +1646,6 @@
                         card.classList.add('swiping-left');
                         card.classList.remove('swiping-right');
                     }
-
                     card.style.transform = `translateX(${limitedDx}px)`;
                 }
             };
@@ -1662,17 +1655,18 @@
                 const diffTime = Date.now() - cardTouchStartTime;
                 card.classList.remove('swiping-right', 'swiping-left');
                 card.style.transition = 'transform 0.2s ease';
-
                 if (Math.abs(diffX) > 50 && diffTime < 500) {
                     if (diffX > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
                         optimisticMarkSkipped(reminderId, card);
                     }
+                    setTimeout(() => { isSwipingOnCard = false; }, 300);
                 } else {
                     card.style.transform = 'translateX(0)';
                     setTimeout(() => {
                         card.style.transition = '';
+                        isSwipingOnCard = false;
                     }, 200);
                 }
                 cardTouchStartX = 0;
@@ -1686,73 +1680,65 @@
         function optimisticMarkTaken(reminderId, card) {
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
-            reminder._optimisticStatus = 'taken';
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
-            if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-            let historyEntry = historyMap.get(dateKey).find(h => h.reminder && h.reminder.id === reminderId);
+            let histories = historyMap.get(dateKey) || [];
+            let historyEntry = histories.find(h => h.reminder && h.reminder.id === reminderId);
             if (!historyEntry) {
-                historyEntry = { reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
-                historyMap.get(dateKey).push(historyEntry);
+                historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
+                histories.push(historyEntry);
+                historyMap.set(dateKey, histories);
             } else {
                 historyEntry.status = 'taken';
             }
-            const targetCard = card || findCardByReminderId(reminderId);
-            if (targetCard) {
-                targetCard.classList.add('taken');
-                targetCard.classList.remove('pending','skipped','missed');
-                const statusSpan = targetCard.querySelector('.med-status');
-                if (statusSpan) statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
+            card.classList.add('taken');
+            card.classList.remove('pending', 'skipped', 'missed');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
             }
-            markReminderAsTaken(reminderId).then((res) => {
-                reminder._optimisticStatus = null;
-            }).catch(() => {
-                reminder._optimisticStatus = null;
+            card.style.transform = 'translateX(0)';
+            setTimeout(() => { card.style.transition = ''; }, 200);
+            markReminderAsTaken(reminderId).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
-                if (targetCard) {
-                    targetCard.classList.remove('taken');
-                    targetCard.classList.add('pending');
-                    const statusSpan = targetCard.querySelector('.med-status');
-                    if (statusSpan) statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                card.classList.remove('taken');
+                card.classList.add('pending');
+                const statusSpan2 = card.querySelector('.med-status');
+                if (statusSpan2) {
+                    statusSpan2.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5"/></svg> Ожидается</span>`;
                 }
             });
-        }
-
-        function findCardByReminderId(reminderId) {
-            return document.querySelector(`[data-reminder-id="${reminderId}"]`) || document.querySelector(`.card[data-reminder-id="${reminderId}"]`);
         }
 
         function optimisticMarkSkipped(reminderId, card) {
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
-            reminder._optimisticStatus = 'skipped';
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
-            if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-            let historyEntry = historyMap.get(dateKey).find(h => h.reminder && h.reminder.id === reminderId);
+            let histories = historyMap.get(dateKey) || [];
+            let historyEntry = histories.find(h => h.reminder && h.reminder.id === reminderId);
             if (!historyEntry) {
-                historyEntry = { reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
-                historyMap.get(dateKey).push(historyEntry);
+                historyEntry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
+                histories.push(historyEntry);
+                historyMap.set(dateKey, histories);
             } else {
                 historyEntry.status = 'skipped';
             }
-            const targetCard = card || findCardByReminderId(reminderId);
-            if (targetCard) {
-                targetCard.classList.add('skipped');
-                targetCard.classList.remove('pending','taken','missed');
-                const statusSpan = targetCard.querySelector('.med-status');
-                if (statusSpan) statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
+            card.classList.add('skipped');
+            card.classList.remove('pending', 'taken', 'missed');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
             }
-            markReminderAsSkipped(reminderId).then((res) => {
-                reminder._optimisticStatus = null;
-            }).catch(() => {
-                reminder._optimisticStatus = null;
+            card.style.transform = 'translateX(0)';
+            setTimeout(() => { card.style.transition = ''; }, 200);
+            markReminderAsSkipped(reminderId).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
-                if (targetCard) {
-                    targetCard.classList.remove('skipped');
-                    targetCard.classList.add('pending');
-                    const statusSpan = targetCard.querySelector('.med-status');
-                    if (statusSpan) statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                card.classList.remove('skipped');
+                card.classList.add('pending');
+                const statusSpan2 = card.querySelector('.med-status');
+                if (statusSpan2) {
+                    statusSpan2.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5"/></svg> Ожидается</span>`;
                 }
             });
         }
@@ -1827,46 +1813,24 @@
         }
 
         async function apiFetch(endpoint, options = {}, useCache = false) {
-            const headers = Object.assign(
-                { 'Content-Type': 'application/json' },
-                options && options.headers ? options.headers : {}
-            );
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            };
+            if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
 
-            if (authToken) {
-                headers['Authorization'] = `Bearer ${authToken}`;
+            const fetchOptions = { ...options, headers };
+
+            const res = await fetch(API_BASE + endpoint, fetchOptions);
+            const text = await res.text().catch(() => null);
+            let body = null;
+            try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
+
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status} ${res.statusText}`);
             }
-
-            const fetchOptions = Object.assign({}, options || {}, { headers });
-
-            try {
-                const response = await fetch(API_BASE + endpoint, fetchOptions);
-
-                if (response.status === 204) {
-                    return {};
-                }
-
-                const text = await response.text();
-                let data = null;
-
-                try {
-                    data = text ? JSON.parse(text) : null;
-                } catch {
-                    data = text;
-                }
-
-                if (!response.ok) {
-                    const error = new Error(`HTTP ${response.status}`);
-                    error.status = response.status;
-                    error.body = data;
-                    throw error;
-                }
-
-                return data;
-
-            } catch (error) {
-                console.error('apiFetch error:', endpoint, error);
-                throw error;
-            }
+            if (res.status === 204) return {};
+            return body;
         }
 
         function setAvatar(user) {
@@ -1949,15 +1913,12 @@
             }
 
             try {
-                const serverResponse = await apiFetch(
+                const history = await apiFetch(
                     `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
                 );
-
-                const merged = mergeOptimisticHistory(serverResponse);
-
-                historyMap.set(dateKey, merged);
-                historyCache.set(dateKey, { data: merged, timestamp: now });
-
+                const data = Array.isArray(history) ? history : [];
+                historyMap.set(dateKey, data);
+                historyCache.set(dateKey, { data, timestamp: now });
                 renderGroupsForDate(date);
             } catch (err) {
                 console.warn('Ошибка загрузки истории', err);
@@ -2141,7 +2102,7 @@
             remindersCache.timestamp = Date.now();
             try {
                 renderGroupsForDate(selectedDay);
-            } catch(e){}
+            } catch (e) {}
             try {
                 const medicine = await apiFetch('/medicines', {
                     method: 'POST',
@@ -2179,12 +2140,27 @@
         async function markReminderAsTaken(reminderId) {
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
-
             const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
             const scheduledTime = new Date(selectedDay);
             scheduledTime.setHours(hour, minute, 0, 0);
 
             let history = getHistoryForReminder(reminder, selectedDay);
+
+            if (history && !history.id) {
+                try {
+                    const created = await apiFetch('/medicine-history/schedule', {
+                        method: 'POST',
+                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
+                    });
+                    if (created && created.id) {
+                        history.id = created.id;
+                        Object.assign(history, created);
+                    }
+                } catch (err) {
+                    console.warn('Ошибка создания истории', err);
+                    throw err;
+                }
+            }
 
             if (!history) {
                 try {
@@ -2194,12 +2170,15 @@
                     });
                 } catch (err) {
                     console.warn('Ошибка создания истории', err);
-                    return;
+                    throw err;
                 }
-                if (!history || !history.id) return;
-                const dateKey = selectedDay.toISOString().split('T')[0];
-                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                historyMap.get(dateKey).push(history);
+                if (history && history.id) {
+                    const dateKey = selectedDay.toISOString().split('T')[0];
+                    if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                    historyMap.get(dateKey).push(history);
+                } else {
+                    throw new Error('Не удалось получить id истории');
+                }
             }
 
             try {
@@ -2217,35 +2196,46 @@
         }
 
         async function markReminderAsSkipped(reminderId) {
-            try {
-                const reminder = reminders.find(r => r.id === reminderId);
-                if (!reminder) return;
+            const reminder = reminders.find(r => r.id === reminderId);
+            if (!reminder) return;
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
 
-                const dateKey = selectedDay.toISOString().split('T')[0];
-                let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
-                if (!historyEntry) {
-                    const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
-                    const scheduledTime = new Date(selectedDay);
-                    scheduledTime.setHours(hour, minute, 0, 0);
-                    historyEntry = await apiFetch('/medicine-history/schedule', {
+            if (historyEntry && !historyEntry.id) {
+                try {
+                    const created = await apiFetch('/medicine-history/schedule', {
                         method: 'POST',
-                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
+                        body: JSON.stringify({ reminderId, scheduledTime: (new Date(selectedDay)).toISOString() })
                     });
-                    if (!historyEntry || !historyEntry.id) return;
-                    if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                    historyMap.get(dateKey).push(historyEntry);
+                    if (created && created.id) {
+                        historyEntry.id = created.id;
+                        Object.assign(historyEntry, created);
+                    }
+                } catch (err) {
+                    console.warn('Ошибка создания истории', err);
+                    throw err;
                 }
-
-                await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({})
-                });
-
-                historyCache.delete(dateKey);
-            } catch (err) {
-                console.warn('Ошибка отметки пропуска', err);
-                throw err;
             }
+
+            if (!historyEntry) {
+                const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
+                const scheduledTime = new Date(selectedDay);
+                scheduledTime.setHours(hour, minute, 0, 0);
+                historyEntry = await apiFetch('/medicine-history/schedule', {
+                    method: 'POST',
+                    body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
+                });
+                if (!historyEntry || !historyEntry.id) throw new Error('Не удалось создать историю');
+                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                historyMap.get(dateKey).push(historyEntry);
+            }
+
+            await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
+                method: 'PATCH',
+                body: JSON.stringify({})
+            });
+
+            historyCache.delete(dateKey);
         }
 
         async function deleteReminder(reminderId) {
@@ -2399,23 +2389,29 @@
 
         function renderWeek(centerDate) {
             if (!weekRow) return;
-            const week = getWeekDays(centerDate);
             weekRow.innerHTML = '';
-            const today = new Date();
-            week.forEach((day) => {
+            const center = new Date(centerDate);
+            const wday = center.getDay();
+            const start = new Date(center);
+            const diff = (wday === 0 ? -6 : 1 - wday);
+            start.setDate(center.getDate() + diff);
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(start);
+                day.setDate(start.getDate() + i);
                 const chip = document.createElement('div');
                 chip.className = 'day-chip';
-                if (day.toDateString() === today.toDateString()) chip.classList.add('today');
+                chip.setAttribute('data-date', day.toISOString().split('T')[0]);
+                chip.setAttribute('data-day', day.getDate());
+                chip.innerHTML = `<div class="dow">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div><div class="dom">${day.getDate()}</div>`;
+                chip.style.transition = 'background-color 0.25s var(--anim-ease), color 0.25s var(--anim-ease)';
                 if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
-                chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
                 chip.addEventListener('click', () => {
-                    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
-                    chip.classList.add('selected');
-                    changeDayWithAnimation(day);
+                    changeDayWithAnimation(new Date(day));
                 });
                 weekRow.appendChild(chip);
-            });
-            if (monthLabel) monthLabel.childNodes[0].nodeValue = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
+            }
+            const centerDateForLabel = new Date(centerDate);
+            if (monthLabel) monthLabel.childNodes[0].nodeValue = centerDateForLabel.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
         }
 
         let calDate = new Date();
@@ -2468,17 +2464,9 @@
             e.stopPropagation();
             if (calendarPopup.style.display === 'block') {
                 calendarPopup.style.display = 'none';
-                monthLabel.classList.remove('open');
             } else {
                 calendarPopup.style.display = 'block';
-                monthLabel.classList.add('open');
                 renderCalendar();
-            }
-        });
-        document.addEventListener('click', (e) => {
-            if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) {
-                calendarPopup.style.display = 'none';
-                monthLabel.classList.remove('open');
             }
         });
         document.addEventListener('click', (e) => {
@@ -2524,31 +2512,6 @@
 
         $('userSwitchBtn')?.addEventListener('click', () => { renderUserSwitchList(); if (userSwitchSheet) userSwitchSheet.style.display = 'flex'; });
         userSwitchSheet?.addEventListener('click', (e) => { if (e.target === userSwitchSheet) userSwitchSheet.style.display = 'none'; });
-        const userSwitchInner = document.getElementById('userSwitchInner');
-
-        if (userSwitchInner && userSwitchSheet) {
-            let usStart = 0;
-            let usCurrent = 0;
-
-            userSwitchInner.addEventListener('touchstart', (e) => {
-                usStart = e.touches[0].clientY;
-            }, { passive: true });
-
-            userSwitchInner.addEventListener('touchmove', (e) => {
-                usCurrent = e.touches[0].clientY;
-                const diff = Math.max(0, usCurrent - usStart);
-                userSwitchInner.style.transform = diff > 0 ? `translateY(${diff}px)` : '';
-            }, { passive: true });
-
-            userSwitchInner.addEventListener('touchend', () => {
-                if (usCurrent - usStart > 60) {
-                    userSwitchSheet.style.display = 'none';
-                }
-                userSwitchInner.style.transform = '';
-                usStart = 0;
-                usCurrent = 0;
-            }, { passive: true });
-        }
 
         function setActiveTab(tabId) {
             document.querySelectorAll('.nav-item')?.forEach(item => item.classList.remove('active'));
@@ -2561,19 +2524,6 @@
         $('navHome')?.addEventListener('click', () => setActiveTab('navHome'));
         $('navStats')?.addEventListener('click', () => setActiveTab('navStats'));
         $('navProfile')?.addEventListener('click', () => setActiveTab('navProfile'));
-
-        function mergeOptimisticHistory(serverData) {
-            if (!Array.isArray(serverData)) return serverData;
-            try {
-                serverData.forEach(h => {
-                    const rid = h && h.reminder && h.reminder.id;
-                    if (!rid) return;
-                    const rem = reminders.find(r => r.id === rid);
-                    if (rem && rem._optimisticStatus) h.status = rem._optimisticStatus;
-                });
-            } catch (e) {}
-            return serverData;
-        }
 
         (async function init() {
             const savedUser = localStorage.getItem(USER_KEY);
@@ -2659,34 +2609,14 @@
             return ()=>handlers.destroy();
         }
 
-        (function attachDaySwipe() {
-            const el = contentDiv || document.body;
-            let startX = 0, startY = 0, tracking = false, moved = false, isPointer = false;
-            const onStart = (x, y) => { startX = x; startY = y; tracking = true; moved = false; };
-            const onMove = (x, y) => { if (!tracking) return; if (Math.abs(x - startX) > 8 || Math.abs(y - startY) > 8) moved = true; };
-            const onEnd = (endX, endY) => {
-                if (!tracking) return;
-                tracking = false;
-                if (!moved) return;
-                const dx = endX - startX;
-                const dy = endY - startY;
-                if (Math.abs(dx) > 50 && Math.abs(dy) < 80) {
-                    const direction = dx < 0 ? 1 : -1;
-                    const newDate = new Date(currentDate);
-                    newDate.setDate(currentDate.getDate() + (direction));
-                    changeDayWithAnimation(newDate, direction, true);
-                }
-            };
-
-            el.addEventListener('pointerdown', (e) => { isPointer = true; onStart(e.clientX, e.clientY); }, { passive: true });
-            el.addEventListener('pointermove', (e) => { if (isPointer) onMove(e.clientX, e.clientY); }, { passive: true });
-            el.addEventListener('pointerup', (e) => { if (isPointer) { onEnd(e.clientX, e.clientY); isPointer = false; } }, { passive: true });
-            el.addEventListener('pointercancel', () => { tracking = false; isPointer = false; }, { passive: true });
-
-            el.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
-            el.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
-            el.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; onEnd(t.clientX, t.clientY); }, { passive: true });
-        })();
+        function attachDaySwipe(container, onDir){
+            if(!container) return ()=>{};
+            let sX=0, sY=0, sT=0, tracking=false;
+            container.addEventListener('pointerdown', (e)=>{ sX=e.clientX; sY=e.clientY; sT=Date.now(); tracking=true; }, {passive:true});
+            container.addEventListener('pointermove', (e)=>{ if(!tracking) return; const dx = e.clientX - sX; const dy = e.clientY - sY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>30){  } }, {passive:true});
+            container.addEventListener('pointerup', (e)=>{ if(!tracking) return; tracking=false; const dx = e.clientX - sX; const dt = Date.now()-sT; if(Math.abs(dx)>80 && dt<600){ onDir && onDir(dx>0? -1:1); } }, {passive:true});
+            return ()=>{};
+        }
 
         function attachSheetDrag(overlay, sheet){
             if(!overlay || !sheet) return ()=>{};
