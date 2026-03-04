@@ -1571,21 +1571,21 @@
             if (sameWeek) {
                 const prev = weekRow && weekRow.querySelector('.day-chip.selected');
                 if (prev) prev.classList.remove('selected');
-                currentDate = new Date(newDate);
                 selectedDay = new Date(newDate);
                 const dateStr = selectedDay.toISOString().split('T')[0];
                 const newChip = weekRow && weekRow.querySelector(`.day-chip[data-date="${dateStr}"]`);
-                if (newChip) {
-                    newChip.classList.add('selected');
+                if (newChip) newChip.classList.add('selected');
+                contentDiv.classList.add(outClass);
+                setTimeout(() => {
                     onDateSelected(selectedDay).then(() => {
-                        setTimeout(() => { isAnimatingDayChange = false; }, 200);
+                        contentDiv.classList.remove(outClass);
+                        contentDiv.classList.add(inClass);
+                        setTimeout(() => {
+                            contentDiv.classList.remove(inClass);
+                            isAnimatingDayChange = false;
+                        }, 250);
                     });
-                } else {
-                    renderWeek(currentDate);
-                    onDateSelected(selectedDay).then(() => {
-                        setTimeout(() => { isAnimatingDayChange = false; }, 200);
-                    });
-                }
+                }, 10);
             } else {
                 weekRow.style.opacity = '0';
                 weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
@@ -1657,12 +1657,12 @@
         }
 
         function optimisticMarkTaken(reminderId, card) {
-            const reminder = reminders.find(r => r.id === reminderId);
-            if (!reminder) return;
+            const rid = String(reminderId);
+            const reminder = reminders.find(r => String(r.id) === rid) || null;
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
             let histories = historyMap.get(dateKey) || [];
-            let historyEntry = histories.find(h => h.reminder && h.reminder.id === reminderId);
+            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
             if (!historyEntry) {
                 historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
                 histories.push(historyEntry);
@@ -1670,32 +1670,37 @@
             } else {
                 historyEntry.status = 'taken';
             }
-            card.classList.add('taken');
-            card.classList.remove('pending', 'skipped', 'missed');
-            const statusSpan = card.querySelector('.med-status');
-            if (statusSpan) {
-                statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
+            if (card) {
+                card.classList.add('taken');
+                card.classList.remove('pending', 'skipped', 'missed');
+                const statusSpan = card.querySelector('.med-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
+                }
+                card.style.transform = 'translateX(0)';
+                setTimeout(()=>{ card.style.transition = ''; }, 200);
             }
-            card.style.transform = 'translateX(0)';
-            setTimeout(() => { card.style.transition = ''; }, 200);
             markReminderAsTaken(reminderId).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
-                card.classList.remove('taken');
-                card.classList.add('pending');
-                const statusSpan2 = card.querySelector('.med-status');
-                if (statusSpan2) {
-                    statusSpan2.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5"/></svg> Ожидается</span>`;
+                if (card) {
+                    card.classList.remove('taken');
+                    card.classList.add('pending');
+                    const statusSpan = card.querySelector('.med-status');
+                    if (statusSpan) {
+                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                    }
+                    card.style.transition = '';
                 }
             });
         }
 
         function optimisticMarkSkipped(reminderId, card) {
-            const reminder = reminders.find(r => r.id === reminderId);
-            if (!reminder) return;
+            const rid = String(reminderId);
+            const reminder = reminders.find(r => String(r.id) === rid) || null;
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
             let histories = historyMap.get(dateKey) || [];
-            let historyEntry = histories.find(h => h.reminder && h.reminder.id === reminderId);
+            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
             if (!historyEntry) {
                 historyEntry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
                 histories.push(historyEntry);
@@ -1703,21 +1708,26 @@
             } else {
                 historyEntry.status = 'skipped';
             }
-            card.classList.add('skipped');
-            card.classList.remove('pending', 'taken', 'missed');
-            const statusSpan = card.querySelector('.med-status');
-            if (statusSpan) {
-                statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
+            if (card) {
+                card.classList.add('skipped');
+                card.classList.remove('pending', 'taken', 'missed');
+                const statusSpan = card.querySelector('.med-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
+                }
+                card.style.transform = 'translateX(0)';
+                setTimeout(()=>{ card.style.transition = ''; }, 200);
             }
-            card.style.transform = 'translateX(0)';
-            setTimeout(() => { card.style.transition = ''; }, 200);
             markReminderAsSkipped(reminderId).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
-                card.classList.remove('skipped');
-                card.classList.add('pending');
-                const statusSpan2 = card.querySelector('.med-status');
-                if (statusSpan2) {
-                    statusSpan2.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5"/></svg> Ожидается</span>`;
+                if (card) {
+                    card.classList.remove('skipped');
+                    card.classList.add('pending');
+                    const statusSpan = card.querySelector('.med-status');
+                    if (statusSpan) {
+                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                    }
+                    card.style.transition = '';
                 }
             });
         }
@@ -2113,17 +2123,20 @@
         function getHistoryForReminder(reminder, date) {
             const dateKey = date.toISOString().split('T')[0];
             const histories = historyMap.get(dateKey) || [];
-            return histories.find(h => h.reminder && h.reminder.id === reminder.id);
+            return histories.find(h => h.reminder && String(h.reminder.id) === String(reminder.id));
         }
 
         async function markReminderAsTaken(reminderId) {
-            const reminder = reminders.find(r => r.id === reminderId);
-            if (!reminder) return;
-            const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
+            const rid = String(reminderId);
+            const reminder = reminders.find(r => String(r.id) === rid) || null;
+            const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
             const scheduledTime = new Date(selectedDay);
             scheduledTime.setHours(hour, minute, 0, 0);
 
-            let history = getHistoryForReminder(reminder, selectedDay);
+            let history = null;
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            const histories = historyMap.get(dateKey) || [];
+            history = histories.find(h => h.reminder && String(h.reminder.id) === rid);
 
             if (history && !history.id) {
                 try {
@@ -2136,7 +2149,11 @@
                         Object.assign(history, created);
                     }
                 } catch (err) {
-                    console.warn('Ошибка создания истории', err);
+                    console.warn('Ошибка отметки принятия', err);
+                    try {
+                        const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
+                        alert('Не удалось отметить принятие: ' + msg);
+                    } catch(e){}
                     throw err;
                 }
             }
@@ -2148,80 +2165,70 @@
                         body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
                     });
                 } catch (err) {
-                    console.warn('Ошибка отметки принятия', err);
-                    try {
-                        const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
-                        alert('Не удалось отметить принятие: ' + msg);
-                    } catch(e){}
+                    console.warn('Ошибка создания истории', err);
                     throw err;
                 }
-                if (history && history.id) {
-                    const dateKey = selectedDay.toISOString().split('T')[0];
-                    if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                    historyMap.get(dateKey).push(history);
-                } else {
-                    throw new Error('Не удалось получить id истории');
-                }
+                if (!history || !history.id) throw new Error('Не удалось создать историю');
+                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                historyMap.get(dateKey).push(history);
             }
 
-            try {
-                await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
-                    method: 'PATCH',
-                    body: JSON.stringify({ notes: '' })
-                });
-            } catch (err) {
-                console.warn('Ошибка отметки принятия', err);
-                try {
-                    const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
-                    alert('Не удалось отметить принятие: ' + msg);
-                } catch(e){}
-                throw err;
-            }
+            await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
+                method: 'PATCH',
+                body: JSON.stringify({ notes: '' })
+            });
 
-            const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
         }
 
         async function markReminderAsSkipped(reminderId) {
-            const reminder = reminders.find(r => r.id === reminderId);
-            if (!reminder) return;
-            const dateKey = selectedDay.toISOString().split('T')[0];
-            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
+            const rid = String(reminderId);
+            const reminder = reminders.find(r => String(r.id) === rid) || null;
+            const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
+            const scheduledTime = new Date(selectedDay);
+            scheduledTime.setHours(hour, minute, 0, 0);
 
-            if (historyEntry && !historyEntry.id) {
+            let history = null;
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            const histories = historyMap.get(dateKey) || [];
+            history = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+
+            if (history && !history.id) {
                 try {
                     const created = await apiFetch('/medicine-history/schedule', {
                         method: 'POST',
-                        body: JSON.stringify({ reminderId, scheduledTime: (new Date(selectedDay)).toISOString() })
+                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
                     });
                     if (created && created.id) {
-                        historyEntry.id = created.id;
-                        Object.assign(historyEntry, created);
+                        history.id = created.id;
+                        Object.assign(history, created);
                     }
                 } catch (err) {
-                    console.warn('Ошибка отметки принятия', err);
+                    console.warn('Ошибка отметки пропуска', err);
                     try {
                         const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
-                        alert('Не удалось отметить принятие: ' + msg);
+                        alert('Не удалось отметить пропуск: ' + msg);
                     } catch(e){}
                     throw err;
                 }
             }
 
-            if (!historyEntry) {
-                const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
-                const scheduledTime = new Date(selectedDay);
-                scheduledTime.setHours(hour, minute, 0, 0);
-                historyEntry = await apiFetch('/medicine-history/schedule', {
-                    method: 'POST',
-                    body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
-                });
-                if (!historyEntry || !historyEntry.id) throw new Error('Не удалось создать историю');
+            if (!history) {
+                try {
+                    history = await apiFetch('/medicine-history/schedule', {
+                        method: 'POST',
+                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
+                    });
+                } catch (err) {
+                    console.warn('Ошибка создания истории', err);
+                    throw err;
+                }
+                if (!history || !history.id) throw new Error('Не удалось создать историю');
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                historyMap.get(dateKey).push(historyEntry);
+                historyMap.get(dateKey).push(history);
             }
 
-            await apiFetch(`/medicine-history/${historyEntry.id}/mark-skipped`, {
+            await apiFetch(`/medicine-history/${history.id}/mark-skipped`, {
                 method: 'PATCH',
                 body: JSON.stringify({})
             });
