@@ -1608,73 +1608,52 @@
         }
 
         function attachSwipeToCard(card, reminderId) {
-            let cardTouchStartX = 0;
-            let cardTouchStartY = 0;
-            let cardTouchStartTime = 0;
-            let swiped = false;
-            let isSwiping = false;
-
-            const onTouchStart = (e) => {
-                cardTouchStartX = e.touches[0].clientX;
-                cardTouchStartY = e.touches[0].clientY;
-                cardTouchStartTime = Date.now();
-                card.classList.remove('swiping-right', 'swiping-left');
-                card.style.transition = 'none';
-                swiped = false;
-                isSwiping = false;
-                isSwipingOnCard = true;
-            };
-
-            const onTouchMove = (e) => {
-                if (swiped) return;
-                const dx = e.touches[0].clientX - cardTouchStartX;
-                const dy = e.touches[0].clientY - cardTouchStartY;
+            let startX = 0, startY = 0, startTime = 0, moved = false;
+            const onStart = (x,y) => { startX = x; startY = y; startTime = Date.now(); moved = false; card.style.transition = 'none'; isSwipingOnCard = true; };
+            const onMove = (x,y,ev) => {
+                const dx = x - startX;
+                const dy = y - startY;
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-                    e.preventDefault();
-                    isSwiping = true;
-                    const maxDrag = 80;
-                    let limitedDx = dx;
-                    if (Math.abs(dx) > maxDrag) {
-                        const sign = dx > 0 ? 1 : -1;
-                        const excess = Math.abs(dx) - maxDrag;
-                        limitedDx = sign * (maxDrag + excess * 0.25);
-                    }
-                    if (dx > 0) {
-                        card.classList.add('swiping-right');
-                        card.classList.remove('swiping-left');
-                    } else {
-                        card.classList.add('swiping-left');
-                        card.classList.remove('swiping-right');
-                    }
-                    card.style.transform = `translateX(${limitedDx}px)`;
+                    moved = true;
+                    ev && ev.preventDefault();
+                    const max = 120;
+                    let tx = dx;
+                    if (Math.abs(tx) > max) tx = (tx > 0 ? 1 : -1) * (max + (Math.abs(tx)-max)*0.25);
+                    card.style.transform = `translateX(${tx}px)`;
                 }
             };
-
-            const onTouchEnd = (e) => {
-                const diffX = e.changedTouches[0].clientX - cardTouchStartX;
-                const diffTime = Date.now() - cardTouchStartTime;
-                card.classList.remove('swiping-right', 'swiping-left');
-                card.style.transition = 'transform 0.2s ease';
-                if (Math.abs(diffX) > 50 && diffTime < 500) {
-                    if (diffX > 0) {
+            const onEnd = (x,y) => {
+                const dx = x - startX;
+                const dt = Date.now() - startTime;
+                card.style.transition = 'transform 220ms ease';
+                if (Math.abs(dx) > 70 || (Math.abs(dx) > 40 && dt < 300)) {
+                    if (dx > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
                         optimisticMarkSkipped(reminderId, card);
                     }
-                    setTimeout(() => { isSwipingOnCard = false; }, 300);
+                    setTimeout(() => {
+                        card.style.transform = 'translateX(0)';
+                        isSwipingOnCard = false;
+                    }, 220);
                 } else {
                     card.style.transform = 'translateX(0)';
-                    setTimeout(() => {
-                        card.style.transition = '';
-                        isSwipingOnCard = false;
-                    }, 200);
+                    setTimeout(() => { card.style.transition = ''; isSwipingOnCard = false; }, 220);
                 }
-                cardTouchStartX = 0;
             };
 
-            card.addEventListener('touchstart', onTouchStart, { passive: true });
-            card.addEventListener('touchmove', onTouchMove, { passive: false });
-            card.addEventListener('touchend', onTouchEnd, { passive: true });
+            card.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
+            card.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY, e); }, { passive: false });
+            card.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; onEnd(t.clientX, t.clientY); }, { passive: true });
+
+            card.addEventListener('pointerdown', (e) => { onStart(e.clientX, e.clientY); }, { passive: true });
+            card.addEventListener('pointermove', (e) => { onMove(e.clientX, e.clientY, e); }, { passive: true });
+            card.addEventListener('pointerup', (e) => { onEnd(e.clientX, e.clientY); }, { passive: true });
+
+            card.addEventListener('transitionend', () => {
+                card.style.transition = '';
+                card.style.transform = '';
+            }, { passive: true });
         }
 
         function optimisticMarkTaken(reminderId, card) {
@@ -2138,6 +2117,12 @@
         }
 
         async function markReminderAsTaken(reminderId) {
+            try { alert('Ошибка при подтверждении принятия: ' + (err && (err.body && err.body.message) || err.message || JSON.stringify(err))); } catch(e){}
+            if (historyEntry) historyEntry.status = 'pending';
+            card.classList.remove('taken');
+            card.classList.add('pending');
+            const statusSpan2 = card.querySelector('.med-status');
+            if (statusSpan2) statusSpan2.innerHTML = `<span class="status-pending status-icon"> Ожидается</span>`;
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
             const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
@@ -2169,7 +2154,11 @@
                         body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
                     });
                 } catch (err) {
-                    console.warn('Ошибка создания истории', err);
+                    console.warn('Ошибка отметки принятия', err);
+                    try {
+                        const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
+                        alert('Не удалось отметить принятие: ' + msg);
+                    } catch(e){}
                     throw err;
                 }
                 if (history && history.id) {
@@ -2188,6 +2177,10 @@
                 });
             } catch (err) {
                 console.warn('Ошибка отметки принятия', err);
+                try {
+                    const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
+                    alert('Не удалось отметить принятие: ' + msg);
+                } catch(e){}
                 throw err;
             }
 
@@ -2212,7 +2205,11 @@
                         Object.assign(historyEntry, created);
                     }
                 } catch (err) {
-                    console.warn('Ошибка создания истории', err);
+                    console.warn('Ошибка отметки принятия', err);
+                    try {
+                        const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
+                        alert('Не удалось отметить принятие: ' + msg);
+                    } catch(e){}
                     throw err;
                 }
             }
@@ -2408,6 +2405,26 @@
                 chip.addEventListener('click', () => {
                     changeDayWithAnimation(new Date(day));
                 });
+                chip.addEventListener('pointerdown', (ev) => {
+                    ev.currentTarget.__startX = ev.clientX;
+                    ev.currentTarget.__startY = ev.clientY;
+                    ev.currentTarget.__moved = false;
+                }, { passive: true });
+
+                chip.addEventListener('pointermove', (ev) => {
+                    const s = ev.currentTarget.__startX;
+                    if (s === undefined) return;
+                    if (Math.abs(ev.clientX - s) > 8 || Math.abs(ev.clientY - ev.currentTarget.__startY) > 8) {
+                        ev.currentTarget.__moved = true;
+                    }
+                }, { passive: true });
+
+                chip.addEventListener('pointerup', (ev) => {
+                    if (ev.currentTarget.__moved) return;
+                    const dateIso = ev.currentTarget.getAttribute('data-date');
+                    if (!dateIso) return;
+                    changeDayWithAnimation(new Date(dateIso + 'T00:00:00'));
+                }, { passive: true });
                 weekRow.appendChild(chip);
             }
             const centerDateForLabel = new Date(centerDate);
@@ -2609,14 +2626,53 @@
             return ()=>handlers.destroy();
         }
 
-        function attachDaySwipe(container, onDir){
-            if(!container) return ()=>{};
-            let sX=0, sY=0, sT=0, tracking=false;
-            container.addEventListener('pointerdown', (e)=>{ sX=e.clientX; sY=e.clientY; sT=Date.now(); tracking=true; }, {passive:true});
-            container.addEventListener('pointermove', (e)=>{ if(!tracking) return; const dx = e.clientX - sX; const dy = e.clientY - sY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>30){  } }, {passive:true});
-            container.addEventListener('pointerup', (e)=>{ if(!tracking) return; tracking=false; const dx = e.clientX - sX; const dt = Date.now()-sT; if(Math.abs(dx)>80 && dt<600){ onDir && onDir(dx>0? -1:1); } }, {passive:true});
-            return ()=>{};
-        }
+        (function attachDetailButtons() {
+            document.addEventListener('click', (e) => {
+                const takeBtn = e.target.closest && e.target.closest('.take-btn, .btn-take, .accept-btn');
+                const skipBtn = e.target.closest && e.target.closest('.skip-btn, .btn-skip, .decline-btn');
+                if (takeBtn) {
+                    const rid = takeBtn.getAttribute('data-reminder-id') || takeBtn.dataset.reminderId;
+                    if (!rid) { alert('Ошибка: id напоминания не найден у кнопки "Принять"'); return; }
+                    const card = findCardByReminderId(rid);
+                    optimisticMarkTaken(rid, card);
+                }
+                if (skipBtn) {
+                    const rid = skipBtn.getAttribute('data-reminder-id') || skipBtn.dataset.reminderId;
+                    if (!rid) { alert('Ошибка: id напоминания не найден у кнопки "Пропустить"'); return; }
+                    const card = findCardByReminderId(rid);
+                    optimisticMarkSkipped(rid, card);
+                }
+            }, { passive: true });
+        })();
+
+        (function attachDaySwipe() {
+            const el = contentDiv || document.body;
+            let startX = 0, startY = 0, tracking = false, moved = false, isPointer = false;
+            const onStart = (x, y) => { startX = x; startY = y; tracking = true; moved = false; };
+            const onMove = (x, y) => { if (!tracking) return; if (Math.abs(x - startX) > 8 || Math.abs(y - startY) > 8) moved = true; };
+            const onEnd = (endX, endY) => {
+                if (!tracking) return;
+                tracking = false;
+                if (!moved) return;
+                const dx = endX - startX;
+                const dy = endY - startY;
+                if (Math.abs(dx) > 50 && Math.abs(dy) < 80) {
+                    const direction = dx < 0 ? 1 : -1;
+                    const newDate = new Date(currentDate);
+                    newDate.setDate(currentDate.getDate() + direction);
+                    changeDayWithAnimation(newDate, direction, true);
+                }
+            };
+
+            el.addEventListener('pointerdown', (e) => { isPointer = true; onStart(e.clientX, e.clientY); }, { passive: true });
+            el.addEventListener('pointermove', (e) => { if (isPointer) onMove(e.clientX, e.clientY); }, { passive: true });
+            el.addEventListener('pointerup', (e) => { if (isPointer) { onEnd(e.clientX, e.clientY); isPointer = false; } }, { passive: true });
+            el.addEventListener('pointercancel', () => { tracking = false; isPointer = false; }, { passive: true });
+
+            el.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
+            el.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
+            el.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; onEnd(t.clientX, t.clientY); }, { passive: true });
+        })();
 
         function attachSheetDrag(overlay, sheet){
             if(!overlay || !sheet) return ()=>{};
