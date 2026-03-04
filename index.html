@@ -1831,24 +1831,46 @@
         }
 
         async function apiFetch(endpoint, options = {}, useCache = false) {
-            const headers = {
-                'Content-Type': 'application/json',
-                ...(options.headers || {})
-            };
-            if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+            const headers = Object.assign(
+                { 'Content-Type': 'application/json' },
+                options && options.headers ? options.headers : {}
+            );
 
-            const fetchOptions = { ...options, headers };
-
-            const res = await fetch(API_BASE + endpoint, fetchOptions);
-            const text = await res.text().catch(() => null);
-            let body = null;
-            try { body = text ? JSON.parse(text) : null; } catch (e) { body = text; }
-
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status} ${res.statusText}`);
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
             }
-            if (res.status === 204) return {};
-            return body;
+
+            const fetchOptions = Object.assign({}, options || {}, { headers });
+
+            try {
+                const response = await fetch(API_BASE + endpoint, fetchOptions);
+
+                if (response.status === 204) {
+                    return {};
+                }
+
+                const text = await response.text();
+                let data = null;
+
+                try {
+                    data = text ? JSON.parse(text) : null;
+                } catch {
+                    data = text;
+                }
+
+                if (!response.ok) {
+                    const error = new Error(`HTTP ${response.status}`);
+                    error.status = response.status;
+                    error.body = data;
+                    throw error;
+                }
+
+                return data;
+
+            } catch (error) {
+                console.error('apiFetch error:', endpoint, error);
+                throw error;
+            }
         }
 
         function setAvatar(user) {
