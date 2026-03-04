@@ -145,7 +145,10 @@
             width: 20px;
             height: 20px;
             fill: #2d5980;
-            transition: fill var(--anim-duration) var(--anim-ease);
+            transition: transform 0.3s var(--anim-ease);
+        }
+        .month-left.calendar-open svg {
+            transform: rotate(180deg);
         }
         .month-nav {
             display: flex;
@@ -1524,6 +1527,29 @@
         let isSwipingOnCard = false;
         let isAnimatingDayChange = false;
 
+        function getWeekDays(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = (day === 0 ? -6 : 1 - day);
+            const monday = new Date(d);
+            monday.setDate(d.getDate() + diff);
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+                const D = new Date(monday);
+                D.setDate(monday.getDate() + i);
+                week.push(D);
+            }
+            return week;
+        }
+
+        function isSameWeek(date1, date2) {
+            const week1 = getWeekDays(date1);
+            const start = week1[0];
+            const end = week1[6];
+            const d2 = new Date(date2);
+            return d2 >= start && d2 <= end;
+        }
+
         contentDiv?.addEventListener('touchstart', (e) => {
             if (e.target.closest('.med-card')) {
                 return;
@@ -1544,34 +1570,43 @@
                 } else {
                     newDate.setDate(currentDate.getDate() + 1);
                 }
-                changeDayWithAnimation(newDate, diffX > 0 ? -1 : 1);
+                changeDayWithAnimation(newDate, diffX > 0 ? -1 : 1, false);
             }
             touchStartX = 0;
         }, { passive: true });
 
-        function changeDayWithAnimation(newDate, direction) {
+        function changeDayWithAnimation(newDate, direction, animateWeek = false) {
             if (isAnimatingDayChange) return;
             if (direction === undefined) {
                 direction = newDate > currentDate ? 1 : -1;
             }
             isAnimatingDayChange = true;
 
+            const sameWeek = isSameWeek(currentDate, newDate);
+            const shouldAnimateWeek = animateWeek || !sameWeek;
+
             const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
             const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
 
-            weekRow.style.opacity = '0';
-            weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
+            if (shouldAnimateWeek) {
+                weekRow.style.opacity = '0';
+                weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
+            }
             contentDiv.classList.add(outClass);
             setTimeout(() => {
                 currentDate = newDate;
                 renderWeek(currentDate);
                 onDateSelected(currentDate).then(() => {
-                    weekRow.style.opacity = '1';
+                    if (shouldAnimateWeek) {
+                        weekRow.style.opacity = '1';
+                    }
                     contentDiv.classList.remove(outClass);
                     contentDiv.classList.add(inClass);
                     setTimeout(() => {
                         contentDiv.classList.remove(inClass);
-                        weekRow.style.transition = '';
+                        if (shouldAnimateWeek) {
+                            weekRow.style.transition = '';
+                        }
                         isAnimatingDayChange = false;
                     }, 250);
                 });
@@ -1661,10 +1696,15 @@
             if (card.dataset.processing === 'true') return;
             card.dataset.processing = 'true';
 
-            const reminder = reminders.find(r => r.id === reminderId);
-            if (!reminder) return;
+            const reminder = reminders.find(r => String(r.id) === reminderId);
+            if (!reminder) {
+                card.style.transform = 'translateX(0)';
+                card.style.transition = '';
+                delete card.dataset.processing;
+                return;
+            }
             const dateKey = selectedDay.toISOString().split('T')[0];
-            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
+            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && String(h.reminder.id) === reminderId);
             if (!historyEntry) {
                 historyEntry = { reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
@@ -1703,10 +1743,15 @@
             if (card.dataset.processing === 'true') return;
             card.dataset.processing = 'true';
 
-            const reminder = reminders.find(r => r.id === reminderId);
-            if (!reminder) return;
+            const reminder = reminders.find(r => String(r.id) === reminderId);
+            if (!reminder) {
+                card.style.transform = 'translateX(0)';
+                card.style.transition = '';
+                delete card.dataset.processing;
+                return;
+            }
             const dateKey = selectedDay.toISOString().split('T')[0];
-            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
+            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && String(h.reminder.id) === reminderId);
             if (!historyEntry) {
                 historyEntry = { reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
@@ -1744,22 +1789,27 @@
             document.documentElement.style.setProperty('--tg-top-offset', '0px');
 
             function computeOffset() {
-                const vv = window.visualViewport;
+                const tg = window.Telegram?.WebApp;
                 let offset = 0;
-                if (vv && typeof vv.offsetTop === 'number') {
-                    offset = Math.max(0, Math.round(vv.offsetTop));
+                if (tg && typeof tg.contentSafeAreaInset?.top === 'number') {
+                    offset = Math.max(0, Math.round(tg.contentSafeAreaInset.top));
                 } else {
-                    const app = document.querySelector(appElSelector);
-                    if (app) {
-                        const r = app.getBoundingClientRect();
-                        if (r.top > 0) offset = Math.round(r.top);
-                    }
-                    if (!offset && window.outerHeight && window.innerHeight) {
-                        const diff = Math.max(0, Math.round(window.outerHeight - window.innerHeight));
-                        if (diff > 20) offset = diff;
+                    const vv = window.visualViewport;
+                    if (vv && typeof vv.offsetTop === 'number') {
+                        offset = Math.max(0, Math.round(vv.offsetTop));
+                    } else {
+                        const app = document.querySelector(appElSelector);
+                        if (app) {
+                            const r = app.getBoundingClientRect();
+                            if (r.top > 0) offset = Math.round(r.top);
+                        }
+                        if (!offset && window.outerHeight && window.innerHeight) {
+                            const diff = Math.max(0, Math.round(window.outerHeight - window.innerHeight));
+                            if (diff > 20) offset = diff;
+                        }
                     }
                 }
-                return offset;
+                return Math.max(10, offset);
             }
 
             function applyOffset() {
@@ -1933,7 +1983,7 @@
         function getStatusForReminderOnDate(reminder, date) {
             const dateKey = date.toISOString().split('T')[0];
             const history = historyMap.get(dateKey) || [];
-            const entry = history.find(h => h.reminder && h.reminder.id === reminder.id);
+            const entry = history.find(h => h.reminder && String(h.reminder.id) === String(reminder.id));
             if (entry && entry.status) return String(entry.status).toLowerCase();
             return 'pending';
         }
@@ -2064,7 +2114,7 @@
         }
 
         function openDetailSheet(reminderId) {
-            const reminder = reminders.find(r => r.id === reminderId);
+            const reminder = reminders.find(r => String(r.id) === reminderId);
             if (!reminder) return;
             selectedReminderId = reminderId;
             selectedReminder = reminder;
@@ -2109,11 +2159,11 @@
         function getHistoryForReminder(reminder, date) {
             const dateKey = date.toISOString().split('T')[0];
             const histories = historyMap.get(dateKey) || [];
-            return histories.find(h => h.reminder && h.reminder.id === reminder.id);
+            return histories.find(h => h.reminder && String(h.reminder.id) === String(reminder.id));
         }
 
         async function markReminderAsTaken(reminderId) {
-            const reminder = reminders.find(r => r.id === reminderId);
+            const reminder = reminders.find(r => String(r.id) === reminderId);
             if (!reminder) return;
 
             const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
@@ -2154,11 +2204,11 @@
 
         async function markReminderAsSkipped(reminderId) {
             try {
-                const reminder = reminders.find(r => r.id === reminderId);
+                const reminder = reminders.find(r => String(r.id) === reminderId);
                 if (!reminder) return;
 
                 const dateKey = selectedDay.toISOString().split('T')[0];
-                let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder.id === reminderId);
+                let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && String(h.reminder.id) === reminderId);
                 if (!historyEntry) {
                     const [hour = 0, minute = 0] = (reminder.reminderTime || '00:00').split(':').map(Number);
                     const scheduledTime = new Date(selectedDay);
@@ -2187,7 +2237,7 @@
         async function deleteReminder(reminderId) {
             try {
                 await apiFetch(`/reminders/${reminderId}`, { method: 'DELETE' });
-                reminders = reminders.filter(r => r.id !== reminderId);
+                reminders = reminders.filter(r => String(r.id) !== reminderId);
                 remindersCache.data = reminders;
                 remindersCache.timestamp = Date.now();
                 await loadHistoryForDate(selectedDay);
@@ -2318,21 +2368,6 @@
         infoCreateMed?.addEventListener('click', () => {  });
         createMedSheet?.addEventListener('click', (e) => { if (e.target === createMedSheet) closeCreateSheet(); });
 
-        function getWeekDays(date) {
-            const d = new Date(date);
-            const day = d.getDay();
-            const diff = (day === 0 ? -6 : 1 - day);
-            const monday = new Date(d);
-            monday.setDate(d.getDate() + diff);
-            const week = [];
-            for (let i = 0; i < 7; i++) {
-                const D = new Date(monday);
-                D.setDate(monday.getDate() + i);
-                week.push(D);
-            }
-            return week;
-        }
-
         function renderWeek(centerDate) {
             if (!weekRow) return;
             const week = getWeekDays(centerDate);
@@ -2347,7 +2382,7 @@
                 chip.addEventListener('click', () => {
                     document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
                     chip.classList.add('selected');
-                    changeDayWithAnimation(day);
+                    changeDayWithAnimation(day, undefined, false);
                 });
                 weekRow.appendChild(chip);
             });
@@ -2377,7 +2412,7 @@
                 cell.addEventListener('click', () => {
                     document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('selected'));
                     cell.classList.add('selected');
-                    changeDayWithAnimation(new Date(year, month, d));
+                    changeDayWithAnimation(new Date(year, month, d), undefined, false);
                     if (calendarPopup) calendarPopup.style.display = 'none';
                 });
                 calGrid.appendChild(cell);
@@ -2392,25 +2427,30 @@
         $('prevWeek')?.addEventListener('click', () => {
             let newDate = new Date(currentDate);
             newDate.setDate(currentDate.getDate() - 7);
-            changeDayWithAnimation(newDate, -1);
+            changeDayWithAnimation(newDate, -1, true);
         });
         $('nextWeek')?.addEventListener('click', () => {
             let newDate = new Date(currentDate);
             newDate.setDate(currentDate.getDate() + 7);
-            changeDayWithAnimation(newDate, 1);
+            changeDayWithAnimation(newDate, 1, true);
         });
 
         monthLabel?.addEventListener('click', (e) => {
             e.stopPropagation();
             if (calendarPopup.style.display === 'block') {
                 calendarPopup.style.display = 'none';
+                monthLabel.classList.remove('calendar-open');
             } else {
                 calendarPopup.style.display = 'block';
+                monthLabel.classList.add('calendar-open');
                 renderCalendar();
             }
         });
         document.addEventListener('click', (e) => {
-            if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
+            if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) {
+                calendarPopup.style.display = 'none';
+                monthLabel.classList.remove('calendar-open');
+            }
         });
         $('calPrevMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() - 1); renderCalendar(); });
         $('calNextMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() + 1); renderCalendar(); });
@@ -2563,7 +2603,6 @@
             let startY=0, curY=0, dragging=false, activeId=null;
             const openSheet = ()=>{ overlay.style.display='flex'; requestAnimationFrame(()=> sheet.classList.add('sheet-open')); };
             const closeSheet = ()=>{ sheet.classList.remove('sheet-open'); setTimeout(()=> overlay.style.display='none', 260); };
-            sheet.querySelectorAll('*').forEach(el=> el.style.touchAction = 'none');
             sheet.addEventListener('pointerdown', (e)=>{ sheet.setPointerCapture?.(e.pointerId); activeId=e.pointerId; startY=e.clientY; dragging=true; sheet.style.transition='none'; }, {passive:true});
             window.addEventListener('pointermove', (e)=>{ if(!dragging || e.pointerId!==activeId) return; curY=e.clientY; const dy = Math.max(0, curY-startY); sheet.style.transform = `translateY(${dy}px)`; }, {passive:true});
             window.addEventListener('pointerup', (e)=>{ if(!dragging || e.pointerId!==activeId) return; dragging=false; sheet.style.transition='transform 220ms cubic-bezier(.2,.9,.4,1)'; const dy = Math.max(0, curY-startY); if(dy>120) closeSheet(); else sheet.style.transform='translateY(0)'; }, {passive:true});
@@ -2659,10 +2698,6 @@
                 function enhanceSheet(sheetElement, overlayElement){
                     if(!sheetElement || sheetElement.__enhanced) return;
                     sheetElement.__enhanced = true;
-
-                    sheetElement.querySelectorAll('*').forEach(el => {
-                        el.style.touchAction = 'none';
-                    });
 
                     let startY = 0, currentY = 0, dragging = false, pointerId = null;
                     const onDown = (e) => {
