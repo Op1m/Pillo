@@ -145,7 +145,11 @@
             width: 20px;
             height: 20px;
             fill: #2d5980;
-            transition: fill var(--anim-duration) var(--anim-ease);
+            transition: transform 220ms var(--anim-ease), fill var(--anim-duration) var(--anim-ease);
+            transform-origin: center;
+        }
+        .month-left.open svg {
+            transform: rotate(180deg);
         }
         .month-nav {
             display: flex;
@@ -279,9 +283,6 @@
             border: 2px solid transparent;
             transition: background var(--anim-duration) var(--anim-ease), border-color var(--anim-duration) var(--anim-ease), transform var(--anim-duration) var(--anim-ease);
         }
-        .day-chip { transition: background-color 220ms var(--anim-ease), color 220ms var(--anim-ease); }
-        #monthLabel svg { transition: transform 220ms var(--anim-ease); }
-        #monthLabel.open svg { transform: rotate(180deg); }
         .day-chip:active {
             transform: scale(0.94);
         }
@@ -1554,48 +1555,43 @@
 
         function changeDayWithAnimation(newDate, direction) {
             if (isAnimatingDayChange) return;
-            const areSameWeek = (a, b) => {
-                const getMonday = (d) => { const dd = new Date(d); const day = dd.getDay(); const diff = (day === 0 ? -6 : 1 - day); dd.setDate(dd.getDate() + diff); dd.setHours(0,0,0,0); return dd.toDateString(); };
-                return getMonday(a) === getMonday(b);
-            };
-
             if (direction === undefined) direction = newDate > currentDate ? 1 : -1;
-
-            if (!areSameWeek(currentDate, newDate)) {
-                isAnimatingDayChange = true;
-                const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
-                const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
+            const weekStart = (d) => { const c = new Date(d); const day = c.getDay(); const diff = (day === 0 ? -6 : 1 - day); c.setDate(c.getDate() + diff); c.setHours(0,0,0,0); return c.toDateString(); };
+            const sameWeek = weekStart(newDate) === weekStart(currentDate);
+            isAnimatingDayChange = true;
+            const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
+            const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
+            if (sameWeek) {
+                const prevSelected = weekRow && weekRow.querySelector('.day-chip.selected');
+                if (prevSelected) prevSelected.classList.remove('selected');
+                currentDate = newDate;
+                renderWeek(currentDate);
+                const newSelected = weekRow && weekRow.querySelector('.day-chip.selected');
+                if (newSelected) {
+                    newSelected.classList.add('selected');
+                    setTimeout(()=> { isAnimatingDayChange = false; }, 250);
+                } else {
+                    onDateSelected(newDate).then(()=> { isAnimatingDayChange = false; });
+                }
+            } else {
+                weekRow.style.opacity = '0';
+                weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
                 contentDiv.classList.add(outClass);
                 setTimeout(() => {
                     currentDate = newDate;
                     renderWeek(currentDate);
                     onDateSelected(currentDate).then(() => {
+                        weekRow.style.opacity = '1';
                         contentDiv.classList.remove(outClass);
                         contentDiv.classList.add(inClass);
                         setTimeout(() => {
                             contentDiv.classList.remove(inClass);
+                            weekRow.style.transition = '';
                             isAnimatingDayChange = false;
                         }, 250);
                     });
                 }, 250);
-                return;
             }
-
-            const prev = weekRow?.querySelector('.day-chip.selected');
-            const chips = Array.from(weekRow?.querySelectorAll('.day-chip') || []);
-            const targetChip = chips.find(c => {
-                const dayNum = parseInt(c.querySelector('.day-number')?.innerText || '0', 10);
-                return dayNum === newDate.getDate();
-            });
-
-            if (prev && prev !== targetChip) prev.classList.remove('selected');
-            if (targetChip) {
-                targetChip.classList.add('selected');
-                targetChip.style.transition = 'background-color 220ms var(--anim-ease), color 220ms var(--anim-ease)';
-            }
-
-            currentDate = newDate;
-            onDateSelected(currentDate).then(() => {});
         }
 
         function attachSwipeToCard(card, reminderId) {
@@ -1674,6 +1670,7 @@
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
             const dateKey = selectedDay.toISOString().split('T')[0];
+            historyCache.delete(dateKey);
             let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
             if (!historyEntry) {
                 historyEntry = { reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
@@ -1696,7 +1693,39 @@
                 card.classList.add('pending');
                 const statusSpan = card.querySelector('.med-status');
                 if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                    statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                }
+            });
+        }
+
+        function optimisticMarkSkipped(reminderId, card) {
+            const reminder = reminders.find(r => r.id === reminderId);
+            if (!reminder) return;
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            historyCache.delete(dateKey);
+            let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
+            if (!historyEntry) {
+                historyEntry = { reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
+                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
+                historyMap.get(dateKey).push(historyEntry);
+            } else {
+                historyEntry.status = 'skipped';
+            }
+            card.classList.add('skipped');
+            card.classList.remove('pending', 'taken', 'missed');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
+            }
+            card.style.transform = 'translateX(0)';
+            setTimeout(() => { card.style.transition = ''; }, 200);
+            markReminderAsSkipped(reminderId).catch(() => {
+                if (historyEntry) historyEntry.status = 'pending';
+                card.classList.remove('skipped');
+                card.classList.add('pending');
+                const statusSpan = card.querySelector('.med-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
                 }
             });
         }
@@ -1770,9 +1799,6 @@
                 window.visualViewport.addEventListener('scroll', applyOffset, { passive: true });
             }
             window.addEventListener('resize', applyOffset, { passive: true });
-            window.addEventListener('orientationchange', applyOffset, { passive: true });
-            window.addEventListener('focusin', applyOffset, { passive: true });
-            window.addEventListener('focusout', applyOffset, { passive: true });
 
             const tg = window.Telegram && window.Telegram.WebApp;
             if (tg) {
@@ -2034,11 +2060,7 @@
                     `;
                     card.addEventListener('click', () => openDetailSheet(r.id));
                     innerDiv.appendChild(card);
-                    if (window.PointerEvent) {
-                        attachCardSwipe(card, () => optimisticMarkTaken(r.id, card), () => optimisticMarkSkipped(r.id, card));
-                    } else {
-                        attachSwipeToCard(card, r.id);
-                    }
+                    attachSwipeToCard(card, r.id);
                 });
 
                 cardsDiv.appendChild(innerDiv);
@@ -2085,43 +2107,45 @@
 
         async function createMedicineAndReminder(name, dosage, time, food) {
             if (!currentUser) return;
-            const tempMedId = 'temp-med-' + Date.now();
-            const tempRemId = 'temp-rem-' + Date.now();
-            const tempMedicine = { id: tempMedId, name, dosage, instructions: food };
-            const tempReminder = { id: tempRemId, medicine: tempMedicine, medicineId: null, reminderTime: time, daysOfWeek: 'everyday' };
+            const tmpId = 'tmp-' + Date.now();
+            const tempReminder = {
+                id: tmpId,
+                medicine: { id: null, name, dosage, instructions: food },
+                reminderTime: time,
+                userId: currentUser.id,
+                daysOfWeek: 'everyday'
+            };
             reminders.push(tempReminder);
             remindersCache.data = reminders;
             remindersCache.timestamp = Date.now();
-            renderGroupsForDate(selectedDay);
-
             try {
-                const createdMedicine = await apiFetch('/medicines', {
+                renderGroupsForDate(selectedDay);
+            } catch(e){}
+            try {
+                const medicine = await apiFetch('/medicines', {
                     method: 'POST',
                     body: JSON.stringify({ name, dosage, description: '', instructions: food }),
                 });
-                const createdReminder = await apiFetch('/reminders', {
+                const reminder = await apiFetch('/reminders', {
                     method: 'POST',
                     body: JSON.stringify({
                         userId: currentUser.id,
-                        medicineId: createdMedicine.id,
+                        medicineId: medicine.id,
                         reminderTime: time,
                         daysOfWeek: 'everyday'
                     }),
                 });
-
-                const idx = reminders.findIndex(r => r.id === tempRemId);
-                if (idx !== -1) reminders[idx] = createdReminder;
-                else reminders.push(createdReminder);
-
+                const idx = reminders.findIndex(r => r.id === tmpId);
+                if (idx !== -1) reminders[idx] = reminder;
+                else reminders.push(reminder);
                 remindersCache.data = reminders;
                 remindersCache.timestamp = Date.now();
                 await loadHistoryForDate(selectedDay);
             } catch (err) {
-                reminders = reminders.filter(r => r.id !== tempRemId);
+                reminders = reminders.filter(r => r.id !== tmpId);
                 remindersCache.data = reminders;
                 remindersCache.timestamp = Date.now();
-                renderGroupsForDate(selectedDay);
-                console.warn('Ошибка создания', err);
+                await loadHistoryForDate(selectedDay).catch(()=>{});
             }
         }
 
@@ -2426,8 +2450,8 @@
                 monthLabel.classList.remove('open');
             } else {
                 calendarPopup.style.display = 'block';
-                renderCalendar();
                 monthLabel.classList.add('open');
+                renderCalendar();
             }
         });
         document.addEventListener('click', (e) => {
@@ -2477,8 +2501,22 @@
             $('addNewUser')?.addEventListener('click', () => { if (userSwitchSheet) userSwitchSheet.style.display = 'none'; });
         }
 
-        $('userSwitchBtn')?.addEventListener('click', () => { renderUserSwitchList(); if (userSwitchSheet) { userSwitchSheet.style.display = 'flex'; userSwitchSheet.style.opacity = '1'; const inner = userSwitchSheet.querySelector('.bottom-sheet-detail'); if (inner) inner.style.transform = ''; setTimeout(()=> window.__tgUi && window.__tgUi.recompute && window.__tgUi.recompute(), 50); } });
-        userSwitchSheet?.addEventListener('click', (e) => { if (e.target === userSwitchSheet) { userSwitchSheet.style.transition = 'opacity 220ms linear'; userSwitchSheet.style.opacity = '0'; setTimeout(()=> { userSwitchSheet.style.display = 'none'; userSwitchSheet.style.opacity = ''; userSwitchSheet.style.transition = ''; }, 260); } });
+        $('userSwitchBtn')?.addEventListener('click', () => { renderUserSwitchList(); if (userSwitchSheet) userSwitchSheet.style.display = 'flex'; });
+        userSwitchSheet?.addEventListener('click', (e) => { if (e.target === userSwitchSheet) userSwitchSheet.style.display = 'none'; });
+        if (userSwitchInner && userSwitchSheet) {
+            let usStart = 0, usCurrent = 0;
+            userSwitchInner.addEventListener('touchstart', (e) => { usStart = e.touches[0].clientY; }, { passive: true });
+            userSwitchInner.addEventListener('touchmove', (e) => {
+                usCurrent = e.touches[0].clientY;
+                const diff = Math.max(0, usCurrent - usStart);
+                userSwitchInner.style.transform = diff > 0 ? `translateY(${diff}px)` : '';
+            }, { passive: true });
+            userSwitchInner.addEventListener('touchend', () => {
+                if (usCurrent - usStart > 60) userSwitchSheet.style.display = 'none';
+                userSwitchInner.style.transform = '';
+                usStart = usCurrent = 0;
+            }, { passive: true });
+        }
 
         function setActiveTab(tabId) {
             document.querySelectorAll('.nav-item')?.forEach(item => item.classList.remove('active'));
