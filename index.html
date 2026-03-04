@@ -2525,18 +2525,29 @@
 
         $('userSwitchBtn')?.addEventListener('click', () => { renderUserSwitchList(); if (userSwitchSheet) userSwitchSheet.style.display = 'flex'; });
         userSwitchSheet?.addEventListener('click', (e) => { if (e.target === userSwitchSheet) userSwitchSheet.style.display = 'none'; });
+        const userSwitchInner = document.getElementById('userSwitchInner');
+
         if (userSwitchInner && userSwitchSheet) {
-            let usStart = 0, usCurrent = 0;
-            userSwitchInner.addEventListener('touchstart', (e) => { usStart = e.touches[0].clientY; }, { passive: true });
+            let usStart = 0;
+            let usCurrent = 0;
+
+            userSwitchInner.addEventListener('touchstart', (e) => {
+                usStart = e.touches[0].clientY;
+            }, { passive: true });
+
             userSwitchInner.addEventListener('touchmove', (e) => {
                 usCurrent = e.touches[0].clientY;
                 const diff = Math.max(0, usCurrent - usStart);
                 userSwitchInner.style.transform = diff > 0 ? `translateY(${diff}px)` : '';
             }, { passive: true });
+
             userSwitchInner.addEventListener('touchend', () => {
-                if (usCurrent - usStart > 60) userSwitchSheet.style.display = 'none';
+                if (usCurrent - usStart > 60) {
+                    userSwitchSheet.style.display = 'none';
+                }
                 userSwitchInner.style.transform = '';
-                usStart = usCurrent = 0;
+                usStart = 0;
+                usCurrent = 0;
             }, { passive: true });
         }
 
