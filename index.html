@@ -1586,6 +1586,7 @@
             let isSwiping = false;
 
             const onTouchStart = (e) => {
+                if (card.dataset.processing === 'true') return;
                 cardTouchStartX = e.touches[0].clientX;
                 cardTouchStartY = e.touches[0].clientY;
                 cardTouchStartTime = Date.now();
@@ -1596,7 +1597,7 @@
             };
 
             const onTouchMove = (e) => {
-                if (swiped) return;
+                if (swiped || card.dataset.processing === 'true') return;
                 const dx = e.touches[0].clientX - cardTouchStartX;
                 const dy = e.touches[0].clientY - cardTouchStartY;
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
@@ -1625,12 +1626,14 @@
             };
 
             const onTouchEnd = (e) => {
+                if (card.dataset.processing === 'true') return;
                 const diffX = e.changedTouches[0].clientX - cardTouchStartX;
                 const diffTime = Date.now() - cardTouchStartTime;
                 card.classList.remove('swiping-right', 'swiping-left');
                 card.style.transition = 'transform 0.2s ease';
 
                 if (Math.abs(diffX) > 50 && diffTime < 500) {
+                    card.dataset.processing = 'true';
                     if (diffX > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
@@ -1651,6 +1654,13 @@
         }
 
         function optimisticMarkTaken(reminderId, card) {
+            if (!card) {
+                card = document.querySelector(`.med-card[data-id="${reminderId}"]`);
+                if (!card) return;
+            }
+            if (card.dataset.processing === 'true') return;
+            card.dataset.processing = 'true';
+
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
             const dateKey = selectedDay.toISOString().split('T')[0];
@@ -1670,18 +1680,29 @@
             }
             card.style.transform = 'translateX(0)';
             setTimeout(() => { card.style.transition = ''; }, 200);
-            markReminderAsTaken(reminderId).catch(() => {
-                if (historyEntry) historyEntry.status = 'pending';
-                card.classList.remove('taken');
-                card.classList.add('pending');
-                const statusSpan = card.querySelector('.med-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
-                }
-            });
+            markReminderAsTaken(reminderId)
+                .catch(() => {
+                    if (historyEntry) historyEntry.status = 'pending';
+                    card.classList.remove('taken');
+                    card.classList.add('pending');
+                    const statusSpan = card.querySelector('.med-status');
+                    if (statusSpan) {
+                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                    }
+                })
+                .finally(() => {
+                    delete card.dataset.processing;
+                });
         }
 
         function optimisticMarkSkipped(reminderId, card) {
+            if (!card) {
+                card = document.querySelector(`.med-card[data-id="${reminderId}"]`);
+                if (!card) return;
+            }
+            if (card.dataset.processing === 'true') return;
+            card.dataset.processing = 'true';
+
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
             const dateKey = selectedDay.toISOString().split('T')[0];
@@ -1701,15 +1722,19 @@
             }
             card.style.transform = 'translateX(0)';
             setTimeout(() => { card.style.transition = ''; }, 200);
-            markReminderAsSkipped(reminderId).catch(() => {
-                if (historyEntry) historyEntry.status = 'pending';
-                card.classList.remove('skipped');
-                card.classList.add('pending');
-                const statusSpan = card.querySelector('.med-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
-                }
-            });
+            markReminderAsSkipped(reminderId)
+                .catch(() => {
+                    if (historyEntry) historyEntry.status = 'pending';
+                    card.classList.remove('skipped');
+                    card.classList.add('pending');
+                    const statusSpan = card.querySelector('.med-status');
+                    if (statusSpan) {
+                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                    }
+                })
+                .finally(() => {
+                    delete card.dataset.processing;
+                });
         }
 
         (function tgUiHelper(){
