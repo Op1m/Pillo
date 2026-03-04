@@ -2368,12 +2368,11 @@
         $('takeAllConfirm')?.addEventListener('click', async () => {
             if (currentGroupTime) {
                 const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime||'').substring(0,5) === currentGroupTime);
-                for (const r of groupReminders) {
+                groupReminders.forEach(r => {
                     const card = document.querySelector(`.med-card[data-id="${r.id}"]`);
                     if (card) optimisticMarkTaken(r.id, card);
-                }
-                await Promise.all(groupReminders.map(r => markReminderAsTaken(r.id).catch(err => console.warn(err))));
-                await loadHistoryForDate(selectedDay);
+                });
+                Promise.all(groupReminders.map(r => markReminderAsTaken(r.id).catch(err => console.warn(err))));
             }
             if (takeAllSheet) takeAllSheet.style.display = 'none';
         });
@@ -2381,12 +2380,11 @@
         $('skipAllConfirm')?.addEventListener('click', async () => {
             if (currentGroupTime) {
                 const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime||'').substring(0,5) === currentGroupTime);
-                for (const r of groupReminders) {
+                groupReminders.forEach(r => {
                     const card = document.querySelector(`.med-card[data-id="${r.id}"]`);
                     if (card) optimisticMarkSkipped(r.id, card);
-                }
-                await Promise.all(groupReminders.map(r => markReminderAsSkipped(r.id).catch(err => console.warn(err))));
-                await loadHistoryForDate(selectedDay);
+                });
+                Promise.all(groupReminders.map(r => markReminderAsSkipped(r.id).catch(err => console.warn(err))));
             }
             if (takeAllSheet) takeAllSheet.style.display = 'none';
         });
@@ -2886,6 +2884,124 @@
                     }
                 });
             } catch(e){}
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#takeBtn')) {
+                if (selectedReminderId) {
+                    const card = document.querySelector(`.med-card[data-id="${selectedReminderId}"]`);
+                    if (card) optimisticMarkTaken(selectedReminderId, card);
+                    if (sheetOverlay) sheetOverlay.style.display = 'none';
+                }
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#skipBtn')) {
+                if (selectedReminderId) {
+                    const card = document.querySelector(`.med-card[data-id="${selectedReminderId}"]`);
+                    if (card) optimisticMarkSkipped(selectedReminderId, card);
+                    if (sheetOverlay) sheetOverlay.style.display = 'none';
+                }
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#deleteBtn')) {
+                if (selectedReminderId && confirm('Удалить этот препарат?')) {
+                    optimisticDeleteReminder(selectedReminderId);
+                    if (sheetOverlay) sheetOverlay.style.display = 'none';
+                }
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#takeAllConfirm')) {
+                if (currentGroupTime) {
+                    const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime || '').substring(0,5) === currentGroupTime);
+                    groupReminders.forEach(r => {
+                        const card = document.querySelector(`.med-card[data-id="${r.id}"]`);
+                        if (card) optimisticMarkTaken(r.id, card);
+                    });
+                    Promise.all(groupReminders.map(r => markReminderAsTaken(r.id).catch(err => console.warn(err))));
+                }
+                if (takeAllSheet) takeAllSheet.style.display = 'none';
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#skipAllConfirm')) {
+                if (currentGroupTime) {
+                    const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime || '').substring(0,5) === currentGroupTime);
+                    groupReminders.forEach(r => {
+                        const card = document.querySelector(`.med-card[data-id="${r.id}"]`);
+                        if (card) optimisticMarkSkipped(r.id, card);
+                    });
+                    Promise.all(groupReminders.map(r => markReminderAsSkipped(r.id).catch(err => console.warn(err))));
+                }
+                if (takeAllSheet) takeAllSheet.style.display = 'none';
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#cancelTakeAll')) {
+                if (takeAllSheet) takeAllSheet.style.display = 'none';
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#chooseNewMed')) {
+                if (addChoiceSheet) addChoiceSheet.style.display = 'none';
+                openCreateSheet();
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#chooseNewCourse')) {
+                if (addChoiceSheet) addChoiceSheet.style.display = 'none';
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#cancelAddChoice')) {
+                if (addChoiceSheet) addChoiceSheet.style.display = 'none';
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#saveCreateMed')) {
+                const name = medNameInput?.value?.trim();
+                if (!name) return;
+                const dose = medDoseInput?.value?.trim() || '1 таб.';
+                const time = medTimeInput?.value;
+                if (!time) return;
+                const food = medFoodSelect?.value;
+                createMedicineAndReminder(name, dose, time, food);
+                closeCreateSheet();
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#cancelCreateMed') || e.target.closest('#closeCreateMed')) {
+                closeCreateSheet();
+                e.preventDefault();
+                return;
+            }
+            if (e.target.closest('#userSwitchBtn')) {
+                renderUserSwitchList();
+                if (userSwitchSheet) userSwitchSheet.style.display = 'flex';
+                e.preventDefault();
+                return;
+            }
+            if (e.target.classList.contains('sheet-overlay')) {
+                e.target.style.display = 'none';
+            }
+            if (e.target.classList.contains('modal-sheet-overlay')) {
+                e.target.style.display = 'none';
+            }
+        });
+
+
+        document.addEventListener('click', (e) => {
+            const takeAllBtn = e.target.closest('.take-all');
+            if (takeAllBtn) {
+                e.stopPropagation();
+                const time = takeAllBtn.dataset.time;
+                const count = remindersForDate(selectedDay).filter(r => (r.reminderTime||'').substring(0,5) === time).length;
+                if (takeAllSubtitle) takeAllSubtitle.innerText = `Отметить ${count} лекарств на ${time}`;
+                currentGroupTime = time;
+                if (takeAllSheet) takeAllSheet.style.display = 'flex';
+            }
         });
     })();
 </script>
