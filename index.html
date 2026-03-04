@@ -2330,7 +2330,7 @@
                 if (sheetOverlay) sheetOverlay.style.display = 'none';
             }
         });
-        
+
         postponeBtn?.addEventListener('click', () => {  });
         editMed?.addEventListener('click', () => {  });
         btnBack?.addEventListener('click', () => { if (sheetOverlay) sheetOverlay.style.display = 'none'; });
@@ -2443,48 +2443,25 @@
 
         function renderWeek(centerDate) {
             if (!weekRow) return;
-
+            const week = getWeekDays(centerDate);
             weekRow.innerHTML = '';
-
-            const center = new Date(centerDate);
-            const wday = center.getDay();
-            const start = new Date(center);
-            const diff = (wday === 0 ? -6 : 1 - wday);
-            start.setDate(center.getDate() + diff);
-
-            for (let i = 0; i < 7; i++) {
-                const day = new Date(start);
-                day.setDate(start.getDate() + i);
-
+            const today = new Date();
+            week.forEach((day) => {
                 const chip = document.createElement('div');
                 chip.className = 'day-chip';
                 chip.dataset.date = day.toISOString().split('T')[0];
-
-                chip.innerHTML = `
-            <div class="dow">
-                ${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2)}
-            </div>
-            <div class="dom">
-                ${day.getDate()}
-            </div>
-        `;
-
-                if (selectedDay && day.toDateString() === selectedDay.toDateString()) {
+                if (day.toDateString() === today.toDateString()) chip.classList.add('today');
+                if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
+                chip.innerHTML = `<div class="day-number">${day.getDate()}</div><div class="day-name">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div>`;
+                chip.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
                     chip.classList.add('selected');
-                }
-
-                chip.addEventListener('click', () => {
-                    changeDayWithAnimation(new Date(day));
+                    changeDayWithAnimation(day, undefined, false);
                 });
-
                 weekRow.appendChild(chip);
-            }
-
-            if (monthLabel) {
-                monthLabel.childNodes[0].nodeValue =
-                    center.toLocaleString('ru', { month: 'long', year: 'numeric' })
-                        .replace(' г.', '') + ' ';
-            }
+            });
+            if (monthLabel) monthLabel.childNodes[0].nodeValue = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
         }
 
         let calDate = new Date();
