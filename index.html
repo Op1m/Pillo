@@ -2117,12 +2117,6 @@
         }
 
         async function markReminderAsTaken(reminderId) {
-            try { alert('Ошибка при подтверждении принятия: ' + (err && (err.body && err.body.message) || err.message || JSON.stringify(err))); } catch(e){}
-            if (historyEntry) historyEntry.status = 'pending';
-            card.classList.remove('taken');
-            card.classList.add('pending');
-            const statusSpan2 = card.querySelector('.med-status');
-            if (statusSpan2) statusSpan2.innerHTML = `<span class="status-pending status-icon"> Ожидается</span>`;
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
             const [hour=0, minute=0] = (reminder.reminderTime || '00:00').split(':').map(Number);
