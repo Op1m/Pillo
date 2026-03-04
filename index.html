@@ -2393,49 +2393,48 @@
 
         function renderWeek(centerDate) {
             if (!weekRow) return;
+
             weekRow.innerHTML = '';
+
             const center = new Date(centerDate);
             const wday = center.getDay();
             const start = new Date(center);
             const diff = (wday === 0 ? -6 : 1 - wday);
             start.setDate(center.getDate() + diff);
+
             for (let i = 0; i < 7; i++) {
                 const day = new Date(start);
                 day.setDate(start.getDate() + i);
+
                 const chip = document.createElement('div');
                 chip.className = 'day-chip';
-                chip.setAttribute('data-date', day.toISOString().split('T')[0]);
-                chip.setAttribute('data-day', day.getDate());
-                chip.innerHTML = `<div class="dow">${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2).toUpperCase()}</div><div class="dom">${day.getDate()}</div>`;
-                chip.style.transition = 'background-color 0.25s var(--anim-ease), color 0.25s var(--anim-ease)';
-                if (selectedDay && day.toDateString() === selectedDay.toDateString()) chip.classList.add('selected');
+                chip.dataset.date = day.toISOString().split('T')[0];
+
+                chip.innerHTML = `
+            <div class="dow">
+                ${day.toLocaleString('ru', { weekday: 'short' }).slice(0,2)}
+            </div>
+            <div class="dom">
+                ${day.getDate()}
+            </div>
+        `;
+
+                if (selectedDay && day.toDateString() === selectedDay.toDateString()) {
+                    chip.classList.add('selected');
+                }
+
                 chip.addEventListener('click', () => {
                     changeDayWithAnimation(new Date(day));
                 });
-                chip.addEventListener('pointerdown', (ev) => {
-                    ev.currentTarget.__startX = ev.clientX;
-                    ev.currentTarget.__startY = ev.clientY;
-                    ev.currentTarget.__moved = false;
-                }, { passive: true });
 
-                chip.addEventListener('pointermove', (ev) => {
-                    const s = ev.currentTarget.__startX;
-                    if (s === undefined) return;
-                    if (Math.abs(ev.clientX - s) > 8 || Math.abs(ev.clientY - ev.currentTarget.__startY) > 8) {
-                        ev.currentTarget.__moved = true;
-                    }
-                }, { passive: true });
-
-                chip.addEventListener('pointerup', (ev) => {
-                    if (ev.currentTarget.__moved) return;
-                    const dateIso = ev.currentTarget.getAttribute('data-date');
-                    if (!dateIso) return;
-                    changeDayWithAnimation(new Date(dateIso + 'T00:00:00'));
-                }, { passive: true });
                 weekRow.appendChild(chip);
             }
-            const centerDateForLabel = new Date(centerDate);
-            if (monthLabel) monthLabel.childNodes[0].nodeValue = centerDateForLabel.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
+
+            if (monthLabel) {
+                monthLabel.childNodes[0].nodeValue =
+                    center.toLocaleString('ru', { month: 'long', year: 'numeric' })
+                        .replace(' г.', '') + ' ';
+            }
         }
 
         let calDate = new Date();
