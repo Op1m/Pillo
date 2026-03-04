@@ -1927,10 +1927,16 @@
 
         function getStatusForReminderOnDate(reminder, date) {
             const dateKey = date.toISOString().split('T')[0];
-            const history = historyMap.get(dateKey) || [];
-            const entry = history.find(h => h.reminder && h.reminder.id === reminder.id);
-            if (entry && entry.status) return String(entry.status).toLowerCase();
-            return 'pending';
+            const histories = historyMap.get(dateKey) || [];
+
+            const history = histories.find(h =>
+                h.reminder &&
+                String(h.reminder.id) === String(reminder.id)
+            );
+
+            if (!history) return 'pending';
+
+            return (history.status || 'pending').toLowerCase();
         }
 
         function renderGroupsForDate(date) {
