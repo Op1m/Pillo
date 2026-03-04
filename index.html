@@ -1712,15 +1712,10 @@
 
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
+
             const dateKey = selectedDay.toISOString().split('T')[0];
             let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
-            if (!historyEntry) {
-                historyEntry = { reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
-                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                historyMap.get(dateKey).push(historyEntry);
-            } else {
-                historyEntry.status = 'taken';
-            }
+
             card.classList.add('taken');
             card.classList.remove('pending', 'skipped', 'missed');
             const statusSpan = card.querySelector('.med-status');
@@ -1729,6 +1724,7 @@
             }
             card.style.transform = 'translateX(0)';
             setTimeout(() => { card.style.transition = ''; }, 200);
+
             markReminderAsTaken(reminderId).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
                 card.classList.remove('taken');
@@ -1752,15 +1748,10 @@
 
             const reminder = reminders.find(r => r.id === reminderId);
             if (!reminder) return;
+
             const dateKey = selectedDay.toISOString().split('T')[0];
             let historyEntry = (historyMap.get(dateKey) || []).find(h => h.reminder && h.reminder.id === reminderId);
-            if (!historyEntry) {
-                historyEntry = { reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
-                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                historyMap.get(dateKey).push(historyEntry);
-            } else {
-                historyEntry.status = 'skipped';
-            }
+
             card.classList.add('skipped');
             card.classList.remove('pending', 'taken', 'missed');
             const statusSpan = card.querySelector('.med-status');
@@ -1769,6 +1760,7 @@
             }
             card.style.transform = 'translateX(0)';
             setTimeout(() => { card.style.transition = ''; }, 200);
+
             markReminderAsSkipped(reminderId).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
                 card.classList.remove('skipped');
@@ -2617,204 +2609,4 @@
         function attachCardSwipe(card, onAccept, onSkip){
             if(!card) return ()=>{};
             let startX=0, startY=0, isDragging=false, startTime=0, translateX=0;
-            const threshold = 56;
-            const setX = (x)=>{ card.style.transform = `translate3d(${x}px,0,0)`; card.style.willChange='transform'; };
-            const clear = ()=>{ card.style.transform=''; card.dataset.swipe=''; card.classList.remove('is-swiping'); card.style.willChange=''; };
-
-            const handlers = pointerGesture(card, {
-                onStart(e){ startX=e.clientX; startY=e.clientY; startTime=Date.now(); isDragging=false; card.style.transition='none'; },
-                onMove(pos){ const dx = pos.clientX - startX; const dy = pos.clientY - startY; if(!isDragging){ if(Math.abs(dx)>8 && Math.abs(dx)>Math.abs(dy)) isDragging=true; else return; } card.classList.add('is-swiping'); translateX = dx; setX(dx); card.dataset.swipe = dx>0?'right':'left'; },
-                onEnd(pos){ if(!isDragging){ clear(); return; } const total = pos.clientX - startX; const dt = Math.max(1, Date.now()-startTime); const velocity = total / dt; card.style.transition='transform 200ms cubic-bezier(.2,.9,.4,1)'; if(total>threshold || velocity>0.5){ card.classList.add('removed'); card.style.transform='translate3d(60%,0,0)'; card.style.opacity=0; setTimeout(()=>{ onAccept && onAccept(); try{ card.remove(); }catch(e){} },220); } else if(total < -threshold || velocity < -0.5){ card.classList.add('removed'); card.style.transform='translate3d(-60%,0,0)'; card.style.opacity=0; setTimeout(()=>{ onSkip && onSkip(); try{ card.remove(); }catch(e){} },220); } else { card.style.transform='translate3d(0,0,0)'; setTimeout(()=>{ clear(); card.style.transition=''; },220); } }
-            });
-            return ()=>handlers.destroy();
-        }
-
-        function attachDaySwipe(container, onDir){
-            if(!container) return ()=>{};
-            let sX=0, sY=0, sT=0, tracking=false;
-            container.addEventListener('pointerdown', (e)=>{ sX=e.clientX; sY=e.clientY; sT=Date.now(); tracking=true; }, {passive:true});
-            container.addEventListener('pointermove', (e)=>{ if(!tracking) return; const dx = e.clientX - sX; const dy = e.clientY - sY; if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>30){  } }, {passive:true});
-            container.addEventListener('pointerup', (e)=>{ if(!tracking) return; tracking=false; const dx = e.clientX - sX; const dt = Date.now()-sT; if(Math.abs(dx)>80 && dt<600){ onDir && onDir(dx>0? -1:1); } }, {passive:true});
-            return ()=>{};
-        }
-
-        function attachSheetDrag(overlay, sheet){
-            if(!overlay || !sheet) return ()=>{};
-            let startY=0, curY=0, dragging=false, activeId=null;
-            const openSheet = ()=>{ overlay.style.display='flex'; requestAnimationFrame(()=> sheet.classList.add('sheet-open')); };
-            const closeSheet = ()=>{ sheet.classList.remove('sheet-open'); setTimeout(()=> overlay.style.display='none', 260); };
-            sheet.addEventListener('pointerdown', (e)=>{ sheet.setPointerCapture?.(e.pointerId); activeId=e.pointerId; startY=e.clientY; dragging=true; sheet.style.transition='none'; }, {passive:true});
-            window.addEventListener('pointermove', (e)=>{ if(!dragging || e.pointerId!==activeId) return; curY=e.clientY; const dy = Math.max(0, curY-startY); sheet.style.transform = `translateY(${dy}px)`; }, {passive:true});
-            window.addEventListener('pointerup', (e)=>{ if(!dragging || e.pointerId!==activeId) return; dragging=false; sheet.style.transition='transform 220ms cubic-bezier(.2,.9,.4,1)'; const dy = Math.max(0, curY-startY); if(dy>120) closeSheet(); else sheet.style.transform='translateY(0)'; }, {passive:true});
-            return { open: openSheet, close: closeSheet };
-        }
-
-        window.__perfHelpers = { pointerGesture, attachCardSwipe, attachDaySwipe, attachSheetDrag };
-    })();
-</script>
-
-<script>
-    (function(){
-        function onceReady(cb){
-            if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', cb);
-            else cb();
-        }
-
-        onceReady(() => {
-            try {
-                const monthLabel = document.getElementById('monthLabel');
-                const calendarPopup = document.getElementById('calendarPopup');
-                if(monthLabel && calendarPopup){
-                    const reposition = () => {
-                        const style = getComputedStyle(calendarPopup);
-                        if(style.display === 'none') return;
-                        const r = monthLabel.getBoundingClientRect();
-                        const popupWidth = calendarPopup.offsetWidth;
-                        let left = r.left + r.width / 2;
-                        left = Math.max(popupWidth / 2 + 8, Math.min(left, window.innerWidth - popupWidth / 2 - 8));
-                        calendarPopup.style.position = 'fixed';
-                        calendarPopup.style.left = left + 'px';
-                        calendarPopup.style.top = (r.bottom + 8) + 'px';
-                        calendarPopup.style.transform = 'translateX(-50%)';
-                    };
-                    const mo = new MutationObserver(() => reposition());
-                    mo.observe(calendarPopup, { attributes: true, attributeFilter: ['style', 'class'] });
-                    window.addEventListener('resize', reposition, {passive:true});
-                    window.addEventListener('scroll', reposition, {passive:true});
-                    reposition();
-                }
-            } catch(e){ console.warn('calendar reposition patch failed', e); }
-
-            try {
-                function bakeGroupHeights() {
-                    document.querySelectorAll('.time-group').forEach(group => {
-                        const cards = group.querySelector('.med-cards');
-                        if(!cards) return;
-                        const inner = cards.querySelector('.med-cards-inner');
-                        if(!inner) return;
-                        cards.style.maxHeight = '';
-                        const h = inner.scrollHeight;
-                        if(!group.classList.contains('collapsed')) {
-                            cards.style.maxHeight = (h + 16) + 'px';
-                            cards.style.opacity = '1';
-                        } else {
-                            cards.style.maxHeight = '0px';
-                            cards.style.opacity = '0';
-                        }
-                    });
-                }
-                const content = document.getElementById('content');
-                if(content){
-                    const mo2 = new MutationObserver(() => {
-                        clearTimeout(window.__groupHeightTimeout);
-                        window.__groupHeightTimeout = setTimeout(bakeGroupHeights, 40);
-                    });
-                    mo2.observe(content, { childList:true, subtree:true });
-                    bakeGroupHeights();
-                    window.addEventListener('resize', () => setTimeout(bakeGroupHeights, 70), {passive:true});
-                    document.addEventListener('click', (e) => {
-                        const header = e.target.closest('.group-header');
-                        if(!header) return;
-                        const group = header.closest('.time-group');
-                        if(!group) return;
-                        setTimeout(() => {
-                            const cards = group.querySelector('.med-cards');
-                            const inner = cards && cards.querySelector('.med-cards-inner');
-                            if(!cards || !inner) return;
-                            if(group.classList.contains('collapsed')) {
-                                cards.style.maxHeight = '0px';
-                                cards.style.opacity = '0';
-                            } else {
-                                const h = inner.scrollHeight;
-                                cards.style.maxHeight = (h + 16) + 'px';
-                                cards.style.opacity = '1';
-                            }
-                        }, 10);
-                    }, true);
-                }
-            } catch(e){ console.warn('group collapse patch failed', e); }
-
-            try {
-                function enhanceSheet(sheetElement, overlayElement){
-                    if(!sheetElement || sheetElement.__enhanced) return;
-                    sheetElement.__enhanced = true;
-
-                    let startY = 0, currentY = 0, dragging = false, pointerId = null;
-                    const onDown = (e) => {
-                        if(e.pointerType === 'mouse' && e.button !== 0) return;
-                        dragging = true;
-                        pointerId = e.pointerId;
-                        startY = e.clientY;
-                        currentY = startY;
-                        sheetElement.style.transition = 'none';
-                        sheetElement.setPointerCapture && sheetElement.setPointerCapture(pointerId);
-                    };
-                    const onMove = (e) => {
-                        if(!dragging || e.pointerId !== pointerId) return;
-                        currentY = e.clientY;
-                        const diff = Math.max(0, currentY - startY);
-                        sheetElement.style.transform = `translateY(${diff}px)`;
-                    };
-                    const onUp = (e) => {
-                        if(!dragging || e.pointerId !== pointerId) return;
-                        dragging = false;
-                        const diff = currentY - startY;
-                        sheetElement.style.transition = 'transform 320ms cubic-bezier(0.2,0.9,0.3,1)';
-                        if(diff > 90) {
-                            sheetElement.style.transform = 'translateY(110%)';
-                            if(overlayElement) {
-                                overlayElement.style.transition = 'opacity 260ms linear';
-                                overlayElement.style.opacity = '0';
-                                setTimeout(() => {
-                                    overlayElement.style.display = 'none';
-                                    if(overlayElement) overlayElement.style.opacity = '';
-                                }, 300);
-                            }
-                        } else {
-                            sheetElement.style.transform = '';
-                        }
-                        try { sheetElement.releasePointerCapture && sheetElement.releasePointerCapture(pointerId); } catch(e){}
-                        pointerId = null;
-                    };
-                    sheetElement.addEventListener('pointerdown', onDown, {passive:true});
-                    window.addEventListener('pointermove', onMove, {passive:true});
-                    window.addEventListener('pointerup', onUp, {passive:true});
-                }
-
-                const detail = document.getElementById('detailSheet');
-                const sheetOverlay = document.getElementById('sheetOverlay');
-                if(detail && sheetOverlay) enhanceSheet(detail, sheetOverlay);
-
-                const createSheetOverlay = document.getElementById('createMedSheet');
-                const createInner = createSheetOverlay && createSheetOverlay.querySelector('.bottom-sheet-detail');
-                if(createInner && createSheetOverlay) enhanceSheet(createInner, createSheetOverlay);
-
-                const userSwitchSheet = document.getElementById('userSwitchSheet');
-                const userSwitchInner = userSwitchSheet && userSwitchSheet.querySelector('.bottom-sheet-detail');
-                if(userSwitchInner && userSwitchSheet) enhanceSheet(userSwitchInner, userSwitchSheet);
-            } catch(e){ console.warn('sheet enhancement failed', e); }
-
-            try {
-                document.addEventListener('pointerdown', (e) => {
-                    const card = e.target.closest && e.target.closest('.med-card');
-                    if(!card) return;
-                    card.classList.add('is-dragging');
-                    const onUp = () => { card.classList.remove('is-dragging'); window.removeEventListener('pointerup', onUp); };
-                    window.addEventListener('pointerup', onUp, {passive:true});
-                }, {passive:true});
-            } catch(e){ console.warn('med-card rubber patch failed', e); }
-
-            try {
-                document.querySelectorAll('.nav-item').forEach(item => {
-                    if(item.classList.contains('active')){
-                        item.classList.add('force-text-visible');
-                        setTimeout(()=> item.classList.remove('force-text-visible'), 400);
-                    }
-                });
-            } catch(e){}
-        });
-    })();
-</script>
-
-</body>
-</html>
+           
