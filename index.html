@@ -1608,51 +1608,52 @@
         }
 
         function attachSwipeToCard(card, reminderId) {
-            let startX = 0, startY = 0, startTime = 0, moved = false;
-            const onStart = (x,y) => { startX = x; startY = y; startTime = Date.now(); moved = false; card.style.transition = 'none'; isSwipingOnCard = true; };
-            const onMove = (x,y,ev) => {
-                const dx = x - startX;
-                const dy = y - startY;
+            if (!('ontouchstart' in window)) return;
+
+            let startX = 0;
+            let startY = 0;
+            let startTime = 0;
+            let swiping = false;
+
+            card.addEventListener('touchstart', (e) => {
+                const t = e.touches[0];
+                startX = t.clientX;
+                startY = t.clientY;
+                startTime = Date.now();
+                swiping = false;
+                card.style.transition = 'none';
+            }, { passive: true });
+
+            card.addEventListener('touchmove', (e) => {
+                const t = e.touches[0];
+                const dx = t.clientX - startX;
+                const dy = t.clientY - startY;
+
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-                    moved = true;
-                    ev && ev.preventDefault();
-                    const max = 120;
-                    let tx = dx;
-                    if (Math.abs(tx) > max) tx = (tx > 0 ? 1 : -1) * (max + (Math.abs(tx)-max)*0.25);
-                    card.style.transform = `translateX(${tx}px)`;
+                    swiping = true;
+                    e.preventDefault();
+                    card.style.transform = `translateX(${dx}px)`;
                 }
-            };
-            const onEnd = (x,y) => {
-                const dx = x - startX;
+            }, { passive: false });
+
+            card.addEventListener('touchend', (e) => {
+                const dx = e.changedTouches[0].clientX - startX;
                 const dt = Date.now() - startTime;
-                card.style.transition = 'transform 220ms ease';
-                if (Math.abs(dx) > 70 || (Math.abs(dx) > 40 && dt < 300)) {
+
+                card.style.transition = 'transform 200ms ease';
+
+                if (swiping && Math.abs(dx) > 60) {
                     if (dx > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
                         optimisticMarkSkipped(reminderId, card);
                     }
-                    setTimeout(() => {
-                        card.style.transform = 'translateX(0)';
-                        isSwipingOnCard = false;
-                    }, 220);
-                } else {
-                    card.style.transform = 'translateX(0)';
-                    setTimeout(() => { card.style.transition = ''; isSwipingOnCard = false; }, 220);
                 }
-            };
 
-            card.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
-            card.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY, e); }, { passive: false });
-            card.addEventListener('touchend', (e) => { const t = e.changedTouches[0]; onEnd(t.clientX, t.clientY); }, { passive: true });
-
-            card.addEventListener('pointerdown', (e) => { onStart(e.clientX, e.clientY); }, { passive: true });
-            card.addEventListener('pointermove', (e) => { onMove(e.clientX, e.clientY, e); }, { passive: true });
-            card.addEventListener('pointerup', (e) => { onEnd(e.clientX, e.clientY); }, { passive: true });
-
-            card.addEventListener('transitionend', () => {
-                card.style.transition = '';
-                card.style.transform = '';
+                card.style.transform = 'translateX(0)';
+                setTimeout(() => {
+                    card.style.transition = '';
+                }, 200);
             }, { passive: true });
         }
 
