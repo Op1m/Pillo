@@ -2107,7 +2107,7 @@
             let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
 
             const now = new Date();
-            const postponedTime = new Date(now.getTime() + 10 * 60000);
+            const postponedTime = new Date(now.getTime() + 10 * 60000); // +10 минут
 
             if (!historyEntry) {
                 historyEntry = {
