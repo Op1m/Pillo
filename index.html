@@ -879,6 +879,10 @@
             border-radius: 30px;
             transition: width 0.3s var(--anim-ease);
         }
+        .status-postponed { color: #3498db; }
+        .med-card.postponed {
+            background: #e8f4fd;
+            border-color: #3498db;
         .info-card-blue {
             background: #e1efff;
             border-radius: 24px;
@@ -1876,6 +1880,10 @@
             let startTime = 0;
             let swiping = false;
 
+            let lastTapTime = 0;
+            let tapCount = 0;
+            let tapTimer = null;
+
             card.addEventListener('touchstart', (e) => {
                 const t = e.touches[0];
                 startX = t.clientX;
@@ -1883,6 +1891,33 @@
                 startTime = Date.now();
                 swiping = false;
                 card.style.transition = 'none';
+
+                const currentTime = Date.now();
+                const timeDiff = currentTime - lastTapTime;
+
+                if (timeDiff < 300 && timeDiff > 0) {
+                    if (tapTimer) clearTimeout(tapTimer);
+                    tapCount = 0;
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    optimisticPostponeReminder(reminderId, card);
+
+                    lastTapTime = 0;
+                } else {
+                    tapCount = 1;
+                    lastTapTime = currentTime;
+
+                    tapTimer = setTimeout(() => {
+                        if (tapCount === 1) {
+                            openDetailSheet(reminderId);
+                        }
+                        tapCount = 0;
+                        lastTapTime = 0;
+                    }, 250);
+                }
+
             }, { passive: true });
 
             card.addEventListener('touchmove', (e) => {
@@ -1892,6 +1927,12 @@
 
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
                     swiping = true;
+                    if (tapTimer) {
+                        clearTimeout(tapTimer);
+                        tapTimer = null;
+                        tapCount = 0;
+                        lastTapTime = 0;
+                    }
                     e.preventDefault();
                     card.style.transform = `translateX(${dx}px)`;
                 }
@@ -1904,6 +1945,13 @@
                 card.style.transition = 'transform 200ms ease';
 
                 if (swiping && Math.abs(dx) > 60) {
+                    if (tapTimer) {
+                        clearTimeout(tapTimer);
+                        tapTimer = null;
+                        tapCount = 0;
+                        lastTapTime = 0;
+                    }
+
                     if (dx > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
@@ -1916,6 +1964,12 @@
                     card.style.transition = '';
                 }, 200);
             }, { passive: true });
+            card.addEventListener('click', (e) => {
+                if (tapCount === 0) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
         }
 
         function optimisticMarkTaken(reminderId, card) {
@@ -2040,6 +2094,66 @@
                 await loadHistoryForDate(selectedDay);
                 alert('Не удалось удалить препарат');
             }
+        }
+
+        function optimisticPostponeReminder(reminderId, card) {
+            const rid = String(reminderId);
+            const reminder = reminders.find(r => String(r.id) === rid) || null;
+            const dateKey = selectedDay.toISOString().split('T')[0];
+
+            historyCache.delete(dateKey);
+
+            let histories = historyMap.get(dateKey) || [];
+            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+
+            const now = new Date();
+            const postponedTime = new Date(now.getTime() + 10 * 60000);
+
+            if (!historyEntry) {
+                historyEntry = {
+                    id: null,
+                    reminder: { id: reminderId },
+                    status: 'postponed',
+                    scheduledTime: postponedTime.toISOString()
+                };
+                histories.push(historyEntry);
+                historyMap.set(dateKey, histories);
+            } else {
+                historyEntry.status = 'postponed';
+                historyEntry.scheduledTime = postponedTime.toISOString();
+            }
+
+            if (card) {
+                card.classList.add('postponed');
+                card.classList.remove('pending', 'taken', 'skipped', 'missed');
+                const statusSpan = card.querySelector('.med-status');
+                if (statusSpan) {
+                    statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+                }
+                card.style.transform = 'translateX(0)';
+                setTimeout(() => { card.style.transition = ''; }, 200);
+            }
+
+            fetch(`/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('med_token')}`
+                }
+            }).catch(err => {
+                console.error('Ошибка откладывания:', err);
+                if (historyEntry) {
+                    historyEntry.status = 'pending';
+                    if (card) {
+                        card.classList.remove('postponed');
+                        card.classList.add('pending');
+                        const statusSpan = card.querySelector('.med-status');
+                        if (statusSpan) {
+                            statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                        }
+                    }
+                }
+            });
         }
 
         (function tgUiHelper(){
@@ -2336,7 +2450,10 @@
                         statusHtml = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
                     } else if (status === 'skipped' || status === 'missed') {
                         statusHtml = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
-                    } else {
+                    } else if (status === 'postponed') {
+                        statusHtml = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено</span>`;
+                    }
+                    else {
                         statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
                     }
 
@@ -2604,7 +2721,15 @@
             }
         });
 
-        postponeBtn?.addEventListener('click', () => {  });
+        postponeBtn?.addEventListener('click', () => {
+            if (selectedReminderId) {
+                const card = document.querySelector(`.med-card[data-id="${selectedReminderId}"]`);
+                if (card) {
+                    optimisticPostponeReminder(selectedReminderId, card);
+                }
+                if (sheetOverlay) sheetOverlay.style.display = 'none';
+            }
+        });
         editMed?.addEventListener('click', () => {  });
         btnBack?.addEventListener('click', () => { if (sheetOverlay) sheetOverlay.style.display = 'none'; });
         btnInfo?.addEventListener('click', () => {  });
