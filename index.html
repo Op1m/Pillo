@@ -2169,6 +2169,8 @@
                 localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
                 updateUserInfo(currentUser);
                 await loadReminders();
+
+                startAutoRefresh();
             } catch (err) {
                 console.error('Ошибка входа', err);
             }
@@ -2253,6 +2255,15 @@
         function renderGroupsForDate(date) {
             if (!contentDiv) return;
             const filtered = remindersForDate(date);
+
+            const now = Date.now();
+            const lastUpdate = localStorage.getItem('lastHistoryUpdate');
+
+            if (!lastUpdate || now - parseInt(lastUpdate) > 5 * 60 * 1000) {
+                loadHistoryForDate(date).then(() => {
+                    localStorage.setItem('lastHistoryUpdate', now.toString());
+                });
+            }
 
             if (filtered.length === 0) {
                 contentDiv.innerHTML = `
@@ -2867,6 +2878,8 @@
                 clearTimeout(tapTimer);
             }
         });
+
+        startAutoRefresh();
     })();
 </script>
 
@@ -3381,6 +3394,22 @@
         First Name: ${currentUser.firstName || 'не указан'}
     `);
     });
+    function startAutoRefresh() {
+        setInterval(async () => {
+            if (!currentUser || !selectedDay) return;
+
+            console.log('🔄 Автообновление данных...');
+            const dateKey = selectedDay.toISOString().split('T')[0];
+
+            historyCache.delete(dateKey);
+
+            await loadHistoryForDate(selectedDay);
+
+            renderGroupsForDate(selectedDay);
+
+            console.log('✅ Данные обновлены');
+        }, 30000);
+    }
 </script>
 </body>
 </html>
