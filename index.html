@@ -2171,6 +2171,7 @@
                 await loadReminders();
 
                 startAutoRefresh();
+                setupSSE();
             } catch (err) {
                 console.error('Ошибка входа', err);
             }
@@ -2854,11 +2855,15 @@
                     authToken = localStorage.getItem(TOKEN_KEY);
                     updateUserInfo(currentUser);
                     await loadInitialData();
+                    startAutoRefresh();
+                    setupSSE();
                 } catch (e) { console.warn('Ошибка парсинга пользователя', e); }
             }
             if (!currentUser) {
                 await loginWithTelegram();
                 await loadInitialData();
+                startAutoRefresh();
+                setupSSE();
             }
         })();
 
@@ -3410,6 +3415,66 @@
             console.log('✅ Данные обновлены');
         }, 30000);
     }
+
+    function connectToSSE() {
+        if (!currentUser) {
+            console.log('⏳ SSE: Ожидание авторизации...');
+            setTimeout(connectToSSE, 1000);
+            return;
+        }
+
+        console.log('📡 Подключение к SSE для пользователя:', currentUser.id);
+
+        if (window.eventSource) {
+            window.eventSource.close();
+        }
+
+        const eventSource = new EventSource('/api/sse', {
+            withCredentials: true
+        });
+        window.eventSource = eventSource;
+
+        eventSource.addEventListener('connected', (event) => {
+            console.log('✅ SSE соединение установлено:', event.data);
+        });
+
+        eventSource.addEventListener('history-updated', (event) => {
+            console.log('♻️ Получено обновление истории:', event.data);
+
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            historyCache.delete(dateKey);
+
+            loadHistoryForDate(selectedDay).then(() => {
+                renderGroupsForDate(selectedDay);
+                console.log('✅ Данные обновлены после SSE');
+            });
+        });
+
+        eventSource.onerror = (error) => {
+            console.error('❌ SSE ошибка:', error);
+            eventSource.close();
+
+            setTimeout(connectToSSE, 5000);
+        };
+
+        eventSource.onopen = () => {
+            console.log('🔓 SSE соединение открыто');
+        };
+    }
+
+    function setupSSE() {
+        if (window.currentUser) {
+            connectToSSE();
+        } else {
+            const interval = setInterval(() => {
+                if (window.currentUser) {
+                    clearInterval(interval);
+                    connectToSSE();
+                }
+            }, 1000);
+        }
+    }
+
 </script>
 </body>
 </html>
