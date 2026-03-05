@@ -1274,6 +1274,7 @@
     </div>
 </div>
 
+
 <div class="app" id="app">
     <div class="top-pill">
         <div class="avatar" id="avatarContainer">
@@ -1847,7 +1848,6 @@
                         weekRow.style.transition = 'opacity 0.2s ease';
                         weekRow.style.opacity = '1';
 
-                        // Форсируем перерисовку
                         void contentDiv.offsetHeight;
 
                         contentDiv.style.transition = 'transform 0.25s var(--anim-ease), opacity 0.25s var(--anim-ease)';
@@ -3364,6 +3364,23 @@
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         setTimeout(checkUserAndSubscribe, 1000);
     }
+
+    document.querySelector('.avatar')?.addEventListener('dblclick', () => {
+        if (!currentUser) {
+            alert('Пользователь не авторизован');
+            return;
+        }
+
+        alert(`
+        👤 Информация о пользователе:
+
+        ID: ${currentUser.id}
+        Username: ${currentUser.username}
+        Telegram ID: ${currentUser.telegramId || 'не указан'}
+        Telegram Chat ID: ${currentUser.telegramChatId || 'не указан'}
+        First Name: ${currentUser.firstName || 'не указан'}
+    `);
+    });
 </script>
 </body>
 </html>
