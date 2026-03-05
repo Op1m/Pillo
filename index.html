@@ -2265,10 +2265,11 @@
             if (!currentUser) return;
 
             const start = new Date(date);
-            start.setHours(0,0,0,0);
+            start.setHours(0, 0, 0, 0);
+
             const end = new Date(date);
-            end.setDate(end.getDate() + 1);
-            end.setHours(23,59,59,999);
+            end.setHours(23, 59, 59, 999);
+
             const dateKey = date.toISOString().split('T')[0];
 
             const cache = historyCache.get(dateKey);
@@ -2284,6 +2285,9 @@
                     `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
                 );
                 const data = Array.isArray(history) ? history : [];
+
+                console.log(`📊 Загружена история на ${dateKey}:`, data);
+
                 historyMap.set(dateKey, data);
                 historyCache.set(dateKey, { data, timestamp: now });
                 renderGroupsForDate(date);
