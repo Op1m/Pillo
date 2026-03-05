@@ -1879,11 +1879,6 @@
             let startY = 0;
             let startTime = 0;
             let swiping = false;
-            let didScroll = false;
-
-            let lastTapTime = 0;
-            let tapCount = 0;
-            let tapTimer = null;
 
             card.addEventListener('touchstart', (e) => {
                 const t = e.touches[0];
@@ -1891,32 +1886,7 @@
                 startY = t.clientY;
                 startTime = Date.now();
                 swiping = false;
-                didScroll = false;
                 card.style.transition = 'none';
-
-                const currentTime = Date.now();
-                const timeDiff = currentTime - lastTapTime;
-
-                if (timeDiff < 300 && timeDiff > 0) {
-                    if (tapTimer) clearTimeout(tapTimer);
-                    tapCount = 0;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    optimisticPostponeReminder(reminderId, card);
-                    lastTapTime = 0;
-                } else {
-                    tapCount = 1;
-                    lastTapTime = currentTime;
-
-                    tapTimer = setTimeout(() => {
-                        if (tapCount === 1 && !swiping && !didScroll) {
-                            openDetailSheet(reminderId);
-                        }
-                        tapCount = 0;
-                        lastTapTime = 0;
-                    }, 250);
-                }
-
             }, { passive: true });
 
             card.addEventListener('touchmove', (e) => {
@@ -1924,18 +1894,8 @@
                 const dx = t.clientX - startX;
                 const dy = t.clientY - startY;
 
-                if (Math.abs(dy) > 10) {
-                    didScroll = true;
-                }
-
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
                     swiping = true;
-                    if (tapTimer) {
-                        clearTimeout(tapTimer);
-                        tapTimer = null;
-                        tapCount = 0;
-                        lastTapTime = 0;
-                    }
                     e.preventDefault();
                     card.style.transform = `translateX(${dx}px)`;
                 }
@@ -1948,18 +1908,13 @@
                 card.style.transition = 'transform 200ms ease';
 
                 if (swiping && Math.abs(dx) > 60) {
-                    if (tapTimer) {
-                        clearTimeout(tapTimer);
-                        tapTimer = null;
-                        tapCount = 0;
-                        lastTapTime = 0;
-                    }
-
                     if (dx > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
                         optimisticMarkSkipped(reminderId, card);
                     }
+                } else if (!swiping) {
+                    openDetailSheet(reminderId);
                 }
 
                 card.style.transform = 'translateX(0)';
@@ -1967,13 +1922,6 @@
                     card.style.transition = '';
                 }, 200);
             }, { passive: true });
-
-            card.addEventListener('click', (e) => {
-                if (tapCount === 0) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            });
         }
 
         function optimisticMarkTaken(reminderId, card) {
