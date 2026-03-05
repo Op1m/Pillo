@@ -1680,18 +1680,6 @@
             }, 1000);
         }
 
-        const facts = [
-            'витамин А: важен для зрения и здоровья кожи',
-            'витамин С: укрепляет иммунитет и помогает усвоению железа',
-            'витамин D: необходим для костей и зубов, вырабатывается на солнце',
-            'витамин Е: мощный антиоксидант, защищает клетки',
-            'витамин К: участвует в свёртывании крови',
-            'витамины группы В: помогают нервной системе и обмену веществ',
-            'кальций: нужен для крепких костей и зубов',
-            'магний: снимает стресс и улучшает сон',
-            'омега-3: полезна для сердца и мозга',
-            'железо: предотвращает анемию и даёт энергию'
-        ];
         if (splashFact) {
             splashFact.innerText = facts[Math.floor(Math.random() * facts.length)];
         }
@@ -2176,6 +2164,7 @@
                 });
                 authToken = data.token;
                 currentUser = data.user;
+                window.currentUser = currentUser;
                 localStorage.setItem(TOKEN_KEY, authToken);
                 localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
                 updateUserInfo(currentUser);
@@ -2850,6 +2839,7 @@
             if (savedUser) {
                 try {
                     currentUser = safeJSONParse(savedUser);
+                    window.currentUser = currentUser;
                     authToken = localStorage.getItem(TOKEN_KEY);
                     updateUserInfo(currentUser);
                     await loadInitialData();
@@ -3279,6 +3269,101 @@
         });
     })();
 </script>
+<script>
+    async function initializePushNotifications() {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log('Push-уведомления не поддерживаются');
+            return;
+        }
 
+        if (Notification.permission === 'denied') {
+            console.log('Уведомления запрещены');
+            return;
+        }
+
+        if (Notification.permission !== 'granted') {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                console.log('Разрешение на уведомления не получено');
+                return;
+            }
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            console.log('Service Worker зарегистрирован');
+
+            const response = await fetch('/api/push/public-key');
+            const vapidPublicKey = await response.text();
+            console.log('VAPID ключ получен');
+
+            const convertedKey = urlBase64ToUint8Array(vapidPublicKey);
+
+            let subscription = await registration.pushManager.getSubscription();
+
+            if (!subscription) {
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedKey
+                });
+                console.log('Новая подписка создана');
+            } else {
+                console.log('Используем существующую подписку');
+            }
+
+            const subscribeResponse = await fetch('/api/push/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('med_token')}`
+                },
+                body: JSON.stringify(subscription)
+            });
+
+            if (subscribeResponse.ok) {
+                console.log('✅ Push-подписка сохранена на сервере');
+            } else {
+                console.error('❌ Ошибка сохранения подписки');
+            }
+
+        } catch (error) {
+            console.error('Ошибка при настройке push-уведомлений:', error);
+        }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    function checkUserAndSubscribe() {
+        if (window.currentUser) {
+            console.log('Пользователь авторизован, настраиваем push...');
+            initializePushNotifications();
+        } else {
+            console.log('Ожидание авторизации пользователя...');
+            const interval = setInterval(() => {
+                if (window.currentUser) {
+                    clearInterval(interval);
+                    initializePushNotifications();
+                }
+            }, 1000);
+
+            setTimeout(() => clearInterval(interval), 30000);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', checkUserAndSubscribe);
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(checkUserAndSubscribe, 1000);
+    }
+</script>
 </body>
 </html>
