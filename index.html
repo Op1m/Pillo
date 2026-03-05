@@ -1879,6 +1879,7 @@
             let startY = 0;
             let startTime = 0;
             let swiping = false;
+            let isVerticalScroll = false;
 
             card.addEventListener('touchstart', (e) => {
                 const t = e.touches[0];
@@ -1886,6 +1887,7 @@
                 startY = t.clientY;
                 startTime = Date.now();
                 swiping = false;
+                isVerticalScroll = false;
                 card.style.transition = 'none';
             }, { passive: true });
 
@@ -1893,6 +1895,11 @@
                 const t = e.touches[0];
                 const dx = t.clientX - startX;
                 const dy = t.clientY - startY;
+
+                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+                    isVerticalScroll = true;
+                    return;
+                }
 
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
                     swiping = true;
@@ -1913,7 +1920,8 @@
                     } else {
                         optimisticMarkSkipped(reminderId, card);
                     }
-                } else if (!swiping) {
+                }
+                else if (!swiping && !isVerticalScroll && Math.abs(dx) < 10) {
                     openDetailSheet(reminderId);
                 }
 
