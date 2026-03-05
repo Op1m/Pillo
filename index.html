@@ -1799,8 +1799,11 @@
             const sameWeek = weekStart(newDate) === weekStart(currentDate);
 
             isAnimatingDayChange = true;
-            const outClass = direction === 1 ? 'slide-left-out' : 'slide-right-out';
-            const inClass = direction === 1 ? 'slide-right-in' : 'slide-left-in';
+
+            contentDiv.style.pointerEvents = 'none';
+
+            const contentHeight = contentDiv.scrollHeight;
+            contentDiv.style.minHeight = contentHeight + 'px';
 
             if (sameWeek) {
                 const prev = weekRow && weekRow.querySelector('.day-chip.selected');
@@ -1810,30 +1813,65 @@
                 const newChip = weekRow && weekRow.querySelector(`.day-chip[data-date="${dateStr}"]`);
                 if (newChip) newChip.classList.add('selected');
                 currentDate = new Date(newDate);
-                contentDiv.classList.add(outClass);
+
+                contentDiv.style.transition = 'transform 0.25s var(--anim-ease), opacity 0.25s var(--anim-ease)';
+                contentDiv.style.transform = direction === 1 ? 'translateX(-30%)' : 'translateX(30%)';
+                contentDiv.style.opacity = '0';
+
                 setTimeout(() => {
                     onDateSelected(selectedDay).then(() => {
-                        contentDiv.classList.remove(outClass);
-                        contentDiv.classList.add(inClass);
+                        contentDiv.style.transition = 'none';
+                        contentDiv.style.transform = direction === 1 ? 'translateX(30%)' : 'translateX(-30%)';
+                        contentDiv.style.opacity = '0';
+
+                        void contentDiv.offsetHeight;
+
+                        contentDiv.style.transition = 'transform 0.25s var(--anim-ease), opacity 0.25s var(--anim-ease)';
+                        contentDiv.style.transform = 'translateX(0)';
+                        contentDiv.style.opacity = '1';
+
                         setTimeout(() => {
-                            contentDiv.classList.remove(inClass);
+                            contentDiv.style.transition = '';
+                            contentDiv.style.transform = '';
+                            contentDiv.style.opacity = '';
+                            contentDiv.style.minHeight = '';
+                            contentDiv.style.pointerEvents = '';
                             isAnimatingDayChange = false;
                         }, 250);
                     });
                 }, 10);
             } else {
+                weekRow.style.transition = 'opacity 0.2s ease';
                 weekRow.style.opacity = '0';
-                weekRow.style.transition = 'opacity 0.25s var(--anim-ease)';
-                contentDiv.classList.add(outClass);
+
+                contentDiv.style.transition = 'transform 0.25s var(--anim-ease), opacity 0.25s var(--anim-ease)';
+                contentDiv.style.transform = direction === 1 ? 'translateX(-30%)' : 'translateX(30%)';
+                contentDiv.style.opacity = '0';
+
                 setTimeout(() => {
                     currentDate = new Date(newDate);
                     renderWeek(currentDate);
                     onDateSelected(currentDate).then(() => {
+                        contentDiv.style.transition = 'none';
+                        contentDiv.style.transform = direction === 1 ? 'translateX(30%)' : 'translateX(-30%)';
+                        contentDiv.style.opacity = '0';
+
+                        weekRow.style.transition = 'opacity 0.2s ease';
                         weekRow.style.opacity = '1';
-                        contentDiv.classList.remove(outClass);
-                        contentDiv.classList.add(inClass);
+
+                        // Форсируем перерисовку
+                        void contentDiv.offsetHeight;
+
+                        contentDiv.style.transition = 'transform 0.25s var(--anim-ease), opacity 0.25s var(--anim-ease)';
+                        contentDiv.style.transform = 'translateX(0)';
+                        contentDiv.style.opacity = '1';
+
                         setTimeout(() => {
-                            contentDiv.classList.remove(inClass);
+                            contentDiv.style.transition = '';
+                            contentDiv.style.transform = '';
+                            contentDiv.style.opacity = '';
+                            contentDiv.style.minHeight = '';
+                            contentDiv.style.pointerEvents = '';
                             weekRow.style.transition = '';
                             isAnimatingDayChange = false;
                         }, 250);
