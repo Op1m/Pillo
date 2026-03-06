@@ -2010,6 +2010,8 @@
         }
 
         function optimisticPostponeReminder(reminderId, card) {
+            console.log('🚀 optimisticPostponeReminder вызван для reminderId:', reminderId);
+
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
             const dateKey = selectedDay.toISOString().split('T')[0];
@@ -2047,26 +2049,42 @@
                 setTimeout(() => { card.style.transition = ''; }, 200);
             }
 
-            fetch(`/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
+            const url = `/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`;
+            console.log('📤 Отправка запроса на сервер:', url);
+
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('med_token')}`
                 }
-            }).catch(err => {
-                console.error('Ошибка откладывания:', err);
-                if (historyEntry) {
-                    historyEntry.status = 'pending';
-                    if (card) {
-                        card.classList.remove('postponed');
-                        card.classList.add('pending');
-                        const statusSpan = card.querySelector('.med-status');
-                        if (statusSpan) {
-                            statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+            })
+                .then(response => {
+                    console.log('📥 Ответ от сервера:', response.status, response.statusText);
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(`HTTP ${response.status}: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('✅ Успешно отложено на сервере:', data);
+                })
+                .catch(err => {
+                    console.error('❌ Ошибка откладывания:', err);
+                    if (historyEntry) {
+                        historyEntry.status = 'pending';
+                        if (card) {
+                            card.classList.remove('postponed');
+                            card.classList.add('pending');
+                            const statusSpan = card.querySelector('.med-status');
+                            if (statusSpan) {
+                                statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                            }
                         }
                     }
-                }
-            });
+                });
         }
 
         async function optimisticDeleteReminder(reminderId) {
@@ -3609,6 +3627,89 @@
         }
     }
 
+    function logToServer(level, message, data = null) {
+        if (window._lastLogTime && Date.now() - window._lastLogTime < 100) return;
+        window._lastLogTime = Date.now();
+
+        const logData = {
+            level: level,
+            message: message,
+            data: data,
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString(),
+            userId: window.currentUser ? window.currentUser.id : 'unknown'
+        };
+
+        fetch('/api/logs/frontend', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(logData)
+        }).catch(err => {});
+    }
+
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
+
+    console.log = function(...args) {
+        originalConsoleLog.apply(console, args);
+        logToServer('INFO', args.map(a => String(a)).join(' '));
+    };
+
+    console.error = function(...args) {
+        originalConsoleError.apply(console, args);
+        logToServer('ERROR', args.map(a => String(a)).join(' '));
+    };
+
+    console.warn = function(...args) {
+        originalConsoleWarn.apply(console, args);
+        logToServer('WARN', args.map(a => String(a)).join(' '));
+    };
+
+    function logFetch(url, options, response) {
+        logToServer('FETCH', `Запрос к ${url}`, {
+            method: options.method || 'GET',
+            status: response ? response.status : 'pending',
+            statusText: response ? response.statusText : ''
+        });
+    }
+
+    const originalFetch = window.fetch;
+    window.fetch = function(...args) {
+        const url = args[0];
+        const options = args[1] || {};
+
+        logToServer('FETCH_START', `Начинаем запрос к ${url}`, {
+            method: options.method || 'GET',
+            headers: options.headers ? 'есть' : 'нет'
+        });
+
+        return originalFetch.apply(this, args).then(response => {
+            logToServer('FETCH_SUCCESS', `Ответ от ${url}`, {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok
+            });
+
+            const clonedResponse = response.clone();
+            clonedResponse.text().then(body => {
+                if (body.length < 1000) {
+                    logToServer('FETCH_BODY', `Тело ответа от ${url}`, { body: body });
+                }
+            }).catch(() => {});
+
+            return response;
+        }).catch(error => {
+            logToServer('FETCH_ERROR', `Ошибка запроса к ${url}`, {
+                error: error.toString(),
+                stack: error.stack
+            });
+            throw error;
+        });
+    };
 </script>
 </body>
 </html>
