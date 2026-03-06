@@ -2173,9 +2173,6 @@
                         card.classList.add('pending');
 
                         const statusSpan = card.querySelector('.med-status');
-                        if (statusSpan) {
-                            statusSpan.innerHTML = `<span class="status-pending status-icon">...</span>`;
-                        }
 
                         setTimeout(() => {
                             card.style.transition = '';
