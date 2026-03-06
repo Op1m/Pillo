@@ -1937,61 +1937,43 @@
             console.log('🚀 optimisticMarkTaken для reminderId:', reminderId);
 
             const rid = String(reminderId);
-            const reminder = reminders.find(r => String(r.id) === rid) || null;
             const dateKey = selectedDay.toISOString().split('T')[0];
-
-            console.log('   → dateKey:', dateKey);
-            console.log('   → есть ли reminder:', !!reminder);
-
-            historyCache.delete(dateKey);
-            let histories = historyMap.get(dateKey) || [];
-            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
-
-            console.log('   → historyEntry до:', historyEntry);
-
-            if (!historyEntry) {
-                historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
-                histories.push(historyEntry);
-                historyMap.set(dateKey, histories);
-                console.log('   → создана новая запись в historyMap');
-            } else {
-                historyEntry.status = 'taken';
-                console.log('   → обновлен статус существующей записи');
-            }
+            const histories = historyMap.get(dateKey) || [];
+            const originalHistory = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+            const originalStatus = originalHistory?.status || 'pending';
 
             if (card) {
-                console.log('   → обновляем UI карточки');
                 card.classList.add('taken');
                 card.classList.remove('pending', 'skipped', 'missed', 'postponed');
                 const statusSpan = card.querySelector('.med-status');
                 if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
+                    statusSpan.innerHTML = `<span class="status-taken status-icon">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none">
+                    <path d="M20 6L9 17L4 12"/>
+                </svg> Принято
+            </span>`;
                 }
-                card.style.transform = 'translateX(0)';
-                setTimeout(()=>{ card.style.transition = ''; }, 200);
             }
 
-            console.log('📤 отправка запроса на сервер markReminderAsTaken');
             markReminderAsTaken(reminderId)
                 .then(() => {
-                    console.log('✅ Запрос на сервер успешен, обновляем данные');
+                    console.log('✅ Сервер подтвердил принятие');
+                })
+                .catch(err => {
+                    console.error('❌ Ошибка, откатываем UI:', err);
+
+                    if (card) {
+                        card.classList.remove('taken');
+                        card.classList.add(originalStatus);
+                        const statusSpan = card.querySelector('.med-status');
+                        if (statusSpan) {
+                            statusSpan.innerHTML = getStatusHtml(originalStatus);
+                        }
+                    }
+
                     loadHistoryForDate(selectedDay).then(() => {
                         renderGroupsForDate(selectedDay);
                     });
-                })
-                .catch(err => {
-                    console.error('❌ Ошибка в markReminderAsTaken, откатываем:', err);
-                    if (historyEntry) {
-                        historyEntry.status = 'pending';
-                        if (card) {
-                            card.classList.remove('taken');
-                            card.classList.add('pending');
-                            const statusSpan = card.querySelector('.med-status');
-                            if (statusSpan) {
-                                statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
-                            }
-                        }
-                    }
                 });
         }
 
@@ -2031,6 +2013,20 @@
                     card.style.transition = '';
                 }
             });
+        }
+
+        function getStatusHtml(status) {
+            switch(status) {
+                case 'taken':
+                    return `<span class="status-taken status-icon">...</span>`;
+                case 'skipped':
+                case 'missed':
+                    return `<span class="status-missed status-icon">...</span>`;
+                case 'postponed':
+                    return `<span class="status-postponed status-icon">...</span>`;
+                default:
+                    return `<span class="status-pending status-icon">...</span>`;
+            }
         }
 
         function optimisticPostponeReminder(reminderId, card) {
@@ -2598,68 +2594,81 @@
 
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
+
+            const [hour = 0, minute = 0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
             const scheduledTime = new Date(selectedDay);
             scheduledTime.setHours(hour, minute, 0, 0);
 
-            let history = null;
             const dateKey = selectedDay.toISOString().split('T')[0];
-            const histories = historyMap.get(dateKey) || [];
-            history = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+            let histories = historyMap.get(dateKey) || [];
+            let history = histories.find(h => h.reminder && String(h.reminder.id) === rid);
 
-            console.log('   → history найдена:', history ? 'да' : 'нет');
-            console.log('   → scheduledTime:', scheduledTime.toISOString());
-
-            if (history && !history.id) {
-                console.log('   → создаём запись через /schedule');
-                try {
-                    const created = await apiFetch('/medicine-history/schedule', {
-                        method: 'POST',
-                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
-                    });
-                    console.log('   → создано:', created);
-                    if (created && created.id) {
-                        history.id = created.id;
-                        Object.assign(history, created);
-                    }
-                } catch (err) {
-                    console.error('❌ Ошибка создания истории:', err);
-                    throw err;
-                }
-            }
-
-            if (!history) {
-                console.log('   → история не найдена, создаём через /schedule');
-                try {
+            try {
+                if (!history) {
+                    console.log('   → создаём новую запись через /schedule');
                     history = await apiFetch('/medicine-history/schedule', {
                         method: 'POST',
-                        body: JSON.stringify({ reminderId, scheduledTime: scheduledTime.toISOString() })
+                        body: JSON.stringify({
+                            reminderId,
+                            scheduledTime: scheduledTime.toISOString()
+                        })
                     });
-                    console.log('   → создано:', history);
-                } catch (err) {
-                    console.error('❌ Ошибка создания истории:', err);
-                    throw err;
-                }
-                if (!history || !history.id) throw new Error('Не удалось создать историю');
-                if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
-                historyMap.get(dateKey).push(history);
-            }
 
-            console.log('   → отправка PATCH на /mark-taken для historyId:', history.id);
-            try {
+                    if (!history || !history.id) {
+                        throw new Error('Не удалось создать запись истории');
+                    }
+
+                    histories.push(history);
+                    historyMap.set(dateKey, histories);
+                }
+
+                console.log('   → отправка PATCH на /mark-taken для historyId:', history.id);
                 const result = await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
                     method: 'PATCH',
                     body: JSON.stringify({ notes: '' })
                 });
-                console.log('✅ Успех:', result);
+
+                history.status = 'taken';
+                history.takenAt = new Date().toISOString();
+
+                historyCache.delete(dateKey);
+                console.log('✅ markReminderAsTaken завершён:', result);
+
+                return result;
+
             } catch (err) {
-                console.error('❌ Ошибка отметки принятия:', err);
+                console.error('❌ Ошибка в markReminderAsTaken:', err);
+
+                if (history) {
+                    history.status = 'pending';
+                    historyCache.delete(dateKey);
+                }
+
                 throw err;
             }
-
-            historyCache.delete(dateKey);
-            console.log('✅ markReminderAsTaken завершён');
         }
+
+        async function markReminderAsPostponed(reminderId, minutes = 10) {
+            console.log('⏰ markReminderAsPostponed для reminderId:', reminderId);
+
+            try {
+                const result = await apiFetch(`/medicine-history/reminder/${reminderId}/postpone?minutes=${minutes}`, {
+                    method: 'POST'
+                });
+
+                console.log('✅ Успешно отложено:', result);
+
+                const dateKey = selectedDay.toISOString().split('T')[0];
+                historyCache.delete(dateKey);
+                await loadHistoryForDate(selectedDay);
+
+                return result;
+            } catch (err) {
+                console.error('❌ Ошибка откладывания:', err);
+                throw err;
+            }
+        }
+
         async function markReminderAsSkipped(reminderId) {
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
