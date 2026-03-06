@@ -1794,7 +1794,6 @@
             isAnimatingDayChange = true;
 
             contentDiv.style.pointerEvents = 'none';
-
             const contentHeight = contentDiv.scrollHeight;
             contentDiv.style.minHeight = contentHeight + 'px';
 
@@ -1843,8 +1842,10 @@
 
                 setTimeout(() => {
                     currentDate = new Date(newDate);
+                    // Важно: сохраняем выбранный день как первый день новой недели
+                    selectedDay = new Date(newDate);
                     renderWeek(currentDate);
-                    onDateSelected(currentDate).then(() => {
+                    onDateSelected(selectedDay).then(() => {
                         contentDiv.style.transition = 'none';
                         contentDiv.style.transform = direction === 1 ? 'translateX(30%)' : 'translateX(-30%)';
                         contentDiv.style.opacity = '0';
