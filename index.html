@@ -2294,10 +2294,15 @@
                 );
                 const data = Array.isArray(history) ? history : [];
 
-                console.log(`📊 Загружена история на ${dateKey}:`, data);
+                const normalizedData = data.map(item => ({
+                    ...item,
+                    status: item.status ? item.status.toLowerCase() : 'pending'
+                }));
 
-                historyMap.set(dateKey, data);
-                historyCache.set(dateKey, { data, timestamp: now });
+                console.log(`📊 Загружена история на ${dateKey}:`, normalizedData);
+
+                historyMap.set(dateKey, normalizedData);
+                historyCache.set(dateKey, { data: normalizedData, timestamp: now });
                 renderGroupsForDate(date);
             } catch (err) {
                 console.warn('Ошибка загрузки истории', err);
@@ -2325,6 +2330,8 @@
             );
 
             if (!history) return 'pending';
+
+            console.log('📊 Статус из истории:', history.status, 'для reminder:', reminder.id);
 
             return (history.status || 'pending').toLowerCase();
         }
@@ -2410,12 +2417,21 @@
                     let statusHtml = '';
                     if (status === 'taken') {
                         statusHtml = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
-                    } else if (status === 'skipped' || status === 'missed') {
+                    }
+                    else if (status === 'skipped' || status === 'missed')
+                    {
                         statusHtml = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
-                    } else if (status === 'postponed') {
+                    }
+                    else if (status === 'postponed')
+                    {
                         const historyEntry = getHistoryForReminder(r, date);
-                        const postponedTime = historyEntry ? new Date(historyEntry.scheduledTime) : new Date(Date.now() + 10*60000);
-                        statusHtml = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+                        if (historyEntry && historyEntry.scheduledTime) {
+                            const postponedTime = new Date(historyEntry.scheduledTime);
+                            statusHtml = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+                        } else {
+                            const postponedTime = new Date(Date.now() + 10 * 60000);
+                            statusHtml = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено</span>`;
+                        }
                     } else {
                         statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
                     }
