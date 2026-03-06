@@ -1972,20 +1972,27 @@
             }
 
             console.log('📤 отправка запроса на сервер markReminderAsTaken');
-            markReminderAsTaken(reminderId).catch(err => {
-                console.error('❌ Ошибка в markReminderAsTaken, откатываем:', err);
-                if (historyEntry) {
-                    historyEntry.status = 'pending';
-                    if (card) {
-                        card.classList.remove('taken');
-                        card.classList.add('pending');
-                        const statusSpan = card.querySelector('.med-status');
-                        if (statusSpan) {
-                            statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+            markReminderAsTaken(reminderId)
+                .then(() => {
+                    console.log('✅ Запрос на сервер успешен, обновляем данные');
+                    loadHistoryForDate(selectedDay).then(() => {
+                        renderGroupsForDate(selectedDay);
+                    });
+                })
+                .catch(err => {
+                    console.error('❌ Ошибка в markReminderAsTaken, откатываем:', err);
+                    if (historyEntry) {
+                        historyEntry.status = 'pending';
+                        if (card) {
+                            card.classList.remove('taken');
+                            card.classList.add('pending');
+                            const statusSpan = card.querySelector('.med-status');
+                            if (statusSpan) {
+                                statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                            }
                         }
                     }
-                }
-            });
+                });
         }
 
         function optimisticMarkSkipped(reminderId, card) {
