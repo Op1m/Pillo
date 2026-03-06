@@ -2049,7 +2049,7 @@
                 setTimeout(() => { card.style.transition = ''; }, 200);
             }
 
-            const url = `/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`;
+            const url = `${API_BASE}/medicine-history/reminder/${reminderId}/postpone?minutes=10`;
             console.log('📤 Отправка запроса на сервер:', url);
 
             fetch(url, {
@@ -2059,12 +2059,11 @@
                     'Authorization': `Bearer ${localStorage.getItem('med_token')}`
                 }
             })
-                .then(response => {
+                .then(async response => {
                     console.log('📥 Ответ от сервера:', response.status, response.statusText);
                     if (!response.ok) {
-                        return response.text().then(text => {
-                            throw new Error(`HTTP ${response.status}: ${text}`);
-                        });
+                        const text = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${text}`);
                     }
                     return response.json();
                 })
