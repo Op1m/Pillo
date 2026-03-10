@@ -1511,6 +1511,7 @@
 <script>
 
     const tg = window.Telegram?.WebApp;
+    window.selectedDay = selectedDay;
 
     if (tg) {
         tg.ready();
@@ -1793,6 +1794,8 @@
 
             isAnimatingDayChange = true;
 
+            window.selectedDay = selectedDay;
+
             contentDiv.style.pointerEvents = 'none';
 
             const contentHeight = contentDiv.scrollHeight;
@@ -1935,7 +1938,8 @@
         function optimisticMarkTaken(reminderId, card) {
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const dateKey = selectedDay.toISOString().split('T')[0] + 1;
+            const currentSelectedDay = window.selectedDay || selectedDay;
+            const dateKey = currentSelectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
             let histories = historyMap.get(dateKey) || [];
             let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
@@ -1956,7 +1960,7 @@
                 card.style.transform = 'translateX(0)';
                 setTimeout(()=>{ card.style.transition = ''; }, 200);
             }
-            markReminderAsTaken(reminderId).catch(() => {
+            markReminderAsTaken(reminderId, currentSelectedDay).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
                 if (card) {
                     card.classList.remove('taken');
@@ -1973,7 +1977,8 @@
         function optimisticMarkSkipped(reminderId, card) {
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const dateKey = selectedDay.toISOString().split('T')[0];
+            const currentSelectedDay = window.selectedDay || selectedDay;
+            const dateKey = currentSelectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
             let histories = historyMap.get(dateKey) || [];
             let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
@@ -1994,7 +1999,7 @@
                 card.style.transform = 'translateX(0)';
                 setTimeout(()=>{ card.style.transition = ''; }, 200);
             }
-            markReminderAsSkipped(reminderId).catch(() => {
+            markReminderAsSkipped(reminderId, currentSelectedDay).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
                 if (card) {
                     card.classList.remove('skipped');
@@ -2473,6 +2478,8 @@
             selectedReminderId = reminderId;
             selectedReminder = reminder;
 
+            const reminderDate = window.selectedDay || selectedDay;
+
             const med = reminder.medicine || (reminder.medicineId ? { name: 'Препарат #' + reminder.medicineId, dosage:'', instructions:'' } : { name:'Неизвестно', dosage:'', instructions:'' });
 
             if (sheetName) sheetName.innerText = med.name;
@@ -2482,6 +2489,14 @@
             if (sheetSub) sheetSub.innerText = `Последний приём: —\nПринимают: ${currentUser?.firstName || 'Вы'}`;
             if (sheetProgressText) sheetProgressText.innerText = '0/14 дней принято';
             if (sheetProgressFill) sheetProgressFill.style.width = '0%';
+
+            const status = getStatusForReminderOnDate(reminder, reminderDate);
+            if (sheetProgressText) {
+                if (status === 'taken') sheetProgressText.innerText = '✓ Принято сегодня';
+                else if (status === 'skipped') sheetProgressText.innerText = '✗ Пропущено сегодня';
+                else sheetProgressText.innerText = '⏳ Ожидает приёма';
+            }
+
             if (sheetOverlay) sheetOverlay.style.display = 'flex';
         }
 
@@ -2539,7 +2554,7 @@
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
             const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
-            const scheduledTime = new Date(selectedDay);
+            const scheduledTime = new Date(targetDate);
             scheduledTime.setHours(hour, minute, 0, 0);
 
             let history = null;
@@ -2594,7 +2609,7 @@
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
             const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
-            const scheduledTime = new Date(selectedDay);
+            const scheduledTime = new Date(targetDate);
             scheduledTime.setHours(hour, minute, 0, 0);
 
             let history = null;
@@ -3289,6 +3304,7 @@
             if (e.target.closest('#takeBtn')) {
                 if (selectedReminderId) {
                     const card = document.querySelector(`.med-card[data-id="${selectedReminderId}"]`);
+                    const currentSelectedDay = window.selectedDay || selectedDay;
                     if (card) optimisticMarkTaken(selectedReminderId, card);
                     if (sheetOverlay) sheetOverlay.style.display = 'none';
                 }
@@ -3298,6 +3314,7 @@
             if (e.target.closest('#skipBtn')) {
                 if (selectedReminderId) {
                     const card = document.querySelector(`.med-card[data-id="${selectedReminderId}"]`);
+                    const currentSelectedDay = window.selectedDay || selectedDay;
                     if (card) optimisticMarkSkipped(selectedReminderId, card);
                     if (sheetOverlay) sheetOverlay.style.display = 'none';
                 }
@@ -3314,12 +3331,13 @@
             }
             if (e.target.closest('#takeAllConfirm')) {
                 if (currentGroupTime) {
+                    const currentSelectedDay = window.selectedDay || selectedDay;
                     const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime || '').substring(0,5) === currentGroupTime);
                     groupReminders.forEach(r => {
                         const card = document.querySelector(`.med-card[data-id="${r.id}"]`);
                         if (card) optimisticMarkTaken(r.id, card);
                     });
-                    Promise.all(groupReminders.map(r => markReminderAsTaken(r.id).catch(err => console.warn(err))));
+                    Promise.all(groupReminders.map(r => markReminderAsTaken(r.id, currentSelectedDay).catch(err => console.warn(err))));
                 }
                 if (takeAllSheet) takeAllSheet.style.display = 'none';
                 e.preventDefault();
@@ -3327,12 +3345,13 @@
             }
             if (e.target.closest('#skipAllConfirm')) {
                 if (currentGroupTime) {
+                    const currentSelectedDay = window.selectedDay || selectedDay;
                     const groupReminders = remindersForDate(selectedDay).filter(r => (r.reminderTime || '').substring(0,5) === currentGroupTime);
                     groupReminders.forEach(r => {
                         const card = document.querySelector(`.med-card[data-id="${r.id}"]`);
                         if (card) optimisticMarkSkipped(r.id, card);
                     });
-                    Promise.all(groupReminders.map(r => markReminderAsSkipped(r.id).catch(err => console.warn(err))));
+                    Promise.all(groupReminders.map(r => markReminderAsSkipped(r.id, currentSelectedDay).catch(err => console.warn(err))));
                 }
                 if (takeAllSheet) takeAllSheet.style.display = 'none';
                 e.preventDefault();
