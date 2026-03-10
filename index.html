@@ -2118,10 +2118,10 @@
                 await loadHistoryForDate(selectedDay);
                 alert('Не удалось удалить препарат');
             }
+        }
 
-            function findCardByReminderId(reminderId) {
-                return document.querySelector(`.med-card[data-id="${reminderId}"]`);
-            }
+        function findCardByReminderId(reminderId) {
+            return document.querySelector(`.med-card[data-id="${reminderId}"]`);
         }
 
         (function tgUiHelper(){
@@ -2251,6 +2251,24 @@
                 localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
                 updateUserInfo(currentUser);
                 await loadReminders();
+                
+                window.markReminderAsTaken = markReminderAsTaken;
+                window.markReminderAsSkipped = markReminderAsSkipped;
+                window.optimisticMarkTaken = optimisticMarkTaken;
+                window.optimisticMarkSkipped = optimisticMarkSkipped;
+                window.optimisticDeleteReminder = optimisticDeleteReminder;
+                window.remindersForDate = remindersForDate;
+                window.findCardByReminderId = findCardByReminderId;
+                window.selectedReminderId = selectedReminderId;
+                window.sheetOverlay = sheetOverlay;
+                window.takeAllSheet = takeAllSheet;
+                window.currentGroupTime = currentGroupTime;
+                window.addChoiceSheet = addChoiceSheet;
+                window.userSwitchSheet = userSwitchSheet;
+                window.medNameInput = medNameInput;
+                window.medDoseInput = medDoseInput;
+                window.medTimeInput = medTimeInput;
+                window.medFoodSelect = medFoodSelect;
 
                 startAutoRefresh();
                 setupSSE();
@@ -2560,11 +2578,12 @@
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
             const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
+
             const scheduledTime = new Date(targetDate);
             scheduledTime.setHours(hour, minute, 0, 0);
 
             let history = null;
-            const dateKey = selectedDay.toISOString().split('T')[0];
+            const dateKey = targetDate.toISOString().split('T')[0];
             const histories = historyMap.get(dateKey) || [];
             history = histories.find(h => h.reminder && String(h.reminder.id) === rid);
 
@@ -2615,11 +2634,12 @@
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
             const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
+
             const scheduledTime = new Date(targetDate);
             scheduledTime.setHours(hour, minute, 0, 0);
 
             let history = null;
-            const dateKey = selectedDay.toISOString().split('T')[0];
+            const dateKey = targetDate.toISOString().split('T')[0];
             const histories = historyMap.get(dateKey) || [];
             history = histories.find(h => h.reminder && String(h.reminder.id) === rid);
 
@@ -3312,7 +3332,6 @@
             if (e.target.closest('#takeBtn')) {
                 if (selectedReminderId) {
                     const card = document.querySelector(`.med-card[data-id="${selectedReminderId}"]`);
-                    const currentSelectedDay = window.selectedDay || selectedDay;
                     if (card) optimisticMarkTaken(selectedReminderId, card);
                     if (sheetOverlay) sheetOverlay.style.display = 'none';
                 }
