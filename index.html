@@ -1511,7 +1511,6 @@
 <script>
 
     const tg = window.Telegram?.WebApp;
-    window.selectedDay = selectedDay;
 
     if (tg) {
         tg.ready();
@@ -1669,12 +1668,15 @@
         let currentDate = new Date();
         let selectedDay = new Date();
         let collapsedGroups = [];
-
+        
         let touchStartX = 0;
         let touchEndX = 0;
         let touchStartTime = 0;
         let isSwipingOnCard = false;
         let isAnimatingDayChange = false;
+        
+        window.selectedDay = selectedDay;   
+
 
         function hideSplash() {
             if (!splash) return;
