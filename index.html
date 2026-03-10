@@ -2118,6 +2118,10 @@
                 await loadHistoryForDate(selectedDay);
                 alert('Не удалось удалить препарат');
             }
+
+            function findCardByReminderId(reminderId) {
+                return document.querySelector(`.med-card[data-id="${reminderId}"]`);
+            }
         }
 
         (function tgUiHelper(){
@@ -2552,7 +2556,7 @@
             return histories.find(h => h.reminder && String(h.reminder.id) === String(reminder.id));
         }
 
-        async function markReminderAsTaken(reminderId) {
+        async function markReminderAsTaken(reminderId, targetDate = selectedDay) {
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
             const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
@@ -2607,7 +2611,7 @@
             historyCache.delete(dateKey);
         }
 
-        async function markReminderAsSkipped(reminderId) {
+        async function markReminderAsSkipped(reminderId, targetDate = selectedDay) {
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
             const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
@@ -2988,6 +2992,8 @@
                 clearTimeout(tapTimer);
             }
         });
+
+        window.remindersForDate = remindersForDate;
 
         startAutoRefresh();
     })();
