@@ -1796,6 +1796,7 @@
 
             isAnimatingDayChange = true;
 
+            selectedDay = new Date(newDate);
             window.selectedDay = selectedDay;
 
             contentDiv.style.pointerEvents = 'none';
@@ -2856,6 +2857,7 @@
                 chip.addEventListener('click', (e) => {
                     e.stopPropagation();
                     document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('selected'));
+                    window.selectedDay = day
                     chip.classList.add('selected');
                     changeDayWithAnimation(day, undefined, false);
                 });
@@ -2896,6 +2898,7 @@
 
         function onDateSelected(date) {
             selectedDay = date;
+            window.selectedDay = date;
             return loadHistoryForDate(date).then(() => { renderWeek(currentDate); });
         }
 
