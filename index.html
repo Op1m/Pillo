@@ -3691,15 +3691,7 @@
             return;
         }
 
-        alert(`
-        👤 Информация о пользователе:
-
-        ID: ${currentUser.id}
-        Username: ${currentUser.username}
-        Telegram ID: ${currentUser.telegramId || 'не указан'}
-        Telegram Chat ID: ${currentUser.telegramChatId || 'не указан'}
-        First Name: ${currentUser.firstName || 'не указан'}
-    `);
+        alert(`${debugCardMappings()}`);
     });
     function startAutoRefresh() {
         setInterval(async () => {
