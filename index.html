@@ -1616,6 +1616,29 @@
         };
         let historyCache = new Map();
 
+        function saveLocalHistory(dateKey) {
+            try {
+                const histories = historyMap.get(dateKey) || [];
+                localStorage.setItem(`historyLocal_${dateKey}`, JSON.stringify(histories));
+            } catch (e) {
+                console.warn('Ошибка сохранения локальной истории', e);
+            }
+        }
+
+        function loadLocalHistory(dateKey) {
+            try {
+                const stored = localStorage.getItem(`historyLocal_${dateKey}`);
+                if (stored) {
+                    const histories = JSON.parse(stored);
+                    historyMap.set(dateKey, histories);
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Ошибка загрузки локальной истории', e);
+            }
+            return false;
+        }
+
         const $ = id => document.getElementById(id);
         const avatarContainer = $('avatarContainer');
         const avatarPlaceholder = $('avatarPlaceholder');
@@ -1987,6 +2010,7 @@
                 historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
                 histories.push(historyEntry);
                 historyMap.set(dateKey, histories);
+                saveLocalHistory(dateKey);
             } else {
                 historyEntry.status = 'taken';
             }
@@ -2025,6 +2049,7 @@
                 historyEntry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
                 histories.push(historyEntry);
                 historyMap.set(dateKey, histories);
+                saveLocalHistory(dateKey);
             } else {
                 historyEntry.status = 'skipped';
             }
@@ -2074,6 +2099,7 @@
                 };
                 histories.push(historyEntry);
                 historyMap.set(dateKey, histories);
+                saveLocalHistory(dateKey);
             } else {
                 historyEntry.status = 'postponed';
                 historyEntry.scheduledTime = postponedTime.toISOString();
@@ -2323,12 +2349,9 @@
             end.setHours(23,59,59,999);
             const dateKey = date.toISOString().split('T')[0];
 
-            const cache = historyCache.get(dateKey);
-            const now = Date.now();
-            if (cache && now - cache.timestamp < CACHE_TTL) {
-                historyMap.set(dateKey, cache.data);
+            const loaded = loadLocalHistory(dateKey);
+            if (loaded) {
                 renderGroupsForDate(date);
-                return;
             }
 
             try {
@@ -2337,11 +2360,11 @@
                 );
                 const data = Array.isArray(history) ? history : [];
                 historyMap.set(dateKey, data);
-                historyCache.set(dateKey, { data, timestamp: now });
+                historyCache.set(dateKey, { data, timestamp: Date.now() });
+                saveLocalHistory(dateKey);
                 renderGroupsForDate(date);
             } catch (err) {
                 console.warn('Ошибка загрузки истории', err);
-                renderGroupsForDate(date);
             }
         }
 
@@ -2620,6 +2643,7 @@
                 if (!history || !history.id) throw new Error('Не удалось создать историю');
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
                 historyMap.get(dateKey).push(history);
+                saveLocalHistory(dateKey);
             }
 
             await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
@@ -2675,6 +2699,7 @@
                 if (!history || !history.id) throw new Error('Не удалось создать историю');
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
                 historyMap.get(dateKey).push(history);
+                saveLocalHistory(dateKey);
             }
 
             await apiFetch(`/medicine-history/${history.id}/mark-skipped`, {
