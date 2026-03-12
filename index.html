@@ -1630,7 +1630,7 @@
                 const stored = localStorage.getItem(`historyLocal_${dateKey}`);
                 if (stored) {
                     const histories = JSON.parse(stored);
-                    historyMap.set(dateKey, histories);
+                    historyMap.set(dateKey, histories.map(h => ({ ...h })));
                     return true;
                 }
             } catch (e) {
@@ -2006,6 +2006,7 @@
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
             let histories = historyMap.get(dateKey) || [];
+            historyMap.set(dateKey, histories);
             let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
             if (!historyEntry) {
                 historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
@@ -2045,6 +2046,7 @@
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
             let histories = historyMap.get(dateKey) || [];
+            historyMap.set(dateKey, histories);
             let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
             if (!historyEntry) {
                 historyEntry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
@@ -2086,6 +2088,7 @@
             historyCache.delete(dateKey);
 
             let histories = historyMap.get(dateKey) || [];
+            historyMap.set(dateKey, histories);
             let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
 
             const now = new Date();
@@ -2356,12 +2359,11 @@
             if (loaded) {
                 renderGroupsForDate(date);
             }
-
             try {
-                const history = await apiFetch(
+                const response = await apiFetch(
                     `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
                 );
-                const data = Array.isArray(history) ? history : [];
+                const data = Array.isArray(response) ? response.map(h => ({ ...h })) : [];
                 historyMap.set(dateKey, data);
                 historyCache.set(dateKey, { data, timestamp: Date.now() });
                 saveLocalHistory(dateKey);
