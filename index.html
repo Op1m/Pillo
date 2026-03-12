@@ -3691,7 +3691,53 @@
             return;
         }
 
-        alert(`${debugCardMappings()}`);
+        const cards = [...document.querySelectorAll('.card, .drug-card, .med-card, [data-card]')];
+
+        let cardsInfo = cards.map((card, i) => {
+            const date =
+                card.getAttribute('data-date') ||
+                card.getAttribute('data-day') ||
+                card.dataset?.date ||
+                card.dataset?.day ||
+                'дата не найдена';
+
+            const status =
+                card.getAttribute('data-local-status') ||
+                (card.classList.contains('status-accepted') && 'accepted') ||
+                (card.classList.contains('status-rejected') && 'rejected') ||
+                (card.classList.contains('optimistic-postponed') && 'postponed') ||
+                'none';
+
+            const title =
+                card.querySelector('.drug-name, .title, h3, h2')?.textContent?.trim() ||
+                'название не найдено';
+
+            return `${i}. ${title} | date: ${date} | status: ${status}`;
+        }).join('\n');
+
+        const storage = localStorage.getItem('cards_by_day_v2') || 'пусто';
+
+        alert(`
+👤 Информация о пользователе:
+
+ID: ${currentUser.id}
+Username: ${currentUser.username}
+Telegram ID: ${currentUser.telegramId || 'не указан'}
+Telegram Chat ID: ${currentUser.telegramChatId || 'не указан'}
+First Name: ${currentUser.firstName || 'не указан'}
+
+──────────────
+
+📅 Карточки на странице:
+
+${cardsInfo}
+
+──────────────
+
+💾 localStorage cards_by_day_v2:
+
+${storage}
+`);
     });
     function startAutoRefresh() {
         setInterval(async () => {
