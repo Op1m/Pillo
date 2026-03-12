@@ -3908,5 +3908,215 @@
     })();
 </script>
 
+<script>
+    (function(){
+        if (!window) return;
+
+        function pad(n){ return String(n).padStart(2,'0'); }
+
+        function canonicalDateKey(input){
+            if (!input && input !== 0) input = new Date();
+            if (input instanceof Date){
+                const y = input.getFullYear(), m = input.getMonth(), d = input.getDate();
+                const utcMid = new Date(Date.UTC(y, m, d));
+                return utcMid.toISOString().split('T')[0];
+            }
+            if (typeof input === 'string'){
+                const s = input.trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+                const dt = new Date(s);
+                if (isNaN(dt)) {
+                    const parsed = new Date(s + 'T00:00:00');
+                    if (!isNaN(parsed)) return canonicalDateKey(parsed);
+                    return canonicalDateKey(new Date());
+                }
+                const y = dt.getUTCFullYear(), m = dt.getUTCMonth()+1, d = dt.getUTCDate();
+                return `${y}-${pad(m)}-${pad(d)}`;
+            }
+            return canonicalDateKey(new Date());
+        }
+
+        const PENDING_KEY = 'pillo_pending_history_v1';
+
+        function loadPendingRaw(){
+            try{
+                const raw = localStorage.getItem(PENDING_KEY);
+                return raw ? JSON.parse(raw) : {};
+            }catch(e){ return {}; }
+        }
+
+        function loadPending(){
+            const raw = loadPendingRaw();
+            const migrated = {};
+            Object.keys(raw).forEach(k => {
+                let newKey;
+                if (/^\d{4}-\d{2}-\d{2}$/.test(k)) {
+                    const parts = k.split('-').map(Number);
+                    const localDate = new Date(parts[0], parts[1]-1, parts[2]);
+                    newKey = canonicalDateKey(localDate);
+                } else {
+                    newKey = canonicalDateKey(k);
+                }
+                migrated[newKey] = migrated[newKey] || [];
+                (raw[k] || []).forEach(item => migrated[newKey].push(item));
+            });
+            return migrated;
+        }
+
+        function savePending(obj){
+            try { localStorage.setItem(PENDING_KEY, JSON.stringify(obj)); } catch(e){ }
+        }
+
+        function addPendingEntryForKey(dateKey, entry){
+            const pending = loadPending();
+            pending[dateKey] = pending[dateKey] || [];
+            const rid = String(entry.reminder?.id || entry.reminderId || '');
+            const idx = pending[dateKey].findIndex(h => String(h.reminder?.id || h.reminderId || '') === rid);
+            if (idx !== -1) pending[dateKey][idx] = entry;
+            else pending[dateKey].push(entry);
+            savePending(pending);
+        }
+
+        function removePendingEntryForKey(dateKey, reminderId){
+            const pending = loadPending();
+            if (!pending[dateKey]) return;
+            pending[dateKey] = pending[dateKey].filter(h => String(h.reminder?.id || h.reminderId || '') !== String(reminderId));
+            if (pending[dateKey].length === 0) delete pending[dateKey];
+            savePending(pending);
+        }
+
+        function mergePendingIntoHistories(dateKey, histories){
+            const pending = loadPending();
+            const list = pending[dateKey] || [];
+            if (!Array.isArray(histories)) histories = [];
+            const result = histories.slice();
+            list.forEach(p => {
+                const rid = String(p.reminder?.id || p.reminderId || '');
+                const idx = result.findIndex(h => String(h.reminder?.id || h.reminderId || '') === rid);
+                if (idx !== -1) result[idx] = Object.assign({}, result[idx], p);
+                else result.push(Object.assign({}, p));
+            });
+            return result;
+        }
+
+        const origLoadInitial = window.loadInitialData;
+        if (typeof origLoadInitial === 'function'){
+            window.loadInitialData = async function(...args){
+                const res = await origLoadInitial.apply(this, args);
+                try {
+                    if (window.historyMap && window.historyMap instanceof Map){
+                        const entries = Array.from(window.historyMap.entries());
+                        const newMap = new Map();
+                        entries.forEach(([k, arr]) => {
+                            (arr || []).forEach(item => {
+                                const keyFromItem = item && (item.scheduledTime || item.when || item.createdAt);
+                                const key = keyFromItem ? canonicalDateKey(keyFromItem) : canonicalDateKey(k);
+                                if (!newMap.has(key)) newMap.set(key, []);
+                                newMap.get(key).push(item);
+                            });
+                        });
+                        window.historyMap = newMap;
+                    }
+                    const pending = loadPending();
+                    if (window.selectedDay){
+                        const ck = canonicalDateKey(window.selectedDay);
+                        const serverHist = (window.historyMap && window.historyMap.get(ck)) || [];
+                        const merged = mergePendingIntoHistories(ck, serverHist);
+                        if (window.historyMap) window.historyMap.set(ck, merged);
+                    }
+                    if (typeof window.renderGroupsForDate === 'function' && window.selectedDay) {
+                        window.renderGroupsForDate(window.selectedDay);
+                    }
+                } catch(e){ console.warn('canonicalDateKey: loadInitialData patch failed', e); }
+                console.log('canonicalDateKey: loadInitialData finished');
+                return res;
+            };
+        }
+
+        const origLoadHistory = window.loadHistoryForDate;
+        if (typeof origLoadHistory === 'function'){
+            window.loadHistoryForDate = async function(date, ...rest){
+                const res = await origLoadHistory.apply(this, [date, ...rest]);
+                try {
+                    const ck = canonicalDateKey(date || new Date());
+                    window.historyMap = window.historyMap || new Map();
+                    const isoKey = (date || new Date()).toISOString().split('T')[0];
+                    const serverArr = window.historyMap.get(ck) || window.historyMap.get(isoKey) || [];
+                    const merged = mergePendingIntoHistories(ck, serverArr);
+                    window.historyMap.set(ck, merged);
+                    if (typeof window.renderGroupsForDate === 'function') window.renderGroupsForDate(date || new Date());
+                    const pending = loadPending();
+                    (window.historyMap.get(ck) || []).forEach(h => {
+                        if (h.id && h.reminder && String(h.reminder.id)){
+                            removePendingEntryForKey(ck, String(h.reminder.id));
+                        }
+                    });
+                } catch(e){ console.warn('canonicalDateKey: loadHistoryForDate patch failed', e); }
+                return res;
+            };
+        }
+
+        function patchOptimisticFn(fnName){
+            const orig = window[fnName];
+            if (typeof orig !== 'function') return;
+            window[fnName] = function(reminderId, card){
+                const ck = canonicalDateKey(window.selectedDay || new Date());
+                let ret;
+                try { ret = orig.apply(this, [reminderId, card]); } catch(e){ console.warn(fnName, 'orig failed', e); }
+                try {
+                    const now = new Date();
+                    const entry = {
+                        id: null,
+                        reminder: { id: reminderId },
+                        status: fnName === 'optimisticMarkTaken' ? 'taken' : (fnName === 'optimisticMarkSkipped' ? 'skipped' : 'postponed'),
+                        scheduledTime: (window.selectedDay ? new Date(Date.UTC(window.selectedDay.getFullYear(), window.selectedDay.getMonth(), window.selectedDay.getDate())).toISOString() : now.toISOString()),
+                        __optimistic: true
+                    };
+                    addPendingEntryForKey(ck, entry);
+                    window.historyMap = window.historyMap || new Map();
+                    const cur = window.historyMap.get(ck) || [];
+                    const idx = cur.findIndex(h => String(h.reminder?.id || '') === String(reminderId));
+                    if (idx !== -1) cur[idx] = Object.assign({}, cur[idx], entry);
+                    else cur.push(entry);
+                    window.historyMap.set(ck, cur);
+                    if (typeof window.renderGroupsForDate === 'function') window.renderGroupsForDate(window.selectedDay || new Date());
+                    setTimeout(() => {
+                        if (typeof window.loadHistoryForDate === 'function') {
+                            window.loadHistoryForDate(window.selectedDay || new Date()).catch(()=>{});
+                        }
+                    }, 5000);
+                } catch(e){ console.warn(fnName, 'optimistic patch failed', e); }
+                return ret;
+            };
+        }
+        ['optimisticMarkTaken','optimisticMarkSkipped','optimisticPostponeReminder'].forEach(patchOptimisticFn);
+
+        try {
+            if (window.historyMap && window.historyMap instanceof Map){
+                const entries = Array.from(window.historyMap.entries());
+                const newMap = new Map();
+                entries.forEach(([k, arr]) => {
+                    (arr || []).forEach(item => {
+                        const keyFromItem = item && (item.scheduledTime || item.when || item.createdAt);
+                        const key = keyFromItem ? canonicalDateKey(keyFromItem) : canonicalDateKey(k);
+                        if (!newMap.has(key)) newMap.set(key, []);
+                        newMap.get(key).push(item);
+                    });
+                });
+                window.historyMap = newMap;
+            }
+            const pending = loadPending();
+            if (window.selectedDay){
+                const ck = canonicalDateKey(window.selectedDay);
+                const serverArr = window.historyMap && window.historyMap.get(ck) || [];
+                window.historyMap.set(ck, mergePendingIntoHistories(ck, serverArr));
+                if (typeof window.renderGroupsForDate === 'function') window.renderGroupsForDate(window.selectedDay);
+            }
+        } catch(e){}
+        console.log('canonicalDateKey patch loaded — UTC vs local day normalized.');
+    })();
+</script>
+
+
 </body>
 </html>
