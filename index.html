@@ -4122,7 +4122,7 @@
         const SERVER_TZ_OFFSET = '+07:00';
 
         function pad(n){ return String(n).padStart(2,'0'); }
-        
+
         function parseServerTimestampToDate(s) {
             if (!s) return new Date();
             const str = String(s).trim();
@@ -4160,6 +4160,162 @@
     })();
 </script>
 
+<script>
+    (function(){
+        if (!window) return;
+
+        const SERVER_TZ_OFFSET = '+07:00';
+        const SERVER_OFFSET_MINUTES = 7 * 60;
+        const SERVER_OFFSET_MS = SERVER_OFFSET_MINUTES * 60 * 1000;
+
+        function pad(n){ return String(n).padStart(2,'0'); }
+        function fmtUTCDateKey(d){
+            return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+        }
+
+        function parseServerTimestamp(s){
+            if (!s) return new Date();
+            const str = String(s).trim();
+            if (/[zZ]$/.test(str) || /[+-]\d{2}(:\d{2})?$/.test(str)) {
+                return new Date(str);
+            }
+            return new Date(str + SERVER_TZ_OFFSET);
+        }
+
+        function serverKeyFromTimestamp(ts){
+            try {
+                const dt = parseServerTimestamp(ts);
+                const serverLocal = new Date(dt.getTime() + SERVER_OFFSET_MS);
+                return fmtUTCDateKey(serverLocal);
+            } catch (e) {
+                return fmtUTCDateKey(new Date(Date.now() + SERVER_OFFSET_MS));
+            }
+        }
+
+        function serverKeyFromDate(dateObj){
+            const dt = (dateObj instanceof Date) ? dateObj : new Date(dateObj || Date.now());
+            const serverLocal = new Date(dt.getTime() + SERVER_OFFSET_MS);
+            return fmtUTCDateKey(serverLocal);
+        }
+
+        const PENDING_KEY = 'pillo_pending_history_v1';
+        function loadPendingRaw(){
+            try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '{}'); } catch(e){ return {}; }
+        }
+        function savePendingRaw(obj){
+            try { localStorage.setItem(PENDING_KEY, JSON.stringify(obj)); } catch(e) {}
+        }
+        function mergePendingForKey(key, arr){
+            const pending = loadPendingRaw();
+            const list = pending[key] || [];
+            const res = Array.isArray(arr) ? arr.slice() : [];
+            list.forEach(p => {
+                const rid = String(p.reminder?.id || p.reminderId || '');
+                const idx = res.findIndex(h => String(h.reminder?.id || h.reminderId || '') === rid);
+                if (idx !== -1) res[idx] = Object.assign({}, res[idx], p);
+                else res.push(Object.assign({}, p));
+            });
+            return res;
+        }
+
+        const origLoadHistory = window.loadHistoryForDate;
+        if (typeof origLoadHistory === 'function'){
+            window.loadHistoryForDate = async function(date, ...rest){
+                const res = await origLoadHistory.apply(this, [date, ...rest]);
+                try {
+                    const origKey = (date instanceof Date ? date : new Date(date)).toISOString().split('T')[0];
+                    const maybeArr = (window.historyMap && window.historyMap.get(origKey)) || [];
+                    const grouped = {};
+                    (maybeArr || []).forEach(item => {
+                        const sk = serverKeyFromTimestamp(item.scheduledTime || item.when || item.createdAt || origKey);
+                        grouped[sk] = grouped[sk] || [];
+                        grouped[sk].push(item);
+                    });
+                    if (!window.historyMap) window.historyMap = new Map();
+                    Object.keys(grouped).forEach(k => {
+                        const merged = mergePendingForKey(k, grouped[k]);
+                        window.historyMap.set(k, merged);
+                        try {
+                            if (window.historyCache && window.historyCache instanceof Map) {
+                                window.historyCache.set(k, { data: merged, timestamp: Date.now() });
+                            }
+                        } catch(e){}
+                    });
+                    const serverKeyForRequested = serverKeyFromDate(date || new Date());
+                    const dayArr = window.historyMap.get(serverKeyForRequested) || [];
+                    if (typeof window.renderGroupsForDate === 'function'){
+                        window.renderGroupsForDate(date || new Date());
+                    }
+                    const current = window.historyMap.get(serverKeyForRequested) || [];
+                    current.forEach(h => {
+                        if (h.id && h.reminder && String(h.reminder.id)) {
+                            const pending = loadPendingRaw();
+                            if (pending[serverKeyForRequested]) {
+                                const newList = pending[serverKeyForRequested].filter(p => String(p.reminder?.id || p.reminderId || '') !== String(h.reminder.id));
+                                if (newList.length) pending[serverKeyForRequested] = newList;
+                                else delete pending[serverKeyForRequested];
+                                savePendingRaw(pending);
+                            }
+                        }
+                    });
+                } catch(e){
+                    console.warn('server-key patch: loadHistory postprocess failed', e);
+                }
+                return res;
+            };
+        }
+
+        if (typeof window.getStatusForReminderOnDate === 'function'){
+            const origGetStatus = window.getStatusForReminderOnDate;
+            window.getStatusForReminderOnDate = function(reminder, date){
+                try {
+                    const key = serverKeyFromDate(date || new Date());
+                    const histories = (window.historyMap && window.historyMap.get(key)) || [];
+                    const history = histories.find(h => h.reminder && String(h.reminder.id) === String(reminder.id));
+                    if (!history) return 'pending';
+                    return (history.status || 'pending').toLowerCase();
+                } catch(e){
+                    try { return origGetStatus.apply(this, [reminder, date]); } catch(e2){ return 'pending'; }
+                }
+            };
+        }
+
+        function patchOptimistic(name){
+            const orig = window[name];
+            if (typeof orig !== 'function') return;
+            window[name] = function(reminderId, card){
+                const key = serverKeyFromDate(window.selectedDay || new Date());
+                const r = orig.apply(this, [reminderId, card]);
+                try {
+                    const entry = {
+                        id: null,
+                        reminder: { id: reminderId },
+                        status: name === 'optimisticMarkTaken' ? 'taken' : (name === 'optimisticMarkSkipped' ? 'skipped' : 'postponed'),
+                        scheduledTime: (window.selectedDay ? new Date(window.selectedDay.getFullYear(), window.selectedDay.getMonth(), window.selectedDay.getDate()).toISOString() : new Date().toISOString()),
+                        __optimistic: true
+                    };
+                    const pending = loadPendingRaw();
+                    pending[key] = pending[key] || [];
+                    const rid = String(reminderId);
+                    const idx = pending[key].findIndex(h => String(h.reminder?.id || h.reminderId || '') === rid);
+                    if (idx !== -1) pending[key][idx] = entry; else pending[key].push(entry);
+                    savePendingRaw(pending);
+                    window.historyMap = window.historyMap || new Map();
+                    const cur = window.historyMap.get(key) || [];
+                    const i = cur.findIndex(h => String(h.reminder?.id || '') === rid);
+                    if (i !== -1) cur[i] = Object.assign({}, cur[i], entry); else cur.push(entry);
+                    window.historyMap.set(key, cur);
+                    if (typeof window.renderGroupsForDate === 'function') window.renderGroupsForDate(window.selectedDay || new Date());
+                    setTimeout(()=> { if (typeof window.loadHistoryForDate === 'function') window.loadHistoryForDate(window.selectedDay || new Date()).catch(()=>{}); }, 4000);
+                } catch(e){ console.warn('patch optimistic write failed', e); }
+                return r;
+            };
+        }
+        ['optimisticMarkTaken','optimisticMarkSkipped','optimisticPostponeReminder'].forEach(patchOptimistic);
+
+        console.log('pillo server-day patch loaded (server TZ offset %s).', SERVER_TZ_OFFSET);
+    })();
+</script>
 
 </body>
 </html>
