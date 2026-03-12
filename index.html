@@ -3591,7 +3591,7 @@
             }, 1000);
         }
     }
-    
+
     (function(){
         if (!window) return;
 
@@ -3788,5 +3788,125 @@
 
 
 </script>
+
+<script>
+
+    (function(){
+        if (!window) return;
+
+        function localDateKey(d) {
+            const dt = new Date(d);
+            const y = dt.getFullYear();
+            const m = String(dt.getMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getDate()).padStart(2, '0');
+            return `${y}-${m}-${dd}`;
+        }
+
+        function buildLocalHistoryMapFromArray(arr) {
+            const map = new Map();
+            (arr || []).forEach(item => {
+                const when = item && (item.scheduledTime || item.when || item.createdAt) || new Date().toISOString();
+                const key = localDateKey(when);
+                if (!map.has(key)) map.set(key, []);
+                map.get(key).push(item);
+            });
+            return map;
+        }
+
+        function normalizeExistingHistoryMap() {
+            try {
+                if (!window.historyMap || !(window.historyMap instanceof Map)) return;
+                const entries = Array.from(window.historyMap.entries());
+                const newMap = new Map();
+                entries.forEach(([k, arr]) => {
+                    (arr || []).forEach(item => {
+                        const itemKey = localDateKey(item.scheduledTime || k);
+                        if (!newMap.has(itemKey)) newMap.set(itemKey, []);
+                        newMap.get(itemKey).push(item);
+                    });
+                });
+                window.historyMap = newMap;
+            } catch (e) {
+                console.warn('localDateKey: normalizeExistingHistoryMap failed', e);
+            }
+        }
+
+        const origLoadInitialData = window.loadInitialData;
+        if (typeof origLoadInitialData === 'function') {
+            window.loadInitialData = async function(...args) {
+                const res = await origLoadInitialData.apply(this, args);
+                try {
+                    normalizeExistingHistoryMap();
+                    if (typeof window.renderGroupsForDate === 'function' && window.selectedDay) {
+                        window.renderGroupsForDate(window.selectedDay);
+                    }
+                } catch(e){ console.warn('localDateKey: loadInitial patch failed', e); }
+                return res;
+            };
+        }
+
+        const origLoadHistoryForDate = window.loadHistoryForDate;
+        if (typeof origLoadHistoryForDate === 'function') {
+            window.loadHistoryForDate = async function(date, ...rest) {
+                const res = await origLoadHistoryForDate.apply(this, [date, ...rest]);
+                try {
+                    const localKey = localDateKey(date || new Date());
+                    const isoKey = (date || new Date()).toISOString().split('T')[0];
+                    const existing = (window.historyMap && (window.historyMap.get(localKey) || window.historyMap.get(isoKey))) || [];
+                    window.historyMap = window.historyMap || new Map();
+                    window.historyMap.set(localKey, existing.slice());
+                    if (typeof window.mergePendingIntoHistories === 'function') {
+                        const merged = window.mergePendingIntoHistories(localKey, existing);
+                        window.historyMap.set(localKey, merged);
+                    } else {
+                        try {
+                            const raw = localStorage.getItem('pillo_pending_history_v1');
+                            if (raw) {
+                                const pending = JSON.parse(raw);
+                                const list = pending[localKey] || [];
+                                if (list.length) {
+                                    const combined = existing.slice();
+                                    list.forEach(p => {
+                                        const rid = String(p.reminder?.id || p.reminderId || '');
+                                        const idx = combined.findIndex(h => String(h.reminder?.id || h.reminderId || '') === rid);
+                                        if (idx !== -1) combined[idx] = Object.assign({}, combined[idx], p);
+                                        else combined.push(p);
+                                    });
+                                    window.historyMap.set(localKey, combined);
+                                }
+                            }
+                        } catch(e){}
+                    }
+                    if (typeof window.renderGroupsForDate === 'function') {
+                        window.renderGroupsForDate(date || new Date());
+                    }
+                } catch(e) { console.warn('localDateKey: post-loadHistory patch failed', e); }
+                return res;
+            };
+        }
+
+        function patchOptimistic(fnName) {
+            const orig = window[fnName];
+            if (typeof orig !== 'function') return;
+            window[fnName] = function(reminderId, card) {
+                const localKey = localDateKey(window.selectedDay || new Date());
+                const res = orig.apply(this, [reminderId, card]);
+                try {
+                    if (!window.historyMap) window.historyMap = new Map();
+                    const isoKey = (window.selectedDay || new Date()).toISOString().split('T')[0];
+                    const maybe = window.historyMap.get(localKey) || window.historyMap.get(isoKey) || [];
+                    window.historyMap.set(localKey, maybe.slice());
+                    localStorage.setItem('lastHistoryUpdate', Date.now().toString());
+                } catch(e) { console.warn('localDateKey: optimistic patch error', e); }
+                return res;
+            };
+        }
+        ['optimisticMarkTaken', 'optimisticMarkSkipped', 'optimisticPostponeReminder'].forEach(patchOptimistic);
+
+        try { normalizeExistingHistoryMap(); } catch(e){}
+        console.log('localDateKey patch loaded — unified day-keys (local).');
+    })();
+</script>
+
 </body>
 </html>
