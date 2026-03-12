@@ -4365,5 +4365,161 @@ ${storage}
         });
 
     })();
+    (function(){
+        function toISO(d){ const y=d.getFullYear(); const m=('0'+(d.getMonth()+1)).slice(-2); const dd=('0'+d.getDate()).slice(-2); return `${y}-${m}-${dd}`; }
+        function parseDateGuess(txt){
+            if(!txt) return null;
+            txt = String(txt).trim();
+            let m = txt.match(/(20\d{2}-\d{2}-\d{2})/); if(m) return m[1];
+            m = txt.match(/(\d{1,2})\D+(\d{1,2})\D+(20\d{2})/); if(m){ return `${m[3]}-${('0'+m[2]).slice(-2)}-${('0'+m[1]).slice(-2)}`; }
+            const p = Date.parse(txt); if(!isNaN(p)) return toISO(new Date(p));
+            return null;
+        }
+        function domPath(el){
+            if(!el) return '';
+            const parts=[];
+            let cur=el;
+            while(cur && cur.nodeType===1 && cur !== document.body){
+                let s = cur.tagName.toLowerCase();
+                if(cur.id) s += `#${cur.id}`;
+                else if(cur.className) s += `.${String(cur.className).trim().split(/\s+/)[0]||''}`;
+                parts.unshift(s);
+                cur = cur.parentElement;
+            }
+            return parts.join(' > ');
+        }
+        function firstText(el, selectors){ try{ const q = selectors.map(s=>el.querySelector(s)).find(Boolean); return q && q.textContent && q.textContent.trim(); }catch(e){return null;} }
+
+        function computeCandidateDateForCard(card){
+            const ATTRS = ['data-date','data-day','data-card-date','data-current-day','data-visible-day','data-day-key','data-date-iso'];
+            for(const a of ATTRS){
+                const el = card.closest && card.closest('['+a+']') || (card.hasAttribute && card.hasAttribute(a) ? card : null);
+                if(el){
+                    const v = el.getAttribute(a) || (el.dataset && el.dataset[a.replace('data-','')]);
+                    const parsed = parseDateGuess(v);
+                    if(parsed) return { date: parsed, source: `attr:${a}`, value: v, elPath: domPath(el) };
+                }
+            }
+
+            const cell = card.closest && card.closest('[data-date],[data-day],.day-cell,.cell,[data-day-cell]');
+            if(cell){
+                const d = cell.getAttribute('data-date') || cell.getAttribute('data-day');
+                const pd = parseDateGuess(d);
+                if(pd) return { date: pd, source: 'cell:data-date', value: d, elPath: domPath(cell) };
+            }
+
+            const weekRow = card.closest && card.closest('[data-week-start], .calendar-week, .week-row');
+            if(weekRow){
+                const ws = weekRow.getAttribute && (weekRow.getAttribute('data-week-start') || (weekRow.dataset && weekRow.dataset.weekStart));
+                const weekStart = parseDateGuess(ws);
+                if(weekStart){
+                    let cells = Array.from(weekRow.querySelectorAll('.day-cell, .cell, [data-day-cell], [data-date]'));
+                    if(!cells.length) cells = Array.from(weekRow.children);
+                    const idx = cells.findIndex(c => c === card || c.contains(card));
+                    if(idx >= 0){
+                        const base = new Date(weekStart + 'T00:00:00');
+                        base.setDate(base.getDate() + idx);
+                        return { date: toISO(base), source: 'weekStart+index', value: ws, elPath: domPath(weekRow), index: idx };
+                    }
+                }
+            }
+
+            const numEl = card.querySelector && (card.querySelector('.day-number, .date-num, .day, .num') || card.querySelector('header, .header'));
+            const dayNum = numEl && (numEl.textContent || '').trim().match(/\d{1,2}/);
+            const dayNumber = dayNum ? Number(dayNum[0]) : null;
+            if(dayNumber){
+                const monthAnc = card.closest && card.closest('.month, .calendar, .month-view, [data-month], [data-year]');
+                if(monthAnc){
+                    let mRaw = monthAnc.getAttribute && (monthAnc.getAttribute('data-month') || (monthAnc.dataset && monthAnc.dataset.month));
+                    let yRaw = monthAnc.getAttribute && (monthAnc.getAttribute('data-year') || (monthAnc.dataset && monthAnc.dataset.year));
+                    if(!mRaw || !yRaw){
+                        const htxt = monthAnc.textContent && monthAnc.textContent.trim().slice(0,80);
+                        const parsed = parseDateGuess(htxt);
+                        if(parsed){
+                            const d = new Date(parsed + 'T00:00:00'); mRaw = d.getMonth()+1; yRaw = d.getFullYear();
+                        }
+                    }
+                    if(mRaw && yRaw){
+                        const cand = new Date(Number(yRaw), Number(mRaw)-1, dayNumber);
+                        if(!isNaN(cand)) return { date: toISO(cand), source: 'monthHeader+num', value: `${yRaw}-${mRaw}-${dayNumber}`, elPath: domPath(monthAnc) };
+                    }
+                }
+            }
+
+            let p = card;
+            for(let i=0;i<5 && p; i++, p=p.parentElement){
+                const txt = p.textContent && p.textContent.trim().slice(0,120);
+                const pd = parseDateGuess(txt);
+                if(pd) return { date: pd, source: 'parentText', value: txt.slice(0,80), elPath: domPath(p) };
+            }
+
+            return { date: null, source: 'failed', elPath: domPath(card) };
+        }
+
+        function buildReport(){
+            const rows = [];
+            const candidates = Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card], [data-id], [data-card-key], .day-cell .card, .card-item'));
+            const cards = candidates.length ? candidates : Array.from(document.querySelectorAll('div')).slice(0,20);
+            cards.slice(0,40).forEach((card, i) => {
+                const snippet = (card.querySelector && (card.querySelector('.drug-name, .title, h3, h2') && card.querySelector('.drug-name, .title, h3, h2').textContent.trim())) || (card.textContent||'').trim().slice(0,120);
+                const attrs = {};
+                Array.from(card.attributes||[]).forEach(a=>attrs[a.name]=a.value);
+                const candidate = computeCandidateDateForCard(card);
+                rows.push({
+                    idx: i,
+                    path: domPath(card),
+                    snippet: snippet.replace(/\s+/g,' ').slice(0,120),
+                    attrs,
+                    candidate
+                });
+            });
+            return rows;
+        }
+
+        function showChunks(str){
+            const CH = 3000;
+            for(let i=0;i<str.length;i+=CH){
+                alert(str.slice(i, i+CH));
+            }
+        }
+
+        function onDbl(e){
+            try{ e.stopPropagation(); e.preventDefault(); }catch(err){}
+            const currentUser = window.currentUser || window.currentUserData || window.__currentUser || (window.app && window.app.currentUser) || (window.appState && window.appState.currentUser) || null;
+            if(!currentUser){
+                alert('Пользователь не авторизован');
+                return;
+            }
+            const header = `👤 Информация о пользователе:\n\nID: ${currentUser.id||'(не указан)'}\nUsername: ${currentUser.username||'(не указан)'}\nTelegram ID: ${currentUser.telegramId||currentUser.telegram_id||'(не указан)'}\nFirst Name: ${currentUser.firstName||currentUser.first_name||'(не указано)'}\n\n`;
+            const rows = buildReport();
+            try{ sessionStorage.setItem('__card_debug_dump', JSON.stringify(rows)); }catch(e){}
+            const lines = rows.map(r => {
+                const cand = r.candidate;
+                return `${r.idx}. path: ${r.path}\n snippet: ${r.snippet}\n candidate date: ${cand.date||'—'} (source: ${cand.source})\n candidate.value: ${String(cand.value||'')}\n elPath: ${cand.elPath||''}\n attrs: ${Object.keys(r.attrs).length? JSON.stringify(r.attrs):'-'}\n────────────`;
+            }).join('\n\n');
+            showChunks(header + '📋 Диагностика карточек (первые 40):\n\n' + lines + '\n\nFull dump saved to sessionStorage "__card_debug_dump"');
+        }
+
+        (function attach(){
+            const avatar = document.querySelector('.avatar');
+            if(avatar){
+                try{ avatar.removeEventListener('dblclick', avatar.__dbg_handler); }catch(e){}
+                avatar.__dbg_handler = onDbl;
+                avatar.addEventListener('dblclick', onDbl, { passive:false });
+            } else {
+                const mo = new MutationObserver((mutations)=>{
+                    const a = document.querySelector('.avatar');
+                    if(a){
+                        try{ a.removeEventListener('dblclick', a.__dbg_handler); }catch(e){}
+                        a.__dbg_handler = onDbl;
+                        a.addEventListener('dblclick', onDbl, { passive:false });
+                        mo.disconnect();
+                    }
+                });
+                mo.observe(document.body, { childList:true, subtree:true });
+            }
+        })();
+
+    })();
 </script></body>
 </html>
