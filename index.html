@@ -1768,6 +1768,7 @@
                 renderGroupsForDate(selectedDay);
                 renderWeek(currentDate);
 
+
             } catch (err) {
                 console.warn('Ошибка загрузки начальных данных', err);
             } finally {
@@ -2348,6 +2349,8 @@
             end.setDate(end.getDate() + 1);
             end.setHours(23,59,59,999);
             const dateKey = date.toISOString().split('T')[0];
+
+            historyMap.set(dateKey, []);
 
             const loaded = loadLocalHistory(dateKey);
             if (loaded) {
@@ -3008,6 +3011,7 @@
                     authToken = localStorage.getItem(TOKEN_KEY);
                     updateUserInfo(currentUser);
                     await loadInitialData();
+                    renderWeek(currentDate);
                     startAutoRefresh();
                     setupSSE();
                 } catch (e) { console.warn('Ошибка парсинга пользователя', e); }
