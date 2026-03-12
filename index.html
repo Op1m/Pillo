@@ -1616,33 +1616,6 @@
         };
         let historyCache = new Map();
 
-        function saveLocalHistory(dateKey) {
-            try {
-                const histories = historyMap.get(dateKey) || [];
-                localStorage.setItem(`historyLocal_${dateKey}`, JSON.stringify(histories));
-            } catch (e) {
-                console.warn('Ошибка сохранения локальной истории', e);
-            }
-        }
-
-        function loadLocalHistory(dateKey) {
-            try {
-                const stored = localStorage.getItem(`historyLocal_${dateKey}`);
-                if (stored) {
-                    const histories = JSON.parse(stored);
-                    const cleanHistories = histories.map(h => ({
-                        ...h,
-                        reminder: h.reminder ? { ...h.reminder } : null
-                    }));
-                    historyMap.set(dateKey, cleanHistories);
-                    return true;
-                }
-            } catch (e) {
-                console.warn('Ошибка загрузки локальной истории', e);
-            }
-            return false;
-        }
-
         const $ = id => document.getElementById(id);
         const avatarContainer = $('avatarContainer');
         const avatarPlaceholder = $('avatarPlaceholder');
@@ -1765,17 +1738,12 @@
                         const itemDate = new Date(item.scheduledTime).toISOString().split('T')[0];
                         return itemDate === dKey;
                     });
-                    const cleanDayHistory = dayHistory.map(h => ({
-                        ...h,
-                        reminder: h.reminder ? { ...h.reminder } : null
-                    }));
-                    historyMap.set(dKey, cleanDayHistory);
-                    historyCache.set(dKey, { data: cleanDayHistory, timestamp: Date.now() });
+                    historyMap.set(dKey, dayHistory);
+                    historyCache.set(dKey, { data: dayHistory, timestamp: Date.now() });
                 }
 
                 renderGroupsForDate(selectedDay);
                 renderWeek(currentDate);
-
 
             } catch (err) {
                 console.warn('Ошибка загрузки начальных данных', err);
@@ -1866,9 +1834,6 @@
                     });
                 }, 10);
             } else {
-                historyMap.clear();
-                historyCache.clear();
-
                 weekRow.style.transition = 'opacity 0.2s ease';
                 weekRow.style.opacity = '0';
 
@@ -1914,11 +1879,7 @@
             let startY = 0;
             let startTime = 0;
             let swiping = false;
-            let didScroll = false;
-
-            let lastTapTime = 0;
-            let tapCount = 0;
-            let tapTimer = null;
+            let isVerticalScroll = false;
 
             card.addEventListener('touchstart', (e) => {
                 const t = e.touches[0];
@@ -1926,32 +1887,8 @@
                 startY = t.clientY;
                 startTime = Date.now();
                 swiping = false;
-                didScroll = false;
+                isVerticalScroll = false;
                 card.style.transition = 'none';
-
-                const currentTime = Date.now();
-                const timeDiff = currentTime - lastTapTime;
-
-                if (timeDiff < 300 && timeDiff > 0) {
-                    if (tapTimer) clearTimeout(tapTimer);
-                    tapCount = 0;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    optimisticPostponeReminder(reminderId, card);
-                    lastTapTime = 0;
-                } else {
-                    tapCount = 1;
-                    lastTapTime = currentTime;
-
-                    tapTimer = setTimeout(() => {
-                        if (tapCount === 1 && !swiping && !didScroll) {
-                            openDetailSheet(reminderId);
-                        }
-                        tapCount = 0;
-                        lastTapTime = 0;
-                    }, 250);
-                }
-
             }, { passive: true });
 
             card.addEventListener('touchmove', (e) => {
@@ -1959,18 +1896,13 @@
                 const dx = t.clientX - startX;
                 const dy = t.clientY - startY;
 
-                if (Math.abs(dy) > 10) {
-                    didScroll = true;
+                if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+                    isVerticalScroll = true;
+                    return;
                 }
 
                 if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
                     swiping = true;
-                    if (tapTimer) {
-                        clearTimeout(tapTimer);
-                        tapTimer = null;
-                        tapCount = 0;
-                        lastTapTime = 0;
-                    }
                     e.preventDefault();
                     card.style.transform = `translateX(${dx}px)`;
                 }
@@ -1983,18 +1915,14 @@
                 card.style.transition = 'transform 200ms ease';
 
                 if (swiping && Math.abs(dx) > 60) {
-                    if (tapTimer) {
-                        clearTimeout(tapTimer);
-                        tapTimer = null;
-                        tapCount = 0;
-                        lastTapTime = 0;
-                    }
-
                     if (dx > 0) {
                         optimisticMarkTaken(reminderId, card);
                     } else {
                         optimisticMarkSkipped(reminderId, card);
                     }
+                }
+                else if (!swiping && !isVerticalScroll && Math.abs(dx) < 10) {
+                    openDetailSheet(reminderId);
                 }
 
                 card.style.transform = 'translateX(0)';
@@ -2002,39 +1930,22 @@
                     card.style.transition = '';
                 }, 200);
             }, { passive: true });
-
-            card.addEventListener('click', (e) => {
-                if (tapCount === 0) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            });
         }
 
         function optimisticMarkTaken(reminderId, card) {
             const rid = String(reminderId);
+            const reminder = reminders.find(r => String(r.id) === rid) || null;
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
-
             let histories = historyMap.get(dateKey) || [];
             let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
-
             if (!historyEntry) {
-                historyEntry = {
-                    id: null,
-                    reminder: { id: reminderId },
-                    status: 'taken',
-                    scheduledTime: selectedDay.toISOString()
-                };
+                historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
                 histories.push(historyEntry);
                 historyMap.set(dateKey, histories);
-                saveLocalHistory(dateKey);
             } else {
                 historyEntry.status = 'taken';
-                historyMap.set(dateKey, histories);
-                saveLocalHistory(dateKey);
             }
-
             if (card) {
                 card.classList.add('taken');
                 card.classList.remove('pending', 'skipped', 'missed', 'postponed');
@@ -2045,7 +1956,6 @@
                 card.style.transform = 'translateX(0)';
                 setTimeout(()=>{ card.style.transition = ''; }, 200);
             }
-
             markReminderAsTaken(reminderId).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
                 if (card) {
@@ -2062,28 +1972,18 @@
 
         function optimisticMarkSkipped(reminderId, card) {
             const rid = String(reminderId);
+            const reminder = reminders.find(r => String(r.id) === rid) || null;
             const dateKey = selectedDay.toISOString().split('T')[0];
             historyCache.delete(dateKey);
-
             let histories = historyMap.get(dateKey) || [];
             let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
-
             if (!historyEntry) {
-                historyEntry = {
-                    id: null,
-                    reminder: { id: reminderId },
-                    status: 'skipped',
-                    scheduledTime: selectedDay.toISOString()
-                };
+                historyEntry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
                 histories.push(historyEntry);
                 historyMap.set(dateKey, histories);
-                saveLocalHistory(dateKey);
             } else {
                 historyEntry.status = 'skipped';
-                historyMap.set(dateKey, histories);
-                saveLocalHistory(dateKey);
             }
-
             if (card) {
                 card.classList.add('skipped');
                 card.classList.remove('pending', 'taken', 'missed', 'postponed');
@@ -2094,7 +1994,6 @@
                 card.style.transform = 'translateX(0)';
                 setTimeout(()=>{ card.style.transition = ''; }, 200);
             }
-
             markReminderAsSkipped(reminderId).catch(() => {
                 if (historyEntry) historyEntry.status = 'pending';
                 if (card) {
@@ -2111,7 +2010,9 @@
 
         function optimisticPostponeReminder(reminderId, card) {
             const rid = String(reminderId);
+            const reminder = reminders.find(r => String(r.id) === rid) || null;
             const dateKey = selectedDay.toISOString().split('T')[0];
+
             historyCache.delete(dateKey);
 
             let histories = historyMap.get(dateKey) || [];
@@ -2129,12 +2030,9 @@
                 };
                 histories.push(historyEntry);
                 historyMap.set(dateKey, histories);
-                saveLocalHistory(dateKey);
             } else {
                 historyEntry.status = 'postponed';
                 historyEntry.scheduledTime = postponedTime.toISOString();
-                historyMap.set(dateKey, histories);
-                saveLocalHistory(dateKey);
             }
 
             if (card) {
@@ -2375,33 +2273,35 @@
             if (!currentUser) return;
 
             const start = new Date(date);
-            start.setHours(0,0,0,0);
+            start.setHours(0, 0, 0, 0);
+
             const end = new Date(date);
-            end.setDate(end.getDate() + 1);
-            end.setHours(23,59,59,999);
+            end.setHours(23, 59, 59, 999);
+
             const dateKey = date.toISOString().split('T')[0];
 
-            historyMap.set(dateKey, []);
-
-            const loaded = loadLocalHistory(dateKey);
-            if (loaded) {
+            const cache = historyCache.get(dateKey);
+            const now = Date.now();
+            if (cache && now - cache.timestamp < CACHE_TTL) {
+                historyMap.set(dateKey, cache.data);
                 renderGroupsForDate(date);
+                return;
             }
 
             try {
-                const response = await apiFetch(
+                const history = await apiFetch(
                     `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
                 );
-                const data = Array.isArray(response) ? response.map(h => ({
-                    ...h,
-                    reminder: h.reminder ? { ...h.reminder } : null
-                })) : [];
+                const data = Array.isArray(history) ? history : [];
+
+                console.log(`📊 Загружена история на ${dateKey}:`, data);
+
                 historyMap.set(dateKey, data);
-                historyCache.set(dateKey, { data, timestamp: Date.now() });
-                saveLocalHistory(dateKey);
+                historyCache.set(dateKey, { data, timestamp: now });
                 renderGroupsForDate(date);
             } catch (err) {
                 console.warn('Ошибка загрузки истории', err);
+                renderGroupsForDate(date);
             }
         }
 
@@ -2638,7 +2538,7 @@
         async function markReminderAsTaken(reminderId) {
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const [hour = 0, minute = 0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
+            const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
             const scheduledTime = new Date(selectedDay);
             scheduledTime.setHours(hour, minute, 0, 0);
 
@@ -2662,7 +2562,7 @@
                     try {
                         const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
                         alert('Не удалось отметить принятие: ' + msg);
-                    } catch (e) { }
+                    } catch(e){}
                     throw err;
                 }
             }
@@ -2680,29 +2580,12 @@
                 if (!history || !history.id) throw new Error('Не удалось создать историю');
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
                 historyMap.get(dateKey).push(history);
-                saveLocalHistory(dateKey);
             }
 
-            const result = await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
+            await apiFetch(`/medicine-history/${history.id}/mark-taken`, {
                 method: 'PATCH',
                 body: JSON.stringify({ notes: '' })
             });
-
-            if (result && result.id) {
-                const updatedHistories = historyMap.get(dateKey) || [];
-                const idx = updatedHistories.findIndex(h => h.id === history.id);
-                const cleanResult = {
-                    ...result,
-                    reminder: result.reminder ? { ...result.reminder } : null
-                };
-                if (idx !== -1) {
-                    updatedHistories[idx] = cleanResult;
-                } else {
-                    updatedHistories.push(cleanResult);
-                }
-                historyMap.set(dateKey, updatedHistories);
-                saveLocalHistory(dateKey);
-            }
 
             historyCache.delete(dateKey);
         }
@@ -2710,7 +2593,7 @@
         async function markReminderAsSkipped(reminderId) {
             const rid = String(reminderId);
             const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const [hour = 0, minute = 0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
+            const [hour=0, minute=0] = (reminder && reminder.reminderTime ? reminder.reminderTime : '00:00').split(':').map(Number);
             const scheduledTime = new Date(selectedDay);
             scheduledTime.setHours(hour, minute, 0, 0);
 
@@ -2734,7 +2617,7 @@
                     try {
                         const msg = err && (err.body && (err.body.message || JSON.stringify(err.body))) || err.message || String(err);
                         alert('Не удалось отметить пропуск: ' + msg);
-                    } catch (e) { }
+                    } catch(e){}
                     throw err;
                 }
             }
@@ -2752,29 +2635,12 @@
                 if (!history || !history.id) throw new Error('Не удалось создать историю');
                 if (!historyMap.has(dateKey)) historyMap.set(dateKey, []);
                 historyMap.get(dateKey).push(history);
-                saveLocalHistory(dateKey);
             }
 
-            const result = await apiFetch(`/medicine-history/${history.id}/mark-skipped`, {
+            await apiFetch(`/medicine-history/${history.id}/mark-skipped`, {
                 method: 'PATCH',
                 body: JSON.stringify({})
             });
-
-            if (result && result.id) {
-                const updatedHistories = historyMap.get(dateKey) || [];
-                const idx = updatedHistories.findIndex(h => h.id === history.id);
-                const cleanResult = {
-                    ...result,
-                    reminder: result.reminder ? { ...result.reminder } : null
-                };
-                if (idx !== -1) {
-                    updatedHistories[idx] = cleanResult;
-                } else {
-                    updatedHistories.push(cleanResult);
-                }
-                historyMap.set(dateKey, updatedHistories);
-                saveLocalHistory(dateKey);
-            }
 
             historyCache.delete(dateKey);
         }
@@ -3014,15 +2880,6 @@
         });
         document.addEventListener('click', (e) => {
             if (calendarPopup && !calendarPopup.contains(e.target) && !monthLabel.contains(e.target)) calendarPopup.style.display = 'none';
-            const btn = e.target.closest(
-                ".next-day, .prev-day, .day-next, .day-prev, [data-next-day], [data-prev-day]"
-            );
-
-            if (!btn) return;
-
-            setTimeout(() => {
-                applySavedForVisibleDay();
-            }, 200);
         });
         $('calPrevMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() - 1); renderCalendar(); });
         $('calNextMonth')?.addEventListener('click', (e) => { e.stopPropagation(); calDate.setMonth(calDate.getMonth() + 1); renderCalendar(); });
@@ -3086,7 +2943,6 @@
                     authToken = localStorage.getItem(TOKEN_KEY);
                     updateUserInfo(currentUser);
                     await loadInitialData();
-                    renderWeek(currentDate);
                     startAutoRefresh();
                     setupSSE();
                 } catch (e) { console.warn('Ошибка парсинга пользователя', e); }
@@ -3187,9 +3043,6 @@
                     const card = findCardByReminderId(rid);
                     optimisticMarkSkipped(rid, card);
                 }
-                setTimeout(() => {
-                    applySavedForVisibleDay();
-                }, 200);
             }, { passive: true });
         })();
 
@@ -3332,9 +3185,6 @@
                         const group = header.closest('.time-group');
                         if(!group) return;
                         setTimeout(() => {
-                            applySavedForVisibleDay();
-                        }, 200);
-                        setTimeout(() => {
                             const cards = group.querySelector('.med-cards');
                             const inner = cards && cards.querySelector('.med-cards-inner');
                             if(!cards || !inner) return;
@@ -3442,9 +3292,6 @@
                     if (card) optimisticMarkTaken(selectedReminderId, card);
                     if (sheetOverlay) sheetOverlay.style.display = 'none';
                 }
-                setTimeout(() => {
-                    applySavedForVisibleDay();
-                }, 200);
                 e.preventDefault();
                 return;
             }
@@ -3554,10 +3401,6 @@
                 currentGroupTime = time;
                 if (takeAllSheet) takeAllSheet.style.display = 'flex';
             }
-
-            setTimeout(() => {
-                applySavedForVisibleDay();
-            }, 200);
         });
     })();
 </script>
@@ -3623,34 +3466,6 @@
         }
     }
 
-    function _toISO(d){ const y=d.getFullYear(); const m=('0'+(d.getMonth()+1)).slice(-2); const dd=('0'+d.getDate()).slice(-2); return `${y}-${m}-${dd}`; }
-
-    function _parseDateString(txt){
-        if(!txt) return null;
-        txt = String(txt).trim();
-        let m = txt.match(/(20\d{2}-\d{2}-\d{2})/);
-        if(m) return m[1];
-        m = txt.match(/(\d{1,2})\D+(\d{1,2})\D+(20\d{2})/);
-        if(m){ const day=('0'+m[1]).slice(-2); const mon=('0'+m[2]).slice(-2); return `${m[3]}-${mon}-${day}`; }
-        const parsed = Date.parse(txt);
-        if(!isNaN(parsed)) return _toISO(new Date(parsed));
-        return null;
-    }
-
-    function _domPath(el){
-        if(!el) return '';
-        const parts=[];
-        let cur=el;
-        while(cur && cur.nodeType===1 && cur !== document.body){
-            let p = cur.tagName.toLowerCase();
-            if(cur.id) p += `#${cur.id}`;
-            else if(cur.className) p += `.${String(cur.className).trim().split(/\s+/).slice(0,2).join('.')}`;
-            parts.unshift(p);
-            cur = cur.parentElement;
-        }
-        return parts.join(' > ');
-    }
-
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
         const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -3691,53 +3506,15 @@
             return;
         }
 
-        const cards = [...document.querySelectorAll('.card, .drug-card, .med-card, [data-card]')];
-
-        let cardsInfo = cards.map((card, i) => {
-            const date =
-                card.getAttribute('data-date') ||
-                card.getAttribute('data-day') ||
-                card.dataset?.date ||
-                card.dataset?.day ||
-                'дата не найдена';
-
-            const status =
-                card.getAttribute('data-local-status') ||
-                (card.classList.contains('status-accepted') && 'accepted') ||
-                (card.classList.contains('status-rejected') && 'rejected') ||
-                (card.classList.contains('optimistic-postponed') && 'postponed') ||
-                'none';
-
-            const title =
-                card.querySelector('.drug-name, .title, h3, h2')?.textContent?.trim() ||
-                'название не найдено';
-
-            return `${i}. ${title} | date: ${date} | status: ${status}`;
-        }).join('\n');
-
-        const storage = localStorage.getItem('cards_by_day_v2') || 'пусто';
-
         alert(`
-👤 Информация о пользователе:
+        👤 Информация о пользователе:
 
-ID: ${currentUser.id}
-Username: ${currentUser.username}
-Telegram ID: ${currentUser.telegramId || 'не указан'}
-Telegram Chat ID: ${currentUser.telegramChatId || 'не указан'}
-First Name: ${currentUser.firstName || 'не указан'}
-
-──────────────
-
-📅 Карточки на странице:
-
-${cardsInfo}
-
-──────────────
-
-💾 localStorage cards_by_day_v2:
-
-${storage}
-`);
+        ID: ${currentUser.id}
+        Username: ${currentUser.username}
+        Telegram ID: ${currentUser.telegramId || 'не указан'}
+        Telegram Chat ID: ${currentUser.telegramChatId || 'не указан'}
+        First Name: ${currentUser.firstName || 'не указан'}
+    `);
     });
     function startAutoRefresh() {
         setInterval(async () => {
@@ -3802,274 +3579,6 @@ ${storage}
         };
     }
 
-    function toISODateString(d) {
-        const year = d.getFullYear();
-        const month = ('0' + (d.getMonth() + 1)).slice(-2);
-        const day = ('0' + d.getDate()).slice(-2);
-        return `${year}-${month}-${day}`;
-    }
-
-    function getDateFromCardElement(card){
-        try{
-            if(!card) return _toISO(new Date());
-
-            const ATTRS = ['data-date','data-day','data-card-date','data-current-day','data-visible-day','data-day-key'];
-            for(const a of ATTRS){
-                const el = card.closest && card.closest('['+a+']') || (card.hasAttribute && card.hasAttribute(a) ? card : null);
-                if(el){
-                    const v = el.getAttribute(a) || (el.dataset && el.dataset[a.replace('data-','')]);
-                    const p = _parseDateString(v);
-                    if(p) return p;
-                }
-            }
-
-            const dayCell = card.closest && card.closest('[data-date],[data-day],[data-day-cell],.day-cell,.cell');
-            if(dayCell){
-                const p = _parseDateString(dayCell.getAttribute('data-date') || dayCell.getAttribute('data-day'));
-                if(p) return p;
-            }
-
-            const maybeWeekRow = card.closest && card.closest('[data-week-start], .calendar-week, .week-row, [data-week]');
-            if(maybeWeekRow){
-                const wsRaw = maybeWeekRow.getAttribute && (maybeWeekRow.getAttribute('data-week-start') || maybeWeekRow.dataset && maybeWeekRow.dataset.weekStart);
-                const weekStartISO = _parseDateString(wsRaw);
-                let cells = Array.from(maybeWeekRow.querySelectorAll('.day-cell, .cell, [data-day-cell], [data-date]'));
-                if(cells.length===0){
-                    cells = Array.from(maybeWeekRow.children);
-                }
-                if(weekStartISO && cells.length){
-                    let idx = cells.findIndex(c => c === card || c.contains(card));
-                    if(idx >= 0){
-                        const base = new Date(weekStartISO + 'T00:00:00');
-                        base.setDate(base.getDate() + idx);
-                        return _toISO(base);
-                    }
-                    const possibleNum = (function(){
-                        const n = card.querySelector && (card.querySelector('.day-number, .date-num, .day, .num') || card.querySelector('header, .header'));
-                        if(n && n.textContent){
-                            const t = n.textContent.trim().match(/\d{1,2}/);
-                            return t ? Number(t[0]) : null;
-                        }
-                        return null;
-                    })();
-                    if(possibleNum){
-                        for(let i=0;i<cells.length;i++){
-                            const c = cells[i];
-                            const txtEl = c.querySelector && (c.querySelector('.day-number, .date-num, .num') || c);
-                            const txt = txtEl && txtEl.textContent && txtEl.textContent.trim();
-                            const m = txt && txt.match(/\d{1,2}/);
-                            if(m && Number(m[0]) === possibleNum){
-                                const base = new Date(weekStartISO + 'T00:00:00');
-                                base.setDate(base.getDate() + i);
-                                return _toISO(base);
-                            }
-                        }
-                    }
-                }
-            }
-
-            const maybeNumber = (function(){
-                try{
-                    const el = card.querySelector && (card.querySelector('.day-number, .date-num, .day') || card.querySelector('header, .header, .title'));
-                    if(el && el.textContent){
-                        const m = el.textContent.trim().match(/\d{1,2}/);
-                        return m ? Number(m[0]) : null;
-                    }
-                }catch(e){}
-                return null;
-            })();
-            if(maybeNumber){
-                const monthAncestor = card.closest && card.closest('.month, .calendar, .month-view, [data-month], [data-year]') || document.querySelector('.month, .calendar, .month-view, [data-month], [data-year]');
-                if(monthAncestor){
-                    let monthRaw = monthAncestor.getAttribute && (monthAncestor.getAttribute('data-month') || monthAncestor.dataset && monthAncestor.dataset.month);
-                    let yearRaw = monthAncestor.getAttribute && (monthAncestor.getAttribute('data-year') || monthAncestor.dataset && monthAncestor.dataset.year);
-                    if(!monthRaw || !yearRaw){
-                        const hdrText = monthAncestor.textContent && monthAncestor.textContent.trim().slice(0,80);
-                        const parsed = _parseDateString(hdrText);
-                        if(parsed){
-                            const dt = new Date(parsed + 'T00:00:00');
-                            monthRaw = dt.getMonth()+1;
-                            yearRaw = dt.getFullYear();
-                        }
-                    }
-                    if(monthRaw && yearRaw){
-                        const candidate = new Date(Number(yearRaw), Number(monthRaw)-1, maybeNumber);
-                        if(!isNaN(candidate)) return _toISO(candidate);
-                    }
-                }
-            }
-
-            const meta = document.querySelector('meta[name="current-day"],meta[name="currentDate"]');
-            if(meta && meta.content) return _parseDateString(meta.content) || _toISO(new Date());
-            const el = document.querySelector('[data-current-day],[data-visible-day],[data-day]');
-            if(el){
-                const v = el.getAttribute('data-current-day') || el.getAttribute('data-visible-day') || el.getAttribute('data-day') || el.getAttribute('data-date');
-                const p = _parseDateString(v);
-                if(p) return p;
-            }
-
-            return _toISO(new Date());
-
-        }catch(err){
-            console.warn('getDateFromCardElement error', err, _domPath(card));
-            return _toISO(new Date());
-        }
-    }
-
-
-    function cardIdFromElem(card, fallbackIndex){
-        try{
-            if(!card) return null;
-            const id = card.id || card.getAttribute('data-id') || card.getAttribute('data-card-key') || card.getAttribute('data-key');
-            if(id) return String(id);
-            const titleEl = card.querySelector && (card.querySelector('.drug-name, .title, .card-title, h3, h2'));
-            if(titleEl && titleEl.textContent){
-                const t = titleEl.textContent.trim().toLowerCase().replace(/[^\wа-яё0-9\-]+/gi,'_').slice(0,80);
-                return `card_${t}`;
-            }
-            const idx = typeof fallbackIndex==='number' ? fallbackIndex : Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card]')).indexOf(card);
-            const path = _domPath(card) || ('idx_'+idx);
-            let h=0; for(let i=0;i<path.length;i++){ h = ((h<<5)-h) + path.charCodeAt(i); h |= 0; }
-            return `card_fallback_${Math.abs(h)}`;
-        }catch(e){
-            return 'card_err_'+Math.floor(Math.random()*1e9);
-        }
-    }
-
-    function saveStatusForCard(card, status){
-        try{
-            const dayKey = getDateFromCardElement(card);
-            const STORAGE_KEY = 'cards_by_day_v2';
-            const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            if(!all[dayKey]) all[dayKey] = {};
-            const cid = cardIdFromElem(card);
-            all[dayKey][cid] = { status, ts: Date.now(), sourceDomPath: _domPath(card), lastComputedDayKey: dayKey };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-            sessionStorage.setItem('last_saved_card_debug', JSON.stringify({ dayKey, cid, status, time: Date.now() }));
-            console.debug('[saveStatusForCard] saved', dayKey, cid, status, _domPath(card));
-        }catch(e){
-            console.warn('saveStatusForCard error', e);
-        }
-    }
-
-    function applySavedForVisibleDay(){
-        try{
-            const STORAGE_KEY = 'cards_by_day_v2';
-            const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            const cards = Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card], [data-id], [data-card-key]'));
-            const applied = [];
-            cards.forEach((card, idx) => {
-                const dayKey = getDateFromCardElement(card);
-                const cid = cardIdFromElem(card, idx);
-                if(dayKey && all[dayKey] && all[dayKey][cid]){
-                    const st = all[dayKey][cid].status;
-                    card.classList.remove('status-accepted','status-rejected','optimistic-postponed');
-                    if(st === 'accepted') card.classList.add('status-accepted');
-                    else if(st === 'rejected') card.classList.add('status-rejected');
-                    else if(st === 'postponed') card.classList.add('optimistic-postponed');
-                    card.setAttribute('data-local-status', st);
-                    applied.push({ cardPath: _domPath(card), cardId: cid, dayKey, status: st });
-                } else {
-                    card.classList.remove('status-accepted','status-rejected','optimistic-postponed');
-                    card.removeAttribute('data-local-status');
-                }
-            });
-            console.info('[applySavedForVisibleDay] applied to', applied.length, 'cards');
-            if(applied.length) console.table(applied.slice(0,200));
-            return applied;
-        }catch(e){
-            console.warn('applySavedForVisibleDay error', e);
-            return [];
-        }
-    }
-
-    function debugCardMappings(){
-        const cards = Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card], [data-id], [data-card-key]'));
-        const rows = cards.map((card, idx) => {
-            const dayKey = getDateFromCardElement(card);
-            const cid = cardIdFromElem(card, idx);
-            const snippet = (card.querySelector && (card.querySelector('.drug-name, .title, h3, h2')) && card.querySelector('.drug-name, .title, h3, h2').textContent) || (card.textContent||'').trim().slice(0,60);
-            return { idx, cardPath: _domPath(card), cardId: cid, dayKey, snippet };
-        });
-        console.table(rows);
-        return rows;
-    }
-
-    function highlightProblemCards(){
-        try{
-            const STORAGE_KEY = 'cards_by_day_v2';
-            const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            const rows = debugCardMappings();
-            const byId = {};
-            Object.keys(all).forEach(day => {
-                Object.keys(all[day]).forEach(cid => {
-                    byId[cid] = byId[cid] || [];
-                    byId[cid].push(day);
-                });
-            });
-            rows.forEach(r => {
-                const el = document.querySelector && document.querySelector(r.cardPath.split(' > ')[0]) ? document.querySelector(r.cardPath.split(' > ')[0]) : null;
-                const cid = r.cardId;
-                const days = byId[cid] || [];
-                const suspicious = days.some(d1 => days.some(d2 => {
-                    if(d1===d2) return false;
-                    const a=new Date(d1+'T00:00:00'), b=new Date(d2+'T00:00:00');
-                    const diff = Math.round((a-b)/(24*3600*1000));
-                    return Math.abs(diff)===7;
-                }));
-                if(suspicious){
-                    const cardEl = Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card], [data-id], [data-card-key]')).find((c, i) => _domPath(c)===r.cardPath);
-                    if(cardEl){
-                        cardEl.style.outline = '3px solid rgba(255,0,0,0.75)';
-                        cardEl.dataset.__debug_suspicious = '1';
-                    }
-                }
-            });
-            console.info('[highlightProblemCards] highlighted suspicious cards (red outline)');
-        }catch(e){
-            console.warn('highlightProblemCards error', e);
-        }
-    }
-    function clearDebugHighlights(){
-        document.querySelectorAll('[data-local-status], [data-card-key]').forEach(el=>{
-            if(el.dataset && el.dataset.__debug_suspicious) {
-                el.style.outline = '';
-                delete el.dataset.__debug_suspicious;
-            }
-        });
-        console.info('cleared debug highlights');
-    }
-
-    window._debugCardUtils = {
-        getDateFromCardElement,
-        cardIdFromElem,
-        saveStatusForCard,
-        applySavedForVisibleDay,
-        debugCardMappings,
-        highlightProblemCards,
-        clearDebugHighlights
-    };
-
-    function parsePossibleDateString(txt) {
-        if (!txt) return null;
-        txt = String(txt).trim();
-        let m = txt.match(/(20\d{2}-\d{2}-\d{2})/);
-        if (m) return m[1];
-
-        m = txt.match(/(\d{1,2})\D+(\d{1,2})\D+(20\d{2})/);
-        if (m) {
-            const day = ('0' + m[1]).slice(-2);
-            const month = ('0' + m[2]).slice(-2);
-            const year = m[3];
-            return `${year}-${month}-${day}`;
-        }
-
-        const parsed = Date.parse(txt);
-        if (!isNaN(parsed)) return toISODateString(new Date(parsed));
-
-        return null;
-    }
-
     function setupSSE() {
         if (window.currentUser) {
             connectToSSE();
@@ -4082,444 +3591,202 @@ ${storage}
             }, 1000);
         }
     }
-
-</script>
-
-<script>
+    
     (function(){
-        function formatDateLocal(d){var y=d.getFullYear();var m=d.getMonth()+1;var dd=d.getDate();if(m<10)m='0'+m;if(dd<10)dd='0'+dd;return y+'-'+m+'-'+dd}
-        function getMedId(card){if(!card) return null; if(card.dataset && (card.dataset.medId||card.dataset.id)) return card.dataset.medId||card.dataset.id; if(card.hasAttribute('data-id')) return card.getAttribute('data-id'); if(card.id) return card.id; var found = card.querySelector('[data-med-id],[data-id]'); if(found) return found.dataset.medId||found.dataset.id||found.getAttribute('data-id'); return null}
-        function findCardById(id){if(!id) return null; var sel1 = document.querySelector('.med-card[data-med-id="'+id+'"]'); if(sel1) return sel1; var sel2 = document.querySelector('.med-card[data-id="'+id+'"]'); if(sel2) return sel2; var sel3 = document.getElementById(id); if(sel3 && sel3.classList.contains('med-card')) return sel3; var sel4 = document.querySelector('[data-med-id="'+id+'"]'); if(sel4) return sel4.closest('.med-card')||sel4; return null}
-        function readStore(){try{var v=localStorage.getItem('medstate_v1');return v?JSON.parse(v):{}}catch(e){return{}}}
-        function writeStore(obj){try{localStorage.setItem('medstate_v1',JSON.stringify(obj))}catch(e){}}
-        document.addEventListener('DOMContentLoaded',function(){
-            var store = readStore();
-            document.addEventListener('click',function(e){
-                var t = e.target;
-                var btn = t.closest && (t.closest('.accept-btn')||t.closest('.btn-accept')||t.closest('[data-action="accept"]')||t.closest('.take-btn')||t.closest('.confirm-accept'));
-                if(btn){
-                    var card = btn.closest('.med-card');
-                    var id = getMedId(card);
-                    if(id){
-                        var today = formatDateLocal(new Date());
-                        store[id] = {action:'accept',date:today};
-                        writeStore(store);
-                    }
-                    return;
-                }
-                btn = t.closest && (t.closest('.reject-btn')||t.closest('.btn-reject')||t.closest('[data-action="reject"]')||t.closest('.dismiss')||t.closest('.decline'));
-                if(btn){
-                    var card = btn.closest('.med-card');
-                    var id = getMedId(card);
-                    if(id){
-                        var today = formatDateLocal(new Date());
-                        store[id] = {action:'reject',date:today};
-                        writeStore(store);
-                    }
-                    return;
-                }
-                btn = t.closest && (t.closest('.postpone-btn')||t.closest('.btn-postpone')||t.closest('[data-action="postpone"]'));
-                if(btn){
-                    var card = btn.closest('.med-card');
-                    var id = getMedId(card);
-                    if(id){
-                        var until = btn.dataset && btn.dataset.postponeUntil || btn.getAttribute('data-until') || btn.getAttribute('data-postpone-until') || '';
-                        if(!until){
-                            var sibling = card && card.querySelector('input[type="date"], .postpone-until, [data-until]');
-                            if(sibling) until = sibling.value || sibling.dataset && (sibling.dataset.until||sibling.dataset.postponeUntil) || sibling.getAttribute('data-until')||'';
-                        }
-                        var today = formatDateLocal(new Date());
-                        store[id] = {action:'postpone',date:today,until:until};
-                        writeStore(store);
-                    }
-                    return;
-                }
-            },true);
-            function applyStored(){
-                store = readStore();
-                var today = formatDateLocal(new Date());
-                Object.keys(store).forEach(function(id){
-                    var rec = store[id];
-                    var card = findCardById(id);
-                    if(!card) return;
-                    if(rec.action === 'postpone'){
-                        if(rec.until){
-                            card.setAttribute('data-postponed-until',rec.until);
-                            card.classList.add('postponed');
-                            var label = card.querySelector('.postpone-label, .postponed-label');
-                            if(label) label.textContent = 'Отложено до '+rec.until;
-                        }else{
-                            card.classList.add('postponed');
-                        }
-                        return;
-                    }
-                    if(rec.action === 'accept' || rec.action === 'reject'){
-                        if(rec.date === today){
-                            var alreadyAccepted = card.classList.contains('accepted') || card.querySelector('.accept-indicator, .accepted-indicator, [data-accepted="true"]');
-                            if(alreadyAccepted) return;
-                            var acceptBtn = card.querySelector('.accept-btn, .btn-accept, [data-action="accept"], .take-btn, .confirm-accept');
-                            var rejectBtn = card.querySelector('.reject-btn, .btn-reject, [data-action="reject"], .dismiss, .decline');
-                            if(rec.action === 'accept' && acceptBtn){ try{ acceptBtn.click(); }catch(e){} return; }
-                            if(rec.action === 'reject' && rejectBtn){ try{ rejectBtn.click(); }catch(e){} return; }
-                        }
-                    }
-                });
-            }
-            applyStored();
-            var userSwitch = document.querySelector('#userSwitchMenu')||document.querySelector('.user-switch-panel')||document.querySelector('.user-switch')||document.querySelector('[data-user-switch]');
-            if(userSwitch){
-                var startY = 0, currentY = 0, dragging = false, pid = null;
-                userSwitch.addEventListener('pointerdown',function(e){ if(e.pointerType==='mouse' && e.button!==0) return; dragging=true; pid=e.pointerId; startY=e.clientY; currentY=startY; userSwitch.style.transition='none'; userSwitch.setPointerCapture && userSwitch.setPointerCapture(pid); },{passive:true});
-                window.addEventListener('pointermove',function(e){ if(!dragging||e.pointerId!==pid) return; currentY=e.clientY; var diff = Math.max(0,currentY-startY); userSwitch.style.transform = 'translateY('+diff+'px)'; },{passive:true});
-                window.addEventListener('pointerup',function(e){ if(!dragging||e.pointerId!==pid) return; dragging=false; var diff = currentY - startY; userSwitch.style.transition='transform 260ms cubic-bezier(.2,.9,.3,1)'; if(diff>90){ userSwitch.style.transform='translateY(110%)'; var closeBtn = userSwitch.querySelector('.close, .btn-close, [data-action="close"]'); if(closeBtn) try{ closeBtn.click(); }catch(er){} else { userSwitch.style.display='none'; } } else { userSwitch.style.transform=''; } try{ userSwitch.releasePointerCapture && userSwitch.releasePointerCapture(pid);}catch(e){} pid=null; },{passive:true});
-            }
-        });
-    })();
-</script>
+        if (!window) return;
 
+        const PENDING_KEY = 'pillo_pending_history_v1';
 
-<style>
-    {
-        opacity: 0.85;
-        position: relative;
-        transition: transform 220ms ease, box-shadow 220ms ease, opacity 200ms ease;
-        transform-origin: center;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-    }
-    .optimistic-postponed::after{
-        content: "Отложено";
-        position: absolute;
-        right: 8px;
-        top: 8px;
-        background: rgba(255, 255, 255, 0.85);
-        color: #333;
-        padding: 4px 8px;
-        border-radius: 10px;
-        font-size: 12px;
-        backdrop-filter: blur(4px);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        pointer-events: none;
-    }
-    .card-opened {
-        transform: translateY(-6px) scale(1.01);
-        transition: transform 260ms cubic-bezier(.2,.9,.2,1);
-        z-index: 10;
-    }
-</style>
-<script>
-    (function(){
-        function closestBySelector(el, selectors){
-            while(el && el !== document.documentElement){
-                for(var i=0;i<selectors.length;i++){
-                    try{
-                        if(el.matches(selectors[i])) return el;
-                    }catch(e){}
-                }
-                el = el.parentElement;
-            }
-            return null;
+        function loadPending() {
+            try {
+                const raw = localStorage.getItem(PENDING_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch(e){ return {}; }
+        }
+        function savePending(obj){
+            try { localStorage.setItem(PENDING_KEY, JSON.stringify(obj)); } catch(e){}
         }
 
-        document.addEventListener('dblclick', function(e){
-            var card = closestBySelector(e.target, ['.card', '.drug-card', '.med-card', '[data-card]', '[role="button"]']);
-            if(card){
-                e.stopImmediatePropagation();
-                e.preventDefault();
-                setTimeout(function(){ card.dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true})); }, 0);
-            }
-        }, true);
-
-        document.addEventListener('click', function(e){
-            var card = closestBySelector(e.target, ['.card', '.drug-card', '.med-card', '[data-card]']);
-            if(card){
-                var interactive = closestBySelector(e.target, ['button', 'a', 'input', 'label', 'select', 'textarea']);
-                if(interactive && card.contains(interactive)) return;
-
-                card.classList.toggle('card-opened');
-                var isOpen = card.classList.contains('card-opened');
-                try{ card.setAttribute('aria-expanded', isOpen ? 'true' : 'false'); }catch(e){}
-            }
-        }, false);
-
-        var STORAGE_KEY = 'optimistic_card_status_v1';
-
-
-
-        document.addEventListener("click", (e) => {
-
-            const btn = e.target.closest("button");
-
-            if (!btn) return;
-
-            const text = (btn.innerText || "").toLowerCase();
-
-            const card = btn.closest(
-                ".card, .drug-card, .med-card, [data-card]"
-            );
-
-            if (!card) return;
-
-            if (text.includes("прин")) {
-                saveStatusForCard(card, "accepted");
-            }
-
-            if (text.includes("откл")) {
-                saveStatusForCard(card, "rejected");
-            }
-
-            if (text.includes("отлож")) {
-                saveStatusForCard(card, "postponed");
-            }
-
-        });
-
-        function loadLocal(){
-            try{
-                return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            }catch(e){ return {}; }
+        function addPendingEntry(dateKey, entry) {
+            const pending = loadPending();
+            pending[dateKey] = pending[dateKey] || [];
+            const rid = String(entry.reminder?.id || entry.reminderId || '');
+            const idx = pending[dateKey].findIndex(h => String(h.reminder?.id || h.reminderId || '') === rid);
+            if (idx !== -1) pending[dateKey][idx] = entry;
+            else pending[dateKey].push(entry);
+            savePending(pending);
         }
-        function saveLocal(obj){
-            try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); }catch(e){}
+        function removePendingEntry(dateKey, reminderId) {
+            const pending = loadPending();
+            if (!pending[dateKey]) return;
+            pending[dateKey] = pending[dateKey].filter(h => String(h.reminder?.id || h.reminderId || '') !== String(reminderId));
+            if (pending[dateKey].length === 0) delete pending[dateKey];
+            savePending(pending);
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            applySavedForVisibleDay();
-        });
-
-        document.addEventListener('DOMContentLoaded', function(){
-            var map = loadLocal();
-            Object.keys(map).forEach(function(key){
-                var info = map[key];
-                var card = document.querySelector('#' + CSS.escape(key)) || document.querySelector('[data-id="'+CSS.escape(key)+'"]');
-                if(!card){
-                    card = document.querySelector('[data-card-key="'+CSS.escape(key)+'"]');
-                }
-                if(card){
-                    applyOptimisticClass(card, info.status);
+        function mergePendingIntoHistories(dateKey, histories) {
+            const pending = loadPending();
+            const list = pending[dateKey] || [];
+            if (!list || list.length === 0) return histories;
+            const result = Array.isArray(histories) ? histories.slice() : [];
+            list.forEach(p => {
+                const rid = String(p.reminder?.id || p.reminderId || '');
+                const idx = result.findIndex(h => String(h.reminder?.id || '') === rid);
+                if (idx !== -1) {
+                    result[idx] = Object.assign({}, result[idx], p);
+                } else {
+                    const cloned = Object.assign({}, p);
+                    if (!cloned.reminder) cloned.reminder = { id: p.reminderId || p.reminder?.id };
+                    result.push(cloned);
                 }
             });
-        });
-
-        function applyOptimisticClass(card, status){
-            card.classList.remove('optimistic-postponed');
-            if(status === 'postponed'){
-                card.classList.add('optimistic-postponed');
-            } else {
-            }
+            return result;
         }
 
-        document.addEventListener('click', function(e){
-            var target = e.target;
-            var candidate = closestBySelector(target, ['button', 'a', 'input[type="button"]', 'input[type="submit"]']);
-            if(!candidate) return;
-            var text = (candidate.innerText || candidate.value || '').trim().toLowerCase();
-            var dataAction = (candidate.dataset && candidate.dataset.action) ? (candidate.dataset.action + '') : '';
-            var cls = candidate.className || '';
-            var isPostpone = text.indexOf('отлож') !== -1 || text.indexOf('snooz') !== -1 || text.indexOf('postpon') !== -1 || /postpone|snooz|отлож/.test(dataAction) || /postpon|snooz|otlozh|otloz/i.test(cls);
-            if(!isPostpone) return;
+        const origPostpone = window.optimisticPostponeReminder;
+        if (typeof origPostpone === 'function') {
+            window.optimisticPostponeReminder = function(reminderId, card) {
+                try {
+                    const dateKey = (window.selectedDay || new Date()).toISOString().split('T')[0];
+                    const now = new Date();
+                    const postponedTime = new Date(now.getTime() + 10 * 60000);
+                    const entry = {
+                        id: null,
+                        reminder: { id: reminderId },
+                        status: 'postponed',
+                        scheduledTime: postponedTime.toISOString(),
+                        __optimistic: true
+                    };
+                    origPostpone.call(this, reminderId, card);
+                    addPendingEntry(dateKey, entry);
 
-            var card = closestBySelector(candidate, ['.card', '.drug-card', '.med-card', '[data-card]', '[data-id]', '[data-card-key]']);
-            if(!card){
-                return;
-            }
+                    setTimeout(() => {
+                        if (window.loadHistoryForDate) {
+                            window.loadHistoryForDate(window.selectedDay || new Date()).then(() => {
+                                const dateKey2 = (window.selectedDay || new Date()).toISOString().split('T')[0];
+                                const histories = window.historyMap && window.historyMap.get(dateKey2) || [];
+                                const found = histories.find(h => h.reminder && String(h.reminder.id) === String(reminderId) && h.id);
+                                if (found) removePendingEntry(dateKey2, reminderId);
+                            }).catch(()=>{});
+                        }
+                    }, 8000);
 
-            var cardId = card.id || card.getAttribute('data-id') || card.getAttribute('data-card-key') || ('card-idx-' + Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card]')).indexOf(card));
+                } catch(e) { console.error('pillo patch postpone error', e); origPostpone && origPostpone(reminderId, card); }
+            };
+        }
 
-            applyOptimisticClass(card, 'postponed');
+        const origMarkTaken = window.optimisticMarkTaken;
+        if (typeof origMarkTaken === 'function') {
+            window.optimisticMarkTaken = function(reminderId, card) {
+                const dateKey = (window.selectedDay || new Date()).toISOString().split('T')[0];
+                const entry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: (window.selectedDay || new Date()).toISOString(), __optimistic: true };
+                try {
+                    origMarkTaken.call(this, reminderId, card);
+                    addPendingEntry(dateKey, entry);
+                    setTimeout(() => {
+                        if (window.loadHistoryForDate) {
+                            window.loadHistoryForDate(window.selectedDay || new Date()).then(() => {
+                                const histories = window.historyMap && window.historyMap.get(dateKey) || [];
+                                const found = histories.find(h => h.reminder && String(h.reminder.id) === String(reminderId) && h.id);
+                                if (found) removePendingEntry(dateKey, reminderId);
+                            }).catch(()=>{});
+                        }
+                    }, 6000);
+                } catch(e) { console.error('pillo patch markTaken error', e); origMarkTaken && origMarkTaken(reminderId, card); }
+            };
+        }
 
-            var map = loadLocal();
-            map[cardId] = { status: 'postponed', ts: Date.now() };
-            saveLocal(map);
+        const origMarkSkipped = window.optimisticMarkSkipped;
+        if (typeof origMarkSkipped === 'function') {
+            window.optimisticMarkSkipped = function(reminderId, card) {
+                const dateKey = (window.selectedDay || new Date()).toISOString().split('T')[0];
+                const entry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: (window.selectedDay || new Date()).toISOString(), __optimistic: true };
+                try {
+                    origMarkSkipped.call(this, reminderId, card);
+                    addPendingEntry(dateKey, entry);
+                    setTimeout(() => {
+                        if (window.loadHistoryForDate) {
+                            window.loadHistoryForDate(window.selectedDay || new Date()).then(() => {
+                                const histories = window.historyMap && window.historyMap.get(dateKey) || [];
+                                const found = histories.find(h => h.reminder && String(h.reminder.id) === String(reminderId) && h.id);
+                                if (found) removePendingEntry(dateKey, reminderId);
+                            }).catch(()=>{});
+                        }
+                    }, 6000);
+                } catch(e) { console.error('pillo patch markSkipped error', e); origMarkSkipped && origMarkSkipped(reminderId, card); }
+            };
+        }
 
-            var url = candidate.dataset.url || candidate.getAttribute('data-url') || candidate.getAttribute('formaction') || candidate.href || null;
-            if(url){
-                fetch(url, { method: 'POST', credentials: 'same-origin' }).then(function(resp){
-                    if(resp.ok){
-                        try{
-                            var map2 = loadLocal();
-                            if(map2[cardId]){ delete map2[cardId]; saveLocal(map2); }
-                        }catch(e){}
-                    } else {
-                        try{
-                            card.classList.remove('optimistic-postponed');
-                            var map2 = loadLocal();
-                            if(map2[cardId]){ delete map2[cardId]; saveLocal(map2); }
-                        }catch(e){}
+        const origLoadHistory = window.loadHistoryForDate;
+        if (typeof origLoadHistory === 'function') {
+            window.loadHistoryForDate = async function(date) {
+                const res = await origLoadHistory.call(this, date);
+                try {
+                    const dateKey = (date || new Date()).toISOString().split('T')[0];
+                    const serverHist = window.historyMap && window.historyMap.get(dateKey) || [];
+                    const merged = mergePendingIntoHistories(dateKey, serverHist);
+                    window.historyMap && window.historyMap.set(dateKey, merged);
+                } catch(e) { console.warn('pillo patch: merge pending failed', e); }
+                return res;
+            };
+        }
+
+        const origLoadInitial = window.loadInitialData;
+        if (typeof origLoadInitial === 'function') {
+            window.loadInitialData = async function() {
+                const res = await origLoadInitial.call(this);
+                try {
+                    const pending = loadPending();
+                    if (window.historyMap) {
+                        Object.keys(pending).forEach(dateKey => {
+                            const server = window.historyMap.get(dateKey) || [];
+                            const merged = mergePendingIntoHistories(dateKey, server);
+                            window.historyMap.set(dateKey, merged);
+                        });
                     }
-                }).catch(function(err){
-                    console.warn('Optimistic background request failed:', err);
-                });
-            }
-
-            e.stopPropagation();
-
-        }, true);
-
-        const observer = new MutationObserver(() => {
-            applySavedForVisibleDay();
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-    })();
-    (function(){
-        function toISO(d){ const y=d.getFullYear(); const m=('0'+(d.getMonth()+1)).slice(-2); const dd=('0'+d.getDate()).slice(-2); return `${y}-${m}-${dd}`; }
-        function parseDateGuess(txt){
-            if(!txt) return null;
-            txt = String(txt).trim();
-            let m = txt.match(/(20\d{2}-\d{2}-\d{2})/); if(m) return m[1];
-            m = txt.match(/(\d{1,2})\D+(\d{1,2})\D+(20\d{2})/); if(m){ return `${m[3]}-${('0'+m[2]).slice(-2)}-${('0'+m[1]).slice(-2)}`; }
-            const p = Date.parse(txt); if(!isNaN(p)) return toISO(new Date(p));
-            return null;
+                } catch(e) { console.warn('pillo patch: merge initial pending failed', e); }
+                return res;
+            };
         }
-        function domPath(el){
-            if(!el) return '';
-            const parts=[];
-            let cur=el;
-            while(cur && cur.nodeType===1 && cur !== document.body){
-                let s = cur.tagName.toLowerCase();
-                if(cur.id) s += `#${cur.id}`;
-                else if(cur.className) s += `.${String(cur.className).trim().split(/\s+/)[0]||''}`;
-                parts.unshift(s);
-                cur = cur.parentElement;
-            }
-            return parts.join(' > ');
-        }
-        function firstText(el, selectors){ try{ const q = selectors.map(s=>el.querySelector(s)).find(Boolean); return q && q.textContent && q.textContent.trim(); }catch(e){return null;} }
 
-        function computeCandidateDateForCard(card){
-            const ATTRS = ['data-date','data-day','data-card-date','data-current-day','data-visible-day','data-day-key','data-date-iso'];
-            for(const a of ATTRS){
-                const el = card.closest && card.closest('['+a+']') || (card.hasAttribute && card.hasAttribute(a) ? card : null);
-                if(el){
-                    const v = el.getAttribute(a) || (el.dataset && el.dataset[a.replace('data-','')]);
-                    const parsed = parseDateGuess(v);
-                    if(parsed) return { date: parsed, source: `attr:${a}`, value: v, elPath: domPath(el) };
-                }
-            }
-
-            const cell = card.closest && card.closest('[data-date],[data-day],.day-cell,.cell,[data-day-cell]');
-            if(cell){
-                const d = cell.getAttribute('data-date') || cell.getAttribute('data-day');
-                const pd = parseDateGuess(d);
-                if(pd) return { date: pd, source: 'cell:data-date', value: d, elPath: domPath(cell) };
-            }
-
-            const weekRow = card.closest && card.closest('[data-week-start], .calendar-week, .week-row');
-            if(weekRow){
-                const ws = weekRow.getAttribute && (weekRow.getAttribute('data-week-start') || (weekRow.dataset && weekRow.dataset.weekStart));
-                const weekStart = parseDateGuess(ws);
-                if(weekStart){
-                    let cells = Array.from(weekRow.querySelectorAll('.day-cell, .cell, [data-day-cell], [data-date]'));
-                    if(!cells.length) cells = Array.from(weekRow.children);
-                    const idx = cells.findIndex(c => c === card || c.contains(card));
-                    if(idx >= 0){
-                        const base = new Date(weekStart + 'T00:00:00');
-                        base.setDate(base.getDate() + idx);
-                        return { date: toISO(base), source: 'weekStart+index', value: ws, elPath: domPath(weekRow), index: idx };
-                    }
-                }
-            }
-
-            const numEl = card.querySelector && (card.querySelector('.day-number, .date-num, .day, .num') || card.querySelector('header, .header'));
-            const dayNum = numEl && (numEl.textContent || '').trim().match(/\d{1,2}/);
-            const dayNumber = dayNum ? Number(dayNum[0]) : null;
-            if(dayNumber){
-                const monthAnc = card.closest && card.closest('.month, .calendar, .month-view, [data-month], [data-year]');
-                if(monthAnc){
-                    let mRaw = monthAnc.getAttribute && (monthAnc.getAttribute('data-month') || (monthAnc.dataset && monthAnc.dataset.month));
-                    let yRaw = monthAnc.getAttribute && (monthAnc.getAttribute('data-year') || (monthAnc.dataset && monthAnc.dataset.year));
-                    if(!mRaw || !yRaw){
-                        const htxt = monthAnc.textContent && monthAnc.textContent.trim().slice(0,80);
-                        const parsed = parseDateGuess(htxt);
-                        if(parsed){
-                            const d = new Date(parsed + 'T00:00:00'); mRaw = d.getMonth()+1; yRaw = d.getFullYear();
+        (function attachSingleTapOpen(){
+            let lastPointer = null;
+            document.addEventListener('pointerup', (e) => {
+                const card = e.target.closest && e.target.closest('.med-card');
+                if (!card) return;
+                if (card.classList.contains('is-swiping') || card.dataset.swipe) return;
+                if (card.dataset._openedRecently) return;
+                card.dataset._openedRecently = '1';
+                setTimeout(() => { delete card.dataset._openedRecently; }, 450);
+                try {
+                    const rid = card.dataset.id || card.getAttribute('data-id');
+                    if (rid) {
+                        if (typeof window.openDetailSheet === 'function') {
+                            window.openDetailSheet(Number(rid));
                         }
                     }
-                    if(mRaw && yRaw){
-                        const cand = new Date(Number(yRaw), Number(mRaw)-1, dayNumber);
-                        if(!isNaN(cand)) return { date: toISO(cand), source: 'monthHeader+num', value: `${yRaw}-${mRaw}-${dayNumber}`, elPath: domPath(monthAnc) };
-                    }
-                }
-            }
+                } catch(e) { console.warn('pillo patch open error', e); }
+            }, { passive: true });
 
-            let p = card;
-            for(let i=0;i<5 && p; i++, p=p.parentElement){
-                const txt = p.textContent && p.textContent.trim().slice(0,120);
-                const pd = parseDateGuess(txt);
-                if(pd) return { date: pd, source: 'parentText', value: txt.slice(0,80), elPath: domPath(p) };
-            }
-
-            return { date: null, source: 'failed', elPath: domPath(card) };
-        }
-
-        function buildReport(){
-            const rows = [];
-            const candidates = Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card], [data-id], [data-card-key], .day-cell .card, .card-item'));
-            const cards = candidates.length ? candidates : Array.from(document.querySelectorAll('div')).slice(0,20);
-            cards.slice(0,40).forEach((card, i) => {
-                const snippet = (card.querySelector && (card.querySelector('.drug-name, .title, h3, h2') && card.querySelector('.drug-name, .title, h3, h2').textContent.trim())) || (card.textContent||'').trim().slice(0,120);
-                const attrs = {};
-                Array.from(card.attributes||[]).forEach(a=>attrs[a.name]=a.value);
-                const candidate = computeCandidateDateForCard(card);
-                rows.push({
-                    idx: i,
-                    path: domPath(card),
-                    snippet: snippet.replace(/\s+/g,' ').slice(0,120),
-                    attrs,
-                    candidate
-                });
-            });
-            return rows;
-        }
-
-        function showChunks(str){
-            const CH = 3000;
-            for(let i=0;i<str.length;i+=CH){
-                alert(str.slice(i, i+CH));
-            }
-        }
-
-        function onDbl(e){
-            try{ e.stopPropagation(); e.preventDefault(); }catch(err){}
-            const currentUser = window.currentUser || window.currentUserData || window.__currentUser || (window.app && window.app.currentUser) || (window.appState && window.appState.currentUser) || null;
-            if(!currentUser){
-                alert('Пользователь не авторизован');
-                return;
-            }
-            const header = `👤 Информация о пользователе:\n\nID: ${currentUser.id||'(не указан)'}\nUsername: ${currentUser.username||'(не указан)'}\nTelegram ID: ${currentUser.telegramId||currentUser.telegram_id||'(не указан)'}\nFirst Name: ${currentUser.firstName||currentUser.first_name||'(не указано)'}\n\n`;
-            const rows = buildReport();
-            try{ sessionStorage.setItem('__card_debug_dump', JSON.stringify(rows)); }catch(e){}
-            const lines = rows.map(r => {
-                const cand = r.candidate;
-                return `${r.idx}. path: ${r.path}\n snippet: ${r.snippet}\n candidate date: ${cand.date||'—'} (source: ${cand.source})\n candidate.value: ${String(cand.value||'')}\n elPath: ${cand.elPath||''}\n attrs: ${Object.keys(r.attrs).length? JSON.stringify(r.attrs):'-'}\n────────────`;
-            }).join('\n\n');
-            showChunks(header + '📋 Диагностика карточек (первые 40):\n\n' + lines + '\n\nFull dump saved to sessionStorage "__card_debug_dump"');
-        }
-
-        (function attach(){
-            const avatar = document.querySelector('.avatar');
-            if(avatar){
-                try{ avatar.removeEventListener('dblclick', avatar.__dbg_handler); }catch(e){}
-                avatar.__dbg_handler = onDbl;
-                avatar.addEventListener('dblclick', onDbl, { passive:false });
-            } else {
-                const mo = new MutationObserver((mutations)=>{
-                    const a = document.querySelector('.avatar');
-                    if(a){
-                        try{ a.removeEventListener('dblclick', a.__dbg_handler); }catch(e){}
-                        a.__dbg_handler = onDbl;
-                        a.addEventListener('dblclick', onDbl, { passive:false });
-                        mo.disconnect();
-                    }
-                });
-                mo.observe(document.body, { childList:true, subtree:true });
-            }
+            document.addEventListener('touchend', (e) => {
+                const t = e.changedTouches && e.changedTouches[0];
+                if (!t) return;
+                const el = document.elementFromPoint(t.clientX, t.clientY);
+                const card = el && el.closest && el.closest('.med-card');
+                if (!card) return;
+                if (card.classList.contains('is-swiping') || card.dataset.swipe) return;
+                if (card.dataset._openedRecently) return;
+                card.dataset._openedRecently = '1';
+                setTimeout(() => { delete card.dataset._openedRecently; }, 450);
+                const rid = card.dataset.id || card.getAttribute('data-id');
+                if (rid && typeof window.openDetailSheet === 'function') window.openDetailSheet(Number(rid));
+            }, { passive: true });
         })();
 
+        console.log('PILLO patch loaded: optimistic persistence + single-tap open (local)');
     })();
-</script></body>
+
+
+</script>
+</body>
 </html>
