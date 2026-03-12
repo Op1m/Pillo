@@ -3726,5 +3726,163 @@
     })();
 </script>
 
-</body>
+
+<style>
+    {
+        opacity: 0.85;
+        position: relative;
+        transition: transform 220ms ease, box-shadow 220ms ease, opacity 200ms ease;
+        transform-origin: center;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+    .optimistic-postponed::after{
+        content: "Отложено";
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        background: rgba(255, 255, 255, 0.85);
+        color: #333;
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 12px;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        pointer-events: none;
+    }
+    .card-opened {
+        transform: translateY(-6px) scale(1.01);
+        transition: transform 260ms cubic-bezier(.2,.9,.2,1);
+        z-index: 10;
+    }
+</style>
+<script>
+    (function(){
+        function closestBySelector(el, selectors){
+            while(el && el !== document.documentElement){
+                for(var i=0;i<selectors.length;i++){
+                    try{
+                        if(el.matches(selectors[i])) return el;
+                    }catch(e){}
+                }
+                el = el.parentElement;
+            }
+            return null;
+        }
+
+        document.addEventListener('dblclick', function(e){
+            var card = closestBySelector(e.target, ['.card', '.drug-card', '.med-card', '[data-card]', '[role="button"]']);
+            if(card){
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                setTimeout(function(){ card.dispatchEvent(new MouseEvent('click', {bubbles:true, cancelable:true})); }, 0);
+            }
+        }, true);
+
+        document.addEventListener('click', function(e){
+            var card = closestBySelector(e.target, ['.card', '.drug-card', '.med-card', '[data-card]']);
+            if(card){
+                var interactive = closestBySelector(e.target, ['button', 'a', 'input', 'label', 'select', 'textarea']);
+                if(interactive && card.contains(interactive)) return;
+
+                card.classList.toggle('card-opened');
+                var isOpen = card.classList.contains('card-opened');
+                try{ card.setAttribute('aria-expanded', isOpen ? 'true' : 'false'); }catch(e){}
+            }
+        }, false);
+
+        var STORAGE_KEY = 'optimistic_card_status_v1';
+
+        function loadLocal(){
+            try{
+                return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            }catch(e){ return {}; }
+        }
+        function saveLocal(obj){
+            try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); }catch(e){}
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+            var map = loadLocal();
+            Object.keys(map).forEach(function(key){
+                var info = map[key];
+                var card = document.querySelector('#' + CSS.escape(key)) || document.querySelector('[data-id="'+CSS.escape(key)+'"]');
+                if(!card){
+                    card = document.querySelector('[data-card-key="'+CSS.escape(key)+'"]');
+                }
+                if(card){
+                    applyOptimisticClass(card, info.status);
+                }
+            });
+        });
+
+        function applyOptimisticClass(card, status){
+            card.classList.remove('optimistic-postponed');
+            if(status === 'postponed'){
+                card.classList.add('optimistic-postponed');
+            } else {
+            }
+        }
+
+        document.addEventListener('click', function(e){
+            var target = e.target;
+            var candidate = closestBySelector(target, ['button', 'a', 'input[type="button"]', 'input[type="submit"]']);
+            if(!candidate) return;
+            var text = (candidate.innerText || candidate.value || '').trim().toLowerCase();
+            var dataAction = (candidate.dataset && candidate.dataset.action) ? (candidate.dataset.action + '') : '';
+            var cls = candidate.className || '';
+            var isPostpone = text.indexOf('отлож') !== -1 || text.indexOf('snooz') !== -1 || text.indexOf('postpon') !== -1 || /postpone|snooz|отлож/.test(dataAction) || /postpon|snooz|otlozh|otloz/i.test(cls);
+            if(!isPostpone) return;
+
+            var card = closestBySelector(candidate, ['.card', '.drug-card', '.med-card', '[data-card]', '[data-id]', '[data-card-key]']);
+            if(!card){
+                return;
+            }
+
+            var cardId = card.id || card.getAttribute('data-id') || card.getAttribute('data-card-key') || ('card-idx-' + Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card]')).indexOf(card));
+
+            applyOptimisticClass(card, 'postponed');
+
+            var map = loadLocal();
+            map[cardId] = { status: 'postponed', ts: Date.now() };
+            saveLocal(map);
+
+            var url = candidate.dataset.url || candidate.getAttribute('data-url') || candidate.getAttribute('formaction') || candidate.href || null;
+            if(url){
+                fetch(url, { method: 'POST', credentials: 'same-origin' }).then(function(resp){
+                    if(resp.ok){
+                        try{
+                            var map2 = loadLocal();
+                            if(map2[cardId]){ delete map2[cardId]; saveLocal(map2); }
+                        }catch(e){}
+                    } else {
+                        try{
+                            card.classList.remove('optimistic-postponed');
+                            var map2 = loadLocal();
+                            if(map2[cardId]){ delete map2[cardId]; saveLocal(map2); }
+                        }catch(e){}
+                    }
+                }).catch(function(err){
+                    console.warn('Optimistic background request failed:', err);
+                });
+            }
+
+            e.stopPropagation();
+
+        }, true);
+
+        var observer = new MutationObserver(function(mutations){
+            var map = loadLocal();
+            if(!Object.keys(map).length) return;
+            Object.keys(map).forEach(function(key){
+                var info = map[key];
+                var card = document.querySelector('#' + CSS.escape(key)) || document.querySelector('[data-id="'+CSS.escape(key)+'"]') || document.querySelector('[data-card-key="'+CSS.escape(key)+'"]');
+                if(card){
+                    applyOptimisticClass(card, info.status);
+                }
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+    })();
+</script></body>
 </html>
