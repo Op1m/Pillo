@@ -4117,6 +4117,49 @@
     })();
 </script>
 
+<script>
+    (function(){
+        const SERVER_TZ_OFFSET = '+07:00';
+
+        function pad(n){ return String(n).padStart(2,'0'); }
+        
+        function parseServerTimestampToDate(s) {
+            if (!s) return new Date();
+            const str = String(s).trim();
+            if (/[zZ]$/.test(str) || /[+-]\d{2}(:\d{2})?$/.test(str)) {
+                return new Date(str);
+            }
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                return new Date(str + 'T00:00:00' + SERVER_TZ_OFFSET);
+            }
+            return new Date(str + SERVER_TZ_OFFSET);
+        }
+
+        function canonicalDateKey(input){
+            if (!input && input !== 0) input = new Date();
+            if (input instanceof Date){
+                const y = input.getUTCFullYear();
+                const m = input.getUTCMonth() + 1;
+                const d = input.getUTCDate();
+                return `${y}-${pad(m)}-${pad(d)}`;
+            }
+            if (typeof input === 'string'){
+                const s = input.trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+                const dt = parseServerTimestampToDate(s);
+                const y = dt.getUTCFullYear();
+                const m = dt.getUTCMonth() + 1;
+                const d = dt.getUTCDate();
+                return `${y}-${pad(m)}-${pad(d)}`;
+            }
+            return canonicalDateKey(new Date());
+        }
+        window.canonicalDateKey = canonicalDateKey;
+        window._pillo_server_tz_offset = SERVER_TZ_OFFSET;
+        console.log('pillo: canonicalDateKey loaded (frontend fallback, server TZ:', SERVER_TZ_OFFSET, ')');
+    })();
+</script>
+
 
 </body>
 </html>
