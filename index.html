@@ -3623,6 +3623,34 @@
         }
     }
 
+    function _toISO(d){ const y=d.getFullYear(); const m=('0'+(d.getMonth()+1)).slice(-2); const dd=('0'+d.getDate()).slice(-2); return `${y}-${m}-${dd}`; }
+
+    function _parseDateString(txt){
+        if(!txt) return null;
+        txt = String(txt).trim();
+        let m = txt.match(/(20\d{2}-\d{2}-\d{2})/);
+        if(m) return m[1];
+        m = txt.match(/(\d{1,2})\D+(\d{1,2})\D+(20\d{2})/);
+        if(m){ const day=('0'+m[1]).slice(-2); const mon=('0'+m[2]).slice(-2); return `${m[3]}-${mon}-${day}`; }
+        const parsed = Date.parse(txt);
+        if(!isNaN(parsed)) return _toISO(new Date(parsed));
+        return null;
+    }
+
+    function _domPath(el){
+        if(!el) return '';
+        const parts=[];
+        let cur=el;
+        while(cur && cur.nodeType===1 && cur !== document.body){
+            let p = cur.tagName.toLowerCase();
+            if(cur.id) p += `#${cur.id}`;
+            else if(cur.className) p += `.${String(cur.className).trim().split(/\s+/).slice(0,2).join('.')}`;
+            parts.unshift(p);
+            cur = cur.parentElement;
+        }
+        return parts.join(' > ');
+    }
+
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
         const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -3743,139 +3771,246 @@
         return `${year}-${month}-${day}`;
     }
 
-    function getDateFromCardElement(card) {
-        const ATTRS = ['data-date','data-day','data-card-date','data-current-day','data-visible-day'];
-        for (const a of ATTRS) {
-            const el = card.closest && card.closest('['+a+']') || (card.hasAttribute && card.hasAttribute(a) ? card : null);
-            if (el) {
-                const v = el.getAttribute(a) || (el.dataset && el.dataset[a.replace('data-','')] );
-                const parsed = parsePossibleDateString(v);
-                if (parsed) return parsed;
-            }
-        }
+    function getDateFromCardElement(card){
+        try{
+            if(!card) return _toISO(new Date());
 
-        const possiblyNumber = (function(){
-            try {
-                const n = card.querySelector && (card.querySelector('.day-number, .date-num, .day') || card.querySelector('header, .header, .title'));
-                if(n && n.textContent){
-                    const t = n.textContent.trim().match(/\d{1,2}/);
-                    return t ? Number(t[0]) : null;
-                }
-            } catch(e){}
-            return null;
-        })();
-
-        const weekRow = card.closest && card.closest('[data-week-start], .calendar-week, .week-row');
-        if (weekRow) {
-            const ws = weekRow.getAttribute && (weekRow.getAttribute('data-week-start') || weekRow.dataset && weekRow.dataset.weekStart);
-            const weekStartISO = parsePossibleDateString(ws);
-            if (weekStartISO) {
-                let cells = Array.from(weekRow.querySelectorAll('.day-cell, .cell, [data-day-cell]'));
-                if (cells.length === 0) {
-                    cells = Array.from(weekRow.children);
-                }
-                let idx = cells.findIndex(c => c === card || c.contains(card));
-                if (idx >= 0) {
-                    const base = new Date(weekStartISO + 'T00:00:00');
-                    base.setDate(base.getDate() + idx);
-                    return toISODateString(base);
+            const ATTRS = ['data-date','data-day','data-card-date','data-current-day','data-visible-day','data-day-key'];
+            for(const a of ATTRS){
+                const el = card.closest && card.closest('['+a+']') || (card.hasAttribute && card.hasAttribute(a) ? card : null);
+                if(el){
+                    const v = el.getAttribute(a) || (el.dataset && el.dataset[a.replace('data-','')]);
+                    const p = _parseDateString(v);
+                    if(p) return p;
                 }
             }
-        }
 
-        const metaDay = (function(){
-            const m = document.querySelector('meta[name="current-day"],meta[name="currentDate"]');
-            if(m && m.content) return parsePossibleDateString(m.content);
+            const dayCell = card.closest && card.closest('[data-date],[data-day],[data-day-cell],.day-cell,.cell');
+            if(dayCell){
+                const p = _parseDateString(dayCell.getAttribute('data-date') || dayCell.getAttribute('data-day'));
+                if(p) return p;
+            }
+
+            const maybeWeekRow = card.closest && card.closest('[data-week-start], .calendar-week, .week-row, [data-week]');
+            if(maybeWeekRow){
+                const wsRaw = maybeWeekRow.getAttribute && (maybeWeekRow.getAttribute('data-week-start') || maybeWeekRow.dataset && maybeWeekRow.dataset.weekStart);
+                const weekStartISO = _parseDateString(wsRaw);
+                let cells = Array.from(maybeWeekRow.querySelectorAll('.day-cell, .cell, [data-day-cell], [data-date]'));
+                if(cells.length===0){
+                    cells = Array.from(maybeWeekRow.children);
+                }
+                if(weekStartISO && cells.length){
+                    let idx = cells.findIndex(c => c === card || c.contains(card));
+                    if(idx >= 0){
+                        const base = new Date(weekStartISO + 'T00:00:00');
+                        base.setDate(base.getDate() + idx);
+                        return _toISO(base);
+                    }
+                    const possibleNum = (function(){
+                        const n = card.querySelector && (card.querySelector('.day-number, .date-num, .day, .num') || card.querySelector('header, .header'));
+                        if(n && n.textContent){
+                            const t = n.textContent.trim().match(/\d{1,2}/);
+                            return t ? Number(t[0]) : null;
+                        }
+                        return null;
+                    })();
+                    if(possibleNum){
+                        for(let i=0;i<cells.length;i++){
+                            const c = cells[i];
+                            const txtEl = c.querySelector && (c.querySelector('.day-number, .date-num, .num') || c);
+                            const txt = txtEl && txtEl.textContent && txtEl.textContent.trim();
+                            const m = txt && txt.match(/\d{1,2}/);
+                            if(m && Number(m[0]) === possibleNum){
+                                const base = new Date(weekStartISO + 'T00:00:00');
+                                base.setDate(base.getDate() + i);
+                                return _toISO(base);
+                            }
+                        }
+                    }
+                }
+            }
+
+            const maybeNumber = (function(){
+                try{
+                    const el = card.querySelector && (card.querySelector('.day-number, .date-num, .day') || card.querySelector('header, .header, .title'));
+                    if(el && el.textContent){
+                        const m = el.textContent.trim().match(/\d{1,2}/);
+                        return m ? Number(m[0]) : null;
+                    }
+                }catch(e){}
+                return null;
+            })();
+            if(maybeNumber){
+                const monthAncestor = card.closest && card.closest('.month, .calendar, .month-view, [data-month], [data-year]') || document.querySelector('.month, .calendar, .month-view, [data-month], [data-year]');
+                if(monthAncestor){
+                    let monthRaw = monthAncestor.getAttribute && (monthAncestor.getAttribute('data-month') || monthAncestor.dataset && monthAncestor.dataset.month);
+                    let yearRaw = monthAncestor.getAttribute && (monthAncestor.getAttribute('data-year') || monthAncestor.dataset && monthAncestor.dataset.year);
+                    if(!monthRaw || !yearRaw){
+                        const hdrText = monthAncestor.textContent && monthAncestor.textContent.trim().slice(0,80);
+                        const parsed = _parseDateString(hdrText);
+                        if(parsed){
+                            const dt = new Date(parsed + 'T00:00:00');
+                            monthRaw = dt.getMonth()+1;
+                            yearRaw = dt.getFullYear();
+                        }
+                    }
+                    if(monthRaw && yearRaw){
+                        const candidate = new Date(Number(yearRaw), Number(monthRaw)-1, maybeNumber);
+                        if(!isNaN(candidate)) return _toISO(candidate);
+                    }
+                }
+            }
+
+            const meta = document.querySelector('meta[name="current-day"],meta[name="currentDate"]');
+            if(meta && meta.content) return _parseDateString(meta.content) || _toISO(new Date());
             const el = document.querySelector('[data-current-day],[data-visible-day],[data-day]');
-            if (el) {
-                const v = el.getAttribute('data-current-day')||el.getAttribute('data-visible-day')||el.getAttribute('data-day')||el.getAttribute('data-date');
-                const parsed = parsePossibleDateString(v);
-                if(parsed) return parsed;
+            if(el){
+                const v = el.getAttribute('data-current-day') || el.getAttribute('data-visible-day') || el.getAttribute('data-day') || el.getAttribute('data-date');
+                const p = _parseDateString(v);
+                if(p) return p;
             }
-            return null;
-        })();
-        if (metaDay) {
-            if (possiblyNumber) {
-                const baseDate = new Date(metaDay + 'T00:00:00');
-                const year = baseDate.getFullYear();
-                const month = baseDate.getMonth();
-                const candidate = new Date(year, month, possiblyNumber);
-                const diffDays = Math.abs((candidate - baseDate)/(24*3600*1000));
-                if (diffDays <= 10) return toISODateString(candidate);
-                const candidatePrev = new Date(year, month-1, possiblyNumber);
-                const candidateNext = new Date(year, month+1, possiblyNumber);
-                const diffs = [
-                    {d: Math.abs(candidatePrev - baseDate), date: candidatePrev},
-                    {d: Math.abs(candidate - baseDate), date: candidate},
-                    {d: Math.abs(candidateNext - baseDate), date: candidateNext}
-                ].sort((a,b)=>a.d-b.d);
-                return toISODateString(diffs[0].date);
-            }
-            return metaDay;
+
+            return _toISO(new Date());
+
+        }catch(err){
+            console.warn('getDateFromCardElement error', err, _domPath(card));
+            return _toISO(new Date());
         }
-
-        const txt = card.textContent && card.textContent.trim().slice(0,80);
-        const parsedTxt = parsePossibleDateString(txt);
-        if (parsedTxt) return parsedTxt;
-
-        return toISODateString(new Date());
     }
 
-    function cardIdFromElem(card, fallbackIndex) {
-        if (!card) return null;
-        const id = card.id || card.getAttribute('data-id') || card.getAttribute('data-card-key') || card.getAttribute('data-key');
-        if (id) return String(id);
 
-        const titleEl = card.querySelector && (card.querySelector('.drug-name, .title, .card-title, h3, h2'));
-        if (titleEl && titleEl.textContent) {
-            const t = titleEl.textContent.trim().toLowerCase().replace(/[^\wа-яё0-9\-]+/gi, '_').slice(0,60);
-            return `card_${t}`;
+    function cardIdFromElem(card, fallbackIndex){
+        try{
+            if(!card) return null;
+            const id = card.id || card.getAttribute('data-id') || card.getAttribute('data-card-key') || card.getAttribute('data-key');
+            if(id) return String(id);
+            const titleEl = card.querySelector && (card.querySelector('.drug-name, .title, .card-title, h3, h2'));
+            if(titleEl && titleEl.textContent){
+                const t = titleEl.textContent.trim().toLowerCase().replace(/[^\wа-яё0-9\-]+/gi,'_').slice(0,80);
+                return `card_${t}`;
+            }
+            const idx = typeof fallbackIndex==='number' ? fallbackIndex : Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card]')).indexOf(card);
+            const path = _domPath(card) || ('idx_'+idx);
+            let h=0; for(let i=0;i<path.length;i++){ h = ((h<<5)-h) + path.charCodeAt(i); h |= 0; }
+            return `card_fallback_${Math.abs(h)}`;
+        }catch(e){
+            return 'card_err_'+Math.floor(Math.random()*1e9);
         }
-
-        const idx = (typeof fallbackIndex === 'number') ? fallbackIndex : Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card]')).indexOf(card);
-        return `card_fallback_${idx >= 0 ? idx : Math.floor(Math.random()*1e9)}`;
     }
 
-    function saveStatusForCard(card, status) {
-        try {
+    function saveStatusForCard(card, status){
+        try{
             const dayKey = getDateFromCardElement(card);
-            sessionStorage.setItem('last_day_key', dayKey);
             const STORAGE_KEY = 'cards_by_day_v2';
             const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-            if (!all[dayKey]) all[dayKey] = {};
-            const cardId = cardIdFromElem(card);
-            all[dayKey][cardId] = { status: status, ts: Date.now() };
+            if(!all[dayKey]) all[dayKey] = {};
+            const cid = cardIdFromElem(card);
+            all[dayKey][cid] = { status, ts: Date.now(), sourceDomPath: _domPath(card), lastComputedDayKey: dayKey };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-        } catch (e) {
+            sessionStorage.setItem('last_saved_card_debug', JSON.stringify({ dayKey, cid, status, time: Date.now() }));
+            console.debug('[saveStatusForCard] saved', dayKey, cid, status, _domPath(card));
+        }catch(e){
             console.warn('saveStatusForCard error', e);
         }
     }
 
-    function applySavedForVisibleDay() {
-        try {
+    function applySavedForVisibleDay(){
+        try{
             const STORAGE_KEY = 'cards_by_day_v2';
             const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-
             const cards = Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card], [data-id], [data-card-key]'));
+            const applied = [];
             cards.forEach((card, idx) => {
                 const dayKey = getDateFromCardElement(card);
-                const cardId = cardIdFromElem(card, idx);
-                if (dayKey && all[dayKey] && all[dayKey][cardId]) {
-                    const st = all[dayKey][cardId].status;
+                const cid = cardIdFromElem(card, idx);
+                if(dayKey && all[dayKey] && all[dayKey][cid]){
+                    const st = all[dayKey][cid].status;
                     card.classList.remove('status-accepted','status-rejected','optimistic-postponed');
-                    if (st === 'accepted') card.classList.add('status-accepted');
-                    if (st === 'rejected') card.classList.add('status-rejected');
-                    if (st === 'postponed') card.classList.add('optimistic-postponed');
+                    if(st === 'accepted') card.classList.add('status-accepted');
+                    else if(st === 'rejected') card.classList.add('status-rejected');
+                    else if(st === 'postponed') card.classList.add('optimistic-postponed');
                     card.setAttribute('data-local-status', st);
+                    applied.push({ cardPath: _domPath(card), cardId: cid, dayKey, status: st });
                 } else {
                     card.classList.remove('status-accepted','status-rejected','optimistic-postponed');
                     card.removeAttribute('data-local-status');
                 }
             });
-        } catch (e) {
+            console.info('[applySavedForVisibleDay] applied to', applied.length, 'cards');
+            if(applied.length) console.table(applied.slice(0,200));
+            return applied;
+        }catch(e){
             console.warn('applySavedForVisibleDay error', e);
+            return [];
         }
     }
+
+    function debugCardMappings(){
+        const cards = Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card], [data-id], [data-card-key]'));
+        const rows = cards.map((card, idx) => {
+            const dayKey = getDateFromCardElement(card);
+            const cid = cardIdFromElem(card, idx);
+            const snippet = (card.querySelector && (card.querySelector('.drug-name, .title, h3, h2')) && card.querySelector('.drug-name, .title, h3, h2').textContent) || (card.textContent||'').trim().slice(0,60);
+            return { idx, cardPath: _domPath(card), cardId: cid, dayKey, snippet };
+        });
+        console.table(rows);
+        return rows;
+    }
+
+    function highlightProblemCards(){
+        try{
+            const STORAGE_KEY = 'cards_by_day_v2';
+            const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            const rows = debugCardMappings();
+            const byId = {};
+            Object.keys(all).forEach(day => {
+                Object.keys(all[day]).forEach(cid => {
+                    byId[cid] = byId[cid] || [];
+                    byId[cid].push(day);
+                });
+            });
+            rows.forEach(r => {
+                const el = document.querySelector && document.querySelector(r.cardPath.split(' > ')[0]) ? document.querySelector(r.cardPath.split(' > ')[0]) : null;
+                const cid = r.cardId;
+                const days = byId[cid] || [];
+                const suspicious = days.some(d1 => days.some(d2 => {
+                    if(d1===d2) return false;
+                    const a=new Date(d1+'T00:00:00'), b=new Date(d2+'T00:00:00');
+                    const diff = Math.round((a-b)/(24*3600*1000));
+                    return Math.abs(diff)===7;
+                }));
+                if(suspicious){
+                    const cardEl = Array.from(document.querySelectorAll('.card, .drug-card, .med-card, [data-card], [data-id], [data-card-key]')).find((c, i) => _domPath(c)===r.cardPath);
+                    if(cardEl){
+                        cardEl.style.outline = '3px solid rgba(255,0,0,0.75)';
+                        cardEl.dataset.__debug_suspicious = '1';
+                    }
+                }
+            });
+            console.info('[highlightProblemCards] highlighted suspicious cards (red outline)');
+        }catch(e){
+            console.warn('highlightProblemCards error', e);
+        }
+    }
+    function clearDebugHighlights(){
+        document.querySelectorAll('[data-local-status], [data-card-key]').forEach(el=>{
+            if(el.dataset && el.dataset.__debug_suspicious) {
+                el.style.outline = '';
+                delete el.dataset.__debug_suspicious;
+            }
+        });
+        console.info('cleared debug highlights');
+    }
+
+    window._debugCardUtils = {
+        getDateFromCardElement,
+        cardIdFromElem,
+        saveStatusForCard,
+        applySavedForVisibleDay,
+        debugCardMappings,
+        highlightProblemCards,
+        clearDebugHighlights
+    };
 
     function parsePossibleDateString(txt) {
         if (!txt) return null;
