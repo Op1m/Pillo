@@ -4317,5 +4317,185 @@
     })();
 </script>
 
+<script>
+    (function() {
+        console.log('🕒 PILLO: Устанавливаем единый UTC-ключ для всех дат');
+        
+        const SERVER_OFFSET_HOURS = 7;
+        const SERVER_OFFSET_MS = SERVER_OFFSET_HOURS * 60 * 60 * 1000;
+
+        function getServerDateKey(date) {
+            if (!date) date = new Date();
+            const d = new Date(date);
+
+            const serverTime = d.getTime() + SERVER_OFFSET_MS;
+            const serverDate = new Date(serverTime);
+            const year = serverDate.getUTCFullYear();
+            const month = String(serverDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(serverDate.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        const originalLoadHistory = window.loadHistoryForDate;
+        const originalGetStatus = window.getStatusForReminderOnDate;
+        const originalMarkTaken = window.markReminderAsTaken;
+        const originalMarkSkipped = window.markReminderAsSkipped;
+        const originalPostpone = window.optimisticPostponeReminder;
+
+        if (typeof originalLoadHistory === 'function') {
+            window.loadHistoryForDate = async function(date) {
+                if (!currentUser) return;
+
+                const serverKey = getServerDateKey(date);
+
+                const start = new Date(date);
+                start.setHours(0,0,0,0);
+                const end = new Date(date);
+                end.setDate(end.getDate() + 1);
+                end.setHours(23,59,59,999);
+
+                try {
+                    const response = await apiFetch(
+                        `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
+                    );
+
+                    const data = Array.isArray(response) ? response.map(h => ({
+                        ...h,
+                        reminder: h.reminder ? { ...h.reminder } : null
+                    })) : [];
+
+                    historyMap.set(serverKey, data);
+                    historyCache.set(serverKey, { data, timestamp: Date.now() });
+
+                    const stored = localStorage.getItem(`historyLocal_${serverKey}`);
+                    if (stored) {
+                        try {
+                            const localData = JSON.parse(stored).map(h => ({
+                                ...h,
+                                reminder: h.reminder ? { ...h.reminder } : null
+                            }));
+                            const merged = [...data];
+                            localData.forEach(local => {
+                                const existing = merged.find(m =>
+                                    m.reminder && local.reminder &&
+                                    String(m.reminder.id) === String(local.reminder.id)
+                                );
+                                if (existing) {
+                                    Object.assign(existing, local);
+                                } else {
+                                    merged.push(local);
+                                }
+                            });
+                            historyMap.set(serverKey, merged);
+                        } catch (e) {}
+                    }
+
+                    saveLocalHistory(serverKey);
+                    renderGroupsForDate(date);
+
+                } catch (err) {
+                    console.warn('Ошибка загрузки истории', err);
+                    const stored = localStorage.getItem(`historyLocal_${serverKey}`);
+                    if (stored) {
+                        try {
+                            const data = JSON.parse(stored).map(h => ({
+                                ...h,
+                                reminder: h.reminder ? { ...h.reminder } : null
+                            }));
+                            historyMap.set(serverKey, data);
+                            renderGroupsForDate(date);
+                        } catch (e) {}
+                    }
+                }
+            };
+        }
+
+        if (typeof originalGetStatus === 'function') {
+            window.getStatusForReminderOnDate = function(reminder, date) {
+                const serverKey = getServerDateKey(date);
+                const histories = historyMap.get(serverKey) || [];
+                const history = histories.find(h =>
+                    h.reminder && String(h.reminder.id) === String(reminder.id)
+                );
+                return history ? (history.status || 'pending').toLowerCase() : 'pending';
+            };
+        }
+
+        function patchOptimisticFunction(name) {
+            const original = window[name];
+            if (typeof original !== 'function') return;
+
+            window[name] = function(reminderId, card) {
+                const serverKey = getServerDateKey(selectedDay || new Date());
+                const result = original.apply(this, [reminderId, card]);
+
+                let histories = historyMap.get(serverKey) || [];
+                let historyEntry = histories.find(h =>
+                    h.reminder && String(h.reminder.id) === String(reminderId)
+                );
+
+                if (!historyEntry) {
+                    historyEntry = {
+                        id: null,
+                        reminder: { id: reminderId },
+                        status: name === 'optimisticMarkTaken' ? 'taken' :
+                            (name === 'optimisticMarkSkipped' ? 'skipped' : 'postponed'),
+                        scheduledTime: (selectedDay || new Date()).toISOString()
+                    };
+                    histories.push(historyEntry);
+                    historyMap.set(serverKey, histories);
+                } else {
+                    historyEntry.status = name === 'optimisticMarkTaken' ? 'taken' :
+                        (name === 'optimisticMarkSkipped' ? 'skipped' : 'postponed');
+                    historyMap.set(serverKey, histories);
+                }
+
+                saveLocalHistory(serverKey);
+
+                return result;
+            };
+        }
+
+        patchOptimisticFunction('optimisticMarkTaken');
+        patchOptimisticFunction('optimisticMarkSkipped');
+        patchOptimisticFunction('optimisticPostponeReminder');
+
+        const originalSaveLocal = window.saveLocalHistory;
+        if (typeof originalSaveLocal === 'function') {
+            window.saveLocalHistory = function(dateKey) {
+                try {
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+                        const histories = historyMap.get(dateKey) || [];
+                        localStorage.setItem(`historyLocal_${dateKey}`, JSON.stringify(histories));
+                    } else {
+                        const serverKey = getServerDateKey(new Date(dateKey));
+                        const histories = historyMap.get(serverKey) || [];
+                        localStorage.setItem(`historyLocal_${serverKey}`, JSON.stringify(histories));
+                    }
+                } catch (e) {
+                    console.warn('Ошибка сохранения локальной истории', e);
+                }
+            };
+        }
+
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('historyLocal_')) {
+                    const dateStr = key.replace('historyLocal_', '');
+                    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                        keysToRemove.push(key);
+                    }
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            console.log('🧹 Очищено старых ключей:', keysToRemove.length);
+        } catch (e) {}
+
+        console.log('✅ PILLO: Патч часового пояса применён');
+    })();
+</script>
+
 </body>
 </html>
