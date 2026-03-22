@@ -2363,64 +2363,96 @@
         }
 
         function optimisticPostponeReminder(reminderId, card) {
-            const rid = String(reminderId);
-            const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const dateKey = selectedDay.toISOString().split('T')[0];
+    const rid = String(reminderId);
+    const reminder = reminders.find(r => String(r.id) === rid) || null;
+    const dateKey = selectedDay.toISOString().split('T')[0];
 
-            historyCache.delete(dateKey);
+    const now = new Date();
+    const postponedTime = new Date(now.getTime() + 10 * 60000);
 
-            let histories = historyMap.get(dateKey) || [];
-            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+    let histories = historyMap.get(dateKey) || [];
+    let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
 
-            const now = new Date();
-            const postponedTime = new Date(now.getTime() + 10 * 60000);
+    if (historyEntry && historyEntry.id) {
+        historyEntry.status = 'postponed';
+        historyEntry.scheduledTime = postponedTime.toISOString();
+        historyMap.set(dateKey, histories);
 
-            if (!historyEntry) {
-                historyEntry = {
-                    id: null,
-                    reminder: { id: reminderId },
-                    status: 'postponed',
-                    scheduledTime: postponedTime.toISOString()
-                };
-                histories.push(historyEntry);
-                historyMap.set(dateKey, histories);
-            } else {
-                historyEntry.status = 'postponed';
-                historyEntry.scheduledTime = postponedTime.toISOString();
-            }
+        fetch(`/api/medicine-history/${historyEntry.id}/postpone`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('med_token')}`
+            },
+            body: JSON.stringify({ minutes: 10 })
+        }).catch(err => console.error('Ошибка откладывания:', err));
 
-            if (card) {
-                card.classList.add('postponed');
-                card.classList.remove('pending', 'taken', 'skipped', 'missed');
-                const statusSpan = card.querySelector('.med-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
-                }
-                card.style.transform = 'translateX(0)';
-                setTimeout(() => { card.style.transition = ''; }, 200);
-            }
+    } else if (!historyEntry) {
+        const tempId = 'tmp-' + Date.now();
+        const newHistory = {
+            id: null,
+            reminder: { id: reminderId },
+            status: 'postponed',
+            scheduledTime: postponedTime.toISOString(),
+            takenAt: null,
+            notes: 'Отложено на 10 минут'
+        };
+        histories.push(newHistory);
+        historyMap.set(dateKey, histories);
 
-            fetch(`/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
+        const reminder = reminders.find(r => r.id === reminderId);
+        if (reminder && reminder.reminderTime) {
+            const [hour, minute] = reminder.reminderTime.split(':').map(Number);
+            const scheduledTime = new Date(selectedDay);
+            scheduledTime.setHours(hour, minute, 0, 0);
+
+            fetch('/api/medicine-history/schedule', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('med_token')}`
-                }
-            }).catch(err => {
-                console.error('Ошибка откладывания:', err);
-                if (historyEntry) {
-                    historyEntry.status = 'pending';
-                    if (card) {
-                        card.classList.remove('postponed');
-                        card.classList.add('pending');
-                        const statusSpan = card.querySelector('.med-status');
-                        if (statusSpan) {
-                            statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+                },
+                body: JSON.stringify({
+                    reminderId: reminderId,
+                    scheduledTime: postponedTime.toISOString()
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.id) {
+                    newHistory.id = data.id;
+                    newHistory.status = 'postponed';
+                    historyMap.set(dateKey, histories);
+
+                    fetch(`/api/medicine-history/${data.id}/postpone?minutes=10`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('med_token')}`
                         }
-                    }
+                    }).catch(e => console.error(e));
                 }
-            });
+            })
+            .catch(err => console.error('Ошибка создания истории:', err));
         }
+    }
+
+    if (card) {
+        card.classList.add('postponed');
+        card.classList.remove('pending', 'taken', 'skipped', 'missed');
+        const statusSpan = card.querySelector('.med-status');
+        if (statusSpan) {
+            statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+        }
+        card.style.transform = 'translateX(0)';
+        setTimeout(() => { card.style.transition = ''; }, 200);
+    }
+
+    historyCache.delete(dateKey);
+
+    setTimeout(() => {
+        loadHistoryForDate(selectedDay);
+    }, 5000);
+}
 
         async function optimisticDeleteReminder(reminderId) {
             if (!reminderId) return;
