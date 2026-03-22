@@ -492,6 +492,107 @@
             height: 14px;
             fill: #8FA9C6;
         }
+        .input-group.time-group-ios {
+            position: relative;
+        }
+
+        .time-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .time-input-wrapper input[type="time"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d0ddee;
+            border-radius: 24px;
+            font-size: 16px;
+            background: #f9fcff;
+            outline: none;
+            transition: border 0.2s var(--anim-ease), box-shadow 0.2s var(--anim-ease);
+            -webkit-appearance: none;
+            appearance: none;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .time-input-wrapper input[type="time"]:focus {
+            border-color: #2e7aff;
+            box-shadow: 0 0 0 3px rgba(46,122,255,0.1);
+        }
+
+        .time-input-wrapper input[type="time"]::-webkit-calendar-picker-indicator {
+            background: transparent;
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            opacity: 0.6;
+        }
+
+        .time-input-wrapper input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+        }
+
+        .time-input-wrapper input[type="time"]::-webkit-datetime-edit-hour-field,
+        .time-input-wrapper input[type="time"]::-webkit-datetime-edit-minute-field {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            padding: 0 2px;
+        }
+
+        .time-input-wrapper input[type="time"]::-webkit-datetime-edit-text {
+            padding: 0 2px;
+        }
+
+        .time-placeholder {
+            display: none;
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8FA9C6;
+            font-size: 16px;
+            pointer-events: none;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .time-input-wrapper input[type="time"]:not(:focus):placeholder-shown + .time-placeholder {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .input-group.time-group-ios {
+                margin-bottom: 20px;
+            }
+
+            .time-input-wrapper input[type="time"] {
+                font-size: 15px;
+                padding: 14px 16px;
+            }
+
+            .time-input-wrapper input[type="time"]::-webkit-datetime-edit-hour-field,
+            .time-input-wrapper input[type="time"]::-webkit-datetime-edit-minute-field {
+                font-size: 15px;
+            }
+        }
+
+@supports (-webkit-touch-callout: none) {
+    .time-input-wrapper input[type="time"] {
+        min-height: 48px;
+        line-height: normal;
+    }
+
+    .time-input-wrapper input[type="time"]::-webkit-datetime-edit-hour-field:focus,
+    .time-input-wrapper input[type="time"]::-webkit-datetime-edit-minute-field:focus {
+        background-color: #e8f0ff;
+        color: #2e7aff;
+    }
+}
         .med-status {
             font-weight: 600;
             font-size: 13px;
@@ -1415,9 +1516,12 @@
                 <label>Дозировка</label>
                 <input type="text" id="medDose" placeholder="например, 1 таб." value="1 таб.">
             </div>
-            <div class="input-group">
+            <div class="input-group time-group-ios">
                 <label>Время приёма</label>
-                <input type="time" id="medTime" value="08:30">
+                <div class="time-input-wrapper">
+                    <input type="time" id="medTime" value="08:30">
+                    <span class="time-placeholder">08:30</span>
+                </div>
             </div>
             <div class="input-group">
                 <label>Приём пищи</label>
@@ -1720,6 +1824,9 @@
                 nextSunday.setDate(currentMonday.getDate() + 13);
                 nextSunday.setHours(23,59,59,999);
 
+                currentDate = today;
+                selectedDay = today;
+
                 const start = prevMonday;
                 const end = nextSunday;
 
@@ -1741,6 +1848,8 @@
                     historyMap.set(dKey, dayHistory);
                     historyCache.set(dKey, { data: dayHistory, timestamp: Date.now() });
                 }
+
+                await loadHistoryForDate(selectedDay);
 
                 renderGroupsForDate(selectedDay);
                 renderWeek(currentDate);
@@ -2820,7 +2929,14 @@
                 });
                 weekRow.appendChild(chip);
             });
-            if (monthLabel) monthLabel.childNodes[0].nodeValue = centerDate.toLocaleString('ru', { month: 'long', year: 'numeric' }).replace(' г.', '') + ' ';
+            const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+            if (monthLabel) {
+                monthLabel.childNodes[0].nodeValue = monthNames[centerDate.getMonth()] + ' ' + centerDate.getFullYear() + ' ';
+            }
+
+            if (selectedDay) {
+                renderGroupsForDate(selectedDay);
+            }
         }
 
         let calDate = new Date();
