@@ -2670,17 +2670,26 @@ function getStatusForReminderOnDate(reminder, date) {
     const dateKey = date.toISOString().split('T')[0];
     const histories = historyMap.get(dateKey) || [];
 
+    alert('🔍 Поиск статуса для reminder ' + reminder.id +
+          ' в dateKey=' + dateKey +
+          ', всего записей: ' + histories.length);
+
+    histories.forEach((h, idx) => {
+        alert('  Запись ' + idx + ': reminderId=' + (h.reminder?.id) +
+              ', status=' + h.status);
+    });
+
     const history = histories.find(h =>
         h.reminder &&
         String(h.reminder.id) === String(reminder.id)
     );
 
     if (!history) {
-        alert('⚠️ Нет истории для reminder ' + reminder.id + ' на дату ' + dateKey);
+        alert('⚠️ Нет истории для reminder ' + reminder.id);
         return 'pending';
     }
 
-    alert('✅ Статус для reminder ' + reminder.id + ': ' + history.status);
+    alert('✅ Найден статус: ' + history.status);
     return (history.status || 'pending').toLowerCase();
 }
 
@@ -2708,9 +2717,19 @@ function getStatusForReminderOnDate(reminder, date) {
             return (history.status || 'pending').toLowerCase();
         }
 
-        function renderGroupsForDate(date) {
-            if (!contentDiv) return;
-            const filtered = remindersForDate(date);
+function renderGroupsForDate(date) {
+    if (!contentDiv) return;
+    const filtered = remindersForDate(date);
+
+    alert('📋 Рендер для даты: ' + date.toISOString().split('T')[0] +
+          ', напоминаний: ' + filtered.length);
+
+    filtered.forEach(r => {
+        const status = getStatusForReminderOnDate(r, date);
+        alert('💊 Препарат: ' + (r.medicine?.name || r.medicineId) +
+              ', статус: ' + status +
+              ', id: ' + r.id);
+    });
 
             const now = Date.now();
             const lastUpdate = localStorage.getItem('lastHistoryUpdate');
