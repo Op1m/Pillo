@@ -2363,12 +2363,9 @@
         }
 
 function optimisticPostponeReminder(reminderId, card) {
-    alert('🔍 Откладывание начато для reminderId: ' + reminderId);
-
     const now = new Date();
     const postponedTime = new Date(now.getTime() + 10 * 60000);
 
-    // Сразу обновляем карточку
     if (card) {
         card.classList.add('postponed');
         card.classList.remove('pending', 'taken', 'skipped', 'missed');
@@ -2377,9 +2374,9 @@ function optimisticPostponeReminder(reminderId, card) {
             statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
         }
         card.style.transform = 'translateX(0)';
+        setTimeout(() => { card.style.transition = ''; }, 200);
     }
 
-    // Вызываем существующий эндпоинт
     fetch(`/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
         method: 'POST',
         headers: {
@@ -2387,17 +2384,15 @@ function optimisticPostponeReminder(reminderId, card) {
         }
     })
     .then(res => {
-        alert('📡 Ответ: статус ' + res.status);
-        if (!res.ok) throw new Error('Postpone failed');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
     })
     .then(data => {
-        alert('✅ Отложено успешно! ID истории: ' + data.id);
-
-        // Обновляем локальный historyMap
         const dateKey = selectedDay.toISOString().split('T')[0];
         let histories = historyMap.get(dateKey) || [];
-        const existingIndex = histories.findIndex(h => h.reminder && String(h.reminder.id) === String(reminderId));
+        const existingIndex = histories.findIndex(h =>
+            h.reminder && String(h.reminder.id) === String(reminderId)
+        );
 
         if (existingIndex >= 0) {
             histories[existingIndex] = data;
@@ -2410,8 +2405,15 @@ function optimisticPostponeReminder(reminderId, card) {
         renderGroupsForDate(selectedDay);
     })
     .catch(err => {
-        alert('❌ Ошибка: ' + err.message);
-        console.error(err);
+        console.error('Ошибка откладывания:', err);
+        if (card) {
+            card.classList.remove('postponed');
+            card.classList.add('pending');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+            }
+        }
     });
 }
 
