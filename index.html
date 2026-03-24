@@ -2475,6 +2475,22 @@
     }, 3000);
 }
 
+    if (card && historyEntry && historyEntry.id) {
+        card.classList.add('postponed');
+        card.classList.remove('pending', 'taken', 'skipped', 'missed');
+        const statusSpan = card.querySelector('.med-status');
+        if (statusSpan) {
+            statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+        }
+        card.style.transform = 'translateX(0)';
+        setTimeout(() => { card.style.transition = ''; }, 200);
+    }
+
+    setTimeout(() => {
+        loadHistoryForDate(selectedDay);
+    }, 3000);
+}
+
     if (card) {
         card.classList.add('postponed');
         card.classList.remove('pending', 'taken', 'skipped', 'missed');
