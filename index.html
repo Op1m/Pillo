@@ -2416,7 +2416,7 @@ function optimisticPostponeReminder(reminderId, card) {
         }
         historyMap.set(dateKey, histories);
         historyCache.delete(dateKey);
-        
+
         renderGroupsForDate(selectedDay);
         alert('7. Готово!');
     })
@@ -2636,40 +2636,53 @@ function optimisticPostponeReminder(reminderId, card) {
         }
 
         async function loadHistoryForDate(date) {
-            if (!currentUser) return;
+    if (!currentUser) return;
 
-            const start = new Date(date);
-            start.setHours(0, 0, 0, 0);
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
 
-            const end = new Date(date);
-            end.setHours(23, 59, 59, 999);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
 
-            const dateKey = date.toISOString().split('T')[0];
+    const dateKey = date.toISOString().split('T')[0];
+    alert('📥 Загрузка истории для даты: ' + dateKey);
 
-            const cache = historyCache.get(dateKey);
-            const now = Date.now();
-            if (cache && now - cache.timestamp < CACHE_TTL) {
-                historyMap.set(dateKey, cache.data);
-                renderGroupsForDate(date);
-                return;
-            }
+    try {
+        const history = await apiFetch(
+            `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
+        );
+        const data = Array.isArray(history) ? history : [];
 
-            try {
-                const history = await apiFetch(
-                    `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
-                );
-                const data = Array.isArray(history) ? history : [];
+        alert('📊 Получено записей: ' + data.length +
+              '\nСтатусы: ' + data.map(h => h.status).join(', '));
 
-                console.log(`📊 Загружена история на ${dateKey}:`, data);
+        historyMap.set(dateKey, data);
+        historyCache.set(dateKey, { data, timestamp: Date.now() });
+        renderGroupsForDate(date);
+    } catch (err) {
+        alert('❌ Ошибка загрузки истории: ' + err.message);
+        console.warn('Ошибка загрузки истории', err);
+        renderGroupsForDate(date);
+    }
+}
 
-                historyMap.set(dateKey, data);
-                historyCache.set(dateKey, { data, timestamp: now });
-                renderGroupsForDate(date);
-            } catch (err) {
-                console.warn('Ошибка загрузки истории', err);
-                renderGroupsForDate(date);
-            }
-        }
+function getStatusForReminderOnDate(reminder, date) {
+    const dateKey = date.toISOString().split('T')[0];
+    const histories = historyMap.get(dateKey) || [];
+
+    const history = histories.find(h =>
+        h.reminder &&
+        String(h.reminder.id) === String(reminder.id)
+    );
+
+    if (!history) {
+        alert('⚠️ Нет истории для reminder ' + reminder.id + ' на дату ' + dateKey);
+        return 'pending';
+    }
+
+    alert('✅ Статус для reminder ' + reminder.id + ': ' + history.status);
+    return (history.status || 'pending').toLowerCase();
+}
 
         function remindersForDate(date) {
             const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
