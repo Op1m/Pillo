@@ -2363,10 +2363,13 @@
         }
 
 function optimisticPostponeReminder(reminderId, card) {
+    alert('1. Начало откладывания, reminderId=' + reminderId);
+
     const now = new Date();
     const postponedTime = new Date(now.getTime() + 10 * 60000);
 
     if (card) {
+        alert('2. Обновляем карточку визуально');
         card.classList.add('postponed');
         card.classList.remove('pending', 'taken', 'skipped', 'missed');
         const statusSpan = card.querySelector('.med-status');
@@ -2374,38 +2377,59 @@ function optimisticPostponeReminder(reminderId, card) {
             statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
         }
         card.style.transform = 'translateX(0)';
-        setTimeout(() => { card.style.transition = ''; }, 200);
     }
 
-    fetch(`/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
+    const token = localStorage.getItem('med_token');
+    alert('3. Токен: ' + (token ? 'есть, ' + token.substring(0, 20) + '...' : 'НЕТ!'));
+
+    const url = `/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`;
+    alert('4. Запрос к: ' + url);
+
+    fetch(url, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${localStorage.getItem('med_token')}`
+            'Authorization': `Bearer ${token}`
         }
     })
-    .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    .then(async res => {
+        alert('5. Ответ сервера: статус ' + res.status);
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`HTTP ${res.status}: ${text}`);
+        }
         return res.json();
     })
     .then(data => {
+        alert('6. Успех! Получены данные: ID=' + data.id + ', status=' + data.status);
+
         const dateKey = selectedDay.toISOString().split('T')[0];
+        alert('7. dateKey=' + dateKey);
+
         let histories = historyMap.get(dateKey) || [];
+        alert('8. Текущих записей в historyMap: ' + histories.length);
+
         const existingIndex = histories.findIndex(h =>
             h.reminder && String(h.reminder.id) === String(reminderId)
         );
+        alert('9. existingIndex=' + existingIndex);
 
         if (existingIndex >= 0) {
             histories[existingIndex] = data;
+            alert('10. Обновлена существующая запись');
         } else {
             histories.push(data);
+            alert('11. Добавлена новая запись');
         }
         historyMap.set(dateKey, histories);
         historyCache.delete(dateKey);
 
+        alert('12. Вызываем renderGroupsForDate');
         renderGroupsForDate(selectedDay);
+        alert('13. Готово!');
     })
     .catch(err => {
-        console.error('Ошибка откладывания:', err);
+        alert('❌ Ошибка: ' + err.message);
+        console.error(err);
         if (card) {
             card.classList.remove('postponed');
             card.classList.add('pending');
