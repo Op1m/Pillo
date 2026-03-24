@@ -2380,9 +2380,10 @@ function optimisticPostponeReminder(reminderId, card) {
     }
 
     const token = localStorage.getItem('med_token');
-    alert('3. Токен: ' + (token ? 'есть, ' + token.substring(0, 20) + '...' : 'НЕТ!'));
+    alert('3. Токен: ' + (token ? 'есть' : 'НЕТ!'));
 
-    const url = `/api/medicine-history/reminder/${reminderId}/postpone?minutes=10`;
+    // ИСПРАВЛЕНО: используем API_BASE
+    const url = `${API_BASE}/medicine-history/reminder/${reminderId}/postpone?minutes=10`;
     alert('4. Запрос к: ' + url);
 
     fetch(url, {
@@ -2403,29 +2404,21 @@ function optimisticPostponeReminder(reminderId, card) {
         alert('6. Успех! Получены данные: ID=' + data.id + ', status=' + data.status);
 
         const dateKey = selectedDay.toISOString().split('T')[0];
-        alert('7. dateKey=' + dateKey);
-
         let histories = historyMap.get(dateKey) || [];
-        alert('8. Текущих записей в historyMap: ' + histories.length);
-
         const existingIndex = histories.findIndex(h =>
             h.reminder && String(h.reminder.id) === String(reminderId)
         );
-        alert('9. existingIndex=' + existingIndex);
 
         if (existingIndex >= 0) {
             histories[existingIndex] = data;
-            alert('10. Обновлена существующая запись');
         } else {
             histories.push(data);
-            alert('11. Добавлена новая запись');
         }
         historyMap.set(dateKey, histories);
         historyCache.delete(dateKey);
-
-        alert('12. Вызываем renderGroupsForDate');
+        
         renderGroupsForDate(selectedDay);
-        alert('13. Готово!');
+        alert('7. Готово!');
     })
     .catch(err => {
         alert('❌ Ошибка: ' + err.message);
