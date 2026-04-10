@@ -2287,89 +2287,86 @@
     });
 }
         function optimisticMarkTaken(reminderId, card) {
-            const rid = String(reminderId);
-            const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const dateKey = selectedDay.toISOString().split('T')[0];
-            historyCache.delete(dateKey);
-            let histories = historyMap.get(dateKey) || [];
-            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
-            if (!historyEntry) {
-                historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
-                histories.push(historyEntry);
-                historyMap.set(dateKey, histories);
-            } else {
-                historyEntry.status = 'taken';
-            }
-            if (card) {
-                card.classList.add('taken');
-                card.classList.remove('pending', 'skipped', 'missed', 'postponed');
-                const statusSpan = card.querySelector('.med-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
-                }
-                card.style.transform = 'translateX(0)';
-                setTimeout(()=>{ card.style.transition = ''; }, 200);
-            }
-            markReminderAsTaken(reminderId).catch(() => {
-                if (historyEntry) historyEntry.status = 'pending';
-                if (card) {
-                    card.classList.remove('taken');
-                    card.classList.add('pending');
-                    const statusSpan = card.querySelector('.med-status');
-                    if (statusSpan) {
-                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
-                    }
-                    card.style.transition = '';
-                }
-            });
+    const rid = String(reminderId);
+    const reminder = reminders.find(r => String(r.id) === rid) || null;
+    const dateKey = selectedDay.toISOString().split('T')[0];
+    historyCache.delete(dateKey);
+    let histories = historyMap.get(dateKey) || [];
+    let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+    if (!historyEntry) {
+        historyEntry = { id: null, reminder: { id: reminderId }, status: 'taken', scheduledTime: selectedDay.toISOString() };
+        histories.push(historyEntry);
+        historyMap.set(dateKey, histories);
+    } else {
+        historyEntry.status = 'taken';
+    }
+    if (card) {
+        card.classList.add('taken');
+        card.classList.remove('pending', 'skipped', 'missed', 'postponed');
+        const statusSpan = card.querySelector('.med-status');
+        if (statusSpan) {
+            statusSpan.innerHTML = `<span class="status-taken status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M20 6L9 17L4 12"/></svg> Принято</span>`;
         }
+        card.style.transform = 'translateX(0)';
+        setTimeout(()=>{ card.style.transition = ''; }, 200);
+    }
+    markReminderAsTaken(reminderId).catch(() => {
+        if (historyEntry) historyEntry.status = 'pending';
+        if (card) {
+            card.classList.remove('taken');
+            card.classList.add('pending');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+            }
+            card.style.transition = '';
+        }
+    });
+}
 
         function optimisticMarkSkipped(reminderId, card) {
-            const rid = String(reminderId);
-            const reminder = reminders.find(r => String(r.id) === rid) || null;
-            const dateKey = selectedDay.toISOString().split('T')[0];
-            historyCache.delete(dateKey);
-            let histories = historyMap.get(dateKey) || [];
-            let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
-            if (!historyEntry) {
-                historyEntry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
-                histories.push(historyEntry);
-                historyMap.set(dateKey, histories);
-            } else {
-                historyEntry.status = 'skipped';
-            }
-            if (card) {
-                card.classList.add('skipped');
-                card.classList.remove('pending', 'taken', 'missed', 'postponed');
-                const statusSpan = card.querySelector('.med-status');
-                if (statusSpan) {
-                    statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
-                }
-                card.style.transform = 'translateX(0)';
-                setTimeout(()=>{ card.style.transition = ''; }, 200);
-            }
-            markReminderAsSkipped(reminderId).catch(() => {
-                if (historyEntry) historyEntry.status = 'pending';
-                if (card) {
-                    card.classList.remove('skipped');
-                    card.classList.add('pending');
-                    const statusSpan = card.querySelector('.med-status');
-                    if (statusSpan) {
-                        statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C16.97 3 21 7.03 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
-                    }
-                    card.style.transition = '';
-                }
-            });
+    const rid = String(reminderId);
+    const reminder = reminders.find(r => String(r.id) === rid) || null;
+    const dateKey = selectedDay.toISOString().split('T')[0];
+    historyCache.delete(dateKey);
+    let histories = historyMap.get(dateKey) || [];
+    let historyEntry = histories.find(h => h.reminder && String(h.reminder.id) === rid);
+    if (!historyEntry) {
+        historyEntry = { id: null, reminder: { id: reminderId }, status: 'skipped', scheduledTime: selectedDay.toISOString() };
+        histories.push(historyEntry);
+        historyMap.set(dateKey, histories);
+    } else {
+        historyEntry.status = 'skipped';
+    }
+    if (card) {
+        card.classList.add('skipped');
+        card.classList.remove('pending', 'taken', 'missed', 'postponed');
+        const statusSpan = card.querySelector('.med-status');
+        if (statusSpan) {
+            statusSpan.innerHTML = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
         }
+        card.style.transform = 'translateX(0)';
+        setTimeout(()=>{ card.style.transition = ''; }, 200);
+    }
+    markReminderAsSkipped(reminderId).catch(() => {
+        if (historyEntry) historyEntry.status = 'pending';
+        if (card) {
+            card.classList.remove('skipped');
+            card.classList.add('pending');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
+            }
+            card.style.transition = '';
+        }
+    });
+}
 
 function optimisticPostponeReminder(reminderId, card) {
-    alert('1. Начало откладывания, reminderId=' + reminderId);
-
     const now = new Date();
     const postponedTime = new Date(now.getTime() + 10 * 60000);
 
     if (card) {
-        alert('2. Обновляем карточку визуально');
         card.classList.add('postponed');
         card.classList.remove('pending', 'taken', 'skipped', 'missed');
         const statusSpan = card.querySelector('.med-status');
@@ -2380,20 +2377,14 @@ function optimisticPostponeReminder(reminderId, card) {
     }
 
     const token = localStorage.getItem('med_token');
-    alert('3. Токен: ' + (token ? 'есть' : 'НЕТ!'));
 
-    // ИСПРАВЛЕНО: используем API_BASE
-    const url = `${API_BASE}/medicine-history/reminder/${reminderId}/postpone?minutes=10`;
-    alert('4. Запрос к: ' + url);
-
-    fetch(url, {
+    fetch(`${API_BASE}/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`
         }
     })
     .then(async res => {
-        alert('5. Ответ сервера: статус ' + res.status);
         if (!res.ok) {
             const text = await res.text();
             throw new Error(`HTTP ${res.status}: ${text}`);
@@ -2401,8 +2392,6 @@ function optimisticPostponeReminder(reminderId, card) {
         return res.json();
     })
     .then(data => {
-        alert('6. Успех! Получены данные: ID=' + data.id + ', status=' + data.status);
-
         const dateKey = selectedDay.toISOString().split('T')[0];
         let histories = historyMap.get(dateKey) || [];
         const existingIndex = histories.findIndex(h =>
@@ -2417,11 +2406,15 @@ function optimisticPostponeReminder(reminderId, card) {
         historyMap.set(dateKey, histories);
         historyCache.delete(dateKey);
 
-        renderGroupsForDate(selectedDay);
-        alert('7. Готово!');
+        if (card) {
+            const postponedTime = new Date(data.scheduledTime);
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+            }
+        }
     })
     .catch(err => {
-        alert('❌ Ошибка: ' + err.message);
         console.error(err);
         if (card) {
             card.classList.remove('postponed');
@@ -2645,22 +2638,16 @@ function optimisticPostponeReminder(reminderId, card) {
     end.setHours(23, 59, 59, 999);
 
     const dateKey = date.toISOString().split('T')[0];
-    alert('📥 Загрузка истории для даты: ' + dateKey);
 
     try {
         const history = await apiFetch(
             `/medicine-history/user/${currentUser.id}/period?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`
         );
         const data = Array.isArray(history) ? history : [];
-
-        alert('📊 Получено записей: ' + data.length +
-              '\nСтатусы: ' + data.map(h => h.status).join(', '));
-
         historyMap.set(dateKey, data);
         historyCache.set(dateKey, { data, timestamp: Date.now() });
         renderGroupsForDate(date);
     } catch (err) {
-        alert('❌ Ошибка загрузки истории: ' + err.message);
         console.warn('Ошибка загрузки истории', err);
         renderGroupsForDate(date);
     }
@@ -2669,27 +2656,13 @@ function optimisticPostponeReminder(reminderId, card) {
 function getStatusForReminderOnDate(reminder, date) {
     const dateKey = date.toISOString().split('T')[0];
     const histories = historyMap.get(dateKey) || [];
-
-    alert('🔍 Поиск статуса для reminder ' + reminder.id +
-          ' в dateKey=' + dateKey +
-          ', всего записей: ' + histories.length);
-
-    histories.forEach((h, idx) => {
-        alert('  Запись ' + idx + ': reminderId=' + (h.reminder?.id) +
-              ', status=' + h.status);
-    });
-
     const history = histories.find(h =>
         h.reminder &&
         String(h.reminder.id) === String(reminder.id)
     );
-
     if (!history) {
-        alert('⚠️ Нет истории для reminder ' + reminder.id);
         return 'pending';
     }
-
-    alert('✅ Найден статус: ' + history.status);
     return (history.status || 'pending').toLowerCase();
 }
 
