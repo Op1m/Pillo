@@ -4488,8 +4488,6 @@ function renderProfileContent() {
             };
         }
 
-        ['optimisticMarkTaken','optimisticMarkSkipped','optimisticPostponeReminder'].forEach(patchOptimisticFn);
-
         try {
             if (window.historyMap && window.historyMap instanceof Map){
                 const entries = Array.from(window.historyMap.entries());
@@ -4710,7 +4708,6 @@ function renderProfileContent() {
                 return r;
             };
         }
-        ['optimisticMarkTaken','optimisticMarkSkipped','optimisticPostponeReminder'].forEach(patchOptimistic);
 
         console.log('pillo server-day patch loaded (server TZ offset %s).', SERVER_TZ_OFFSET);
     })();
@@ -4857,7 +4854,6 @@ function renderProfileContent() {
 
         patchOptimisticFunction('optimisticMarkTaken');
         patchOptimisticFunction('optimisticMarkSkipped');
-        patchOptimisticFunction('optimisticPostponeReminder');
 
         const originalSaveLocal = window.saveLocalHistory;
         if (typeof originalSaveLocal === 'function') {
