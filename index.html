@@ -1990,6 +1990,8 @@
         const btnBack = $('btnBack');
         const btnInfo = $('btnInfo');
 
+        const dividerLight = $('dividerLight');
+
         let selectedReminderId = null;
         let selectedReminder = null;
         let currentGroupTime = null;
@@ -2002,11 +2004,6 @@
         let touchStartTime = 0;
         let isSwipingOnCard = false;
         let isAnimatingDayChange = false;
-
-        const monthBar = document.getElementById('monthBar');
-        const weekRow = document.getElementById('weekRow');
-        const dividerLight = document.getElementById('dividerLight');
-        const contentDiv = document.getElementById('content');
 
         function hideSplash() {
             if (!splash) return;
@@ -2030,12 +2027,13 @@
             d.setHours(0,0,0,0);
             return d;
         }
-                function setDateControlsVisible(visible) {
-            const display = visible ? '' : 'none';
-            if (monthBar) monthBar.style.display = display;
-            if (weekRow) weekRow.style.display = display;
-            if (dividerLight) dividerLight.style.display = display;
-        }
+function setDateControlsVisible(visible) {
+    const display = visible ? '' : 'none';
+    if (monthBar) monthBar.style.display = display;
+    if (weekRow) weekRow.style.display = display;
+    if (dividerLight) dividerLight.style.display = display;
+}
+
 
         function getSunday(date) {
             const monday = getMonday(date);
@@ -3358,25 +3356,25 @@ function calculateMedicationStats(reminderId) {
         userSwitchSheet?.addEventListener('click', (e) => { if (e.target === userSwitchSheet) userSwitchSheet.style.display = 'none'; });
 
 function setActiveTab(tabId) {
-            document.querySelectorAll('.nav-item')?.forEach(item => item.classList.remove('active'));
-            document.getElementById(tabId)?.classList.add('active');
-            const active = tabId.replace('nav', '').toLowerCase();
+    document.querySelectorAll('.nav-item')?.forEach(item => item.classList.remove('active'));
+    document.getElementById(tabId)?.classList.add('active');
+    const active = tabId.replace('nav', '').toLowerCase();
 
-            if (active === 'home') {
-                setDateControlsVisible(true);
-                renderGroupsForDate(selectedDay);
-                // кнопка "+" показывает добавление препарата
-                plusBtn.onclick = () => { if (addChoiceSheet) addChoiceSheet.style.display = 'flex'; };
-            } else if (active === 'stats') {
-                setDateControlsVisible(false);
-                renderCoursesContent();
-                plusBtn.onclick = () => { alert('Функция создания курса появится позже'); };
-            } else if (active === 'profile') {
-                setDateControlsVisible(false);
-                renderProfileContent();
-                plusBtn.onclick = null; // или можно скрыть кнопку
-            }
-        }
+    if (active === 'home') {
+        setDateControlsVisible(true);
+        renderGroupsForDate(selectedDay);
+        plusBtn.onclick = () => { if (addChoiceSheet) addChoiceSheet.style.display = 'flex'; };
+    } else if (active === 'stats') {
+        setDateControlsVisible(false);
+        renderCoursesContent();
+        plusBtn.onclick = () => { alert('Функция создания курса появится позже'); };
+    } else if (active === 'profile') {
+        setDateControlsVisible(false);
+        renderProfileContent();
+        plusBtn.onclick = null;
+    }
+}
+
 
 function renderProfileContent() {
             if (!contentDiv) return;
