@@ -2419,7 +2419,7 @@ function optimisticPostponeReminder(reminderId, card) {
 
         // Обновляем карточку с точным временем из ответа сервера
         if (card) {
-            const serverPostponedTime = new Date(data.scheduledTime);
+const serverPostponedTime = new Date(data.scheduledTime + 'Z');
             const statusSpan = card.querySelector('.med-status');
             if (statusSpan) {
                 statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${serverPostponedTime.getHours()}:${serverPostponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
@@ -3302,7 +3302,7 @@ function calculateMedicationStats(reminderId) {
         });
         $('nextWeek')?.addEventListener('click', () => {
             let newDate = new Date(currentDate);
-            newDate.setDate(currentDate.getDate() + 7);
+            newDate.setDate(currentDate.getDate());
             changeDayWithAnimation(newDate, 1);
         });
 
@@ -4347,6 +4347,7 @@ function renderProfileContent() {
         function pad(n){ return String(n).padStart(2,'0'); }
 
         function canonicalDateKey(input){
+            if (!input && input !== 0) input = new Date();
             if (!input && input !== 0) input = new Date();
             if (input instanceof Date){
                 const y = input.getFullYear(), m = input.getMonth(), d = input.getDate();
