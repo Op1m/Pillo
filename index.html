@@ -4139,38 +4139,6 @@ function renderProfileContent() {
             return result;
         }
 
-        const origPostpone = window.optimisticPostponeReminder;
-        if (typeof origPostpone === 'function') {
-            window.optimisticPostponeReminder = function(reminderId, card) {
-                try {
-                    const dateKey = (window.selectedDay || new Date()).toISOString().split('T')[0];
-                    const now = new Date();
-                    const postponedTime = new Date(now.getTime() + 10 * 60000);
-                    const entry = {
-                        id: null,
-                        reminder: { id: reminderId },
-                        status: 'postponed',
-                        scheduledTime: postponedTime.toISOString(),
-                        __optimistic: true
-                    };
-                    origPostpone.call(this, reminderId, card);
-                    addPendingEntry(dateKey, entry);
-
-                    setTimeout(() => {
-                        if (window.loadHistoryForDate) {
-                            window.loadHistoryForDate(window.selectedDay || new Date()).then(() => {
-                                const dateKey2 = (window.selectedDay || new Date()).toISOString().split('T')[0];
-                                const histories = window.historyMap && window.historyMap.get(dateKey2) || [];
-                                const found = histories.find(h => h.reminder && String(h.reminder.id) === String(reminderId) && h.id);
-                                if (found) removePendingEntry(dateKey2, reminderId);
-                            }).catch(()=>{});
-                        }
-                    }, 8000);
-
-                } catch(e) { console.error('pillo patch postpone error', e); origPostpone && origPostpone(reminderId, card); }
-            };
-        }
-
         const origMarkTaken = window.optimisticMarkTaken;
         if (typeof origMarkTaken === 'function') {
             window.optimisticMarkTaken = function(reminderId, card) {
@@ -4365,22 +4333,6 @@ function renderProfileContent() {
             };
         }
 
-        function patchOptimistic(fnName) {
-            const orig = window[fnName];
-            if (typeof orig !== 'function') return;
-            window[fnName] = function(reminderId, card) {
-                const localKey = localDateKey(window.selectedDay || new Date());
-                const res = orig.apply(this, [reminderId, card]);
-                try {
-                    if (!window.historyMap) window.historyMap = new Map();
-                    const isoKey = (window.selectedDay || new Date()).toISOString().split('T')[0];
-                    const maybe = window.historyMap.get(localKey) || window.historyMap.get(isoKey) || [];
-                    window.historyMap.set(localKey, maybe.slice());
-                    localStorage.setItem('lastHistoryUpdate', Date.now().toString());
-                } catch(e) { console.warn('localDateKey: optimistic patch error', e); }
-                return res;
-            };
-        }
         ['optimisticMarkTaken', 'optimisticMarkSkipped', 'optimisticPostponeReminder'].forEach(patchOptimistic);
 
         try { normalizeExistingHistoryMap(); } catch(e){}
@@ -4536,39 +4488,6 @@ function renderProfileContent() {
             };
         }
 
-        function patchOptimisticFn(fnName){
-            const orig = window[fnName];
-            if (typeof orig !== 'function') return;
-            window[fnName] = function(reminderId, card){
-                const ck = canonicalDateKey(window.selectedDay || new Date());
-                let ret;
-                try { ret = orig.apply(this, [reminderId, card]); } catch(e){ console.warn(fnName, 'orig failed', e); }
-                try {
-                    const now = new Date();
-                    const entry = {
-                        id: null,
-                        reminder: { id: reminderId },
-                        status: fnName === 'optimisticMarkTaken' ? 'taken' : (fnName === 'optimisticMarkSkipped' ? 'skipped' : 'postponed'),
-                        scheduledTime: (window.selectedDay ? new Date(Date.UTC(window.selectedDay.getFullYear(), window.selectedDay.getMonth(), window.selectedDay.getDate())).toISOString() : now.toISOString()),
-                        __optimistic: true
-                    };
-                    addPendingEntryForKey(ck, entry);
-                    window.historyMap = window.historyMap || new Map();
-                    const cur = window.historyMap.get(ck) || [];
-                    const idx = cur.findIndex(h => String(h.reminder?.id || '') === String(reminderId));
-                    if (idx !== -1) cur[idx] = Object.assign({}, cur[idx], entry);
-                    else cur.push(entry);
-                    window.historyMap.set(ck, cur);
-                    if (typeof window.renderGroupsForDate === 'function') window.renderGroupsForDate(window.selectedDay || new Date());
-                    setTimeout(() => {
-                        if (typeof window.loadHistoryForDate === 'function') {
-                            window.loadHistoryForDate(window.selectedDay || new Date()).catch(()=>{});
-                        }
-                    }, 5000);
-                } catch(e){ console.warn(fnName, 'optimistic patch failed', e); }
-                return ret;
-            };
-        }
         ['optimisticMarkTaken','optimisticMarkSkipped','optimisticPostponeReminder'].forEach(patchOptimisticFn);
 
         try {
