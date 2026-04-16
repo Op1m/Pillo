@@ -2374,8 +2374,9 @@ function setDateControlsVisible(visible) {
 
 function optimisticPostponeReminder(reminderId, card) {
     const now = new Date();
-    const postponedTime = new Date(now.getTime() + 10 * 60000);
+    const postponedTime = new Date(now.getTime() + 10 * 60000); // для оптимистичного UI
 
+    // Оптимистичное обновление карточки
     if (card) {
         card.classList.add('postponed');
         card.classList.remove('pending', 'taken', 'skipped', 'missed');
@@ -2387,6 +2388,7 @@ function optimisticPostponeReminder(reminderId, card) {
     }
 
     const token = localStorage.getItem('med_token');
+    const dateKey = selectedDay.toISOString().split('T')[0];
 
     fetch(`${API_BASE}/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
         method: 'POST',
@@ -2402,12 +2404,11 @@ function optimisticPostponeReminder(reminderId, card) {
         return res.json();
     })
     .then(data => {
-        const dateKey = selectedDay.toISOString().split('T')[0];
+        // Обновляем historyMap данными с сервера
         let histories = historyMap.get(dateKey) || [];
         const existingIndex = histories.findIndex(h =>
             h.reminder && String(h.reminder.id) === String(reminderId)
         );
-
         if (existingIndex >= 0) {
             histories[existingIndex] = data;
         } else {
@@ -2416,16 +2417,21 @@ function optimisticPostponeReminder(reminderId, card) {
         historyMap.set(dateKey, histories);
         historyCache.delete(dateKey);
 
+        // Обновляем карточку с точным временем из ответа сервера
         if (card) {
-            const postponedTime = new Date(data.scheduledTime);
+            const serverPostponedTime = new Date(data.scheduledTime);
             const statusSpan = card.querySelector('.med-status');
             if (statusSpan) {
-                statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+                statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${serverPostponedTime.getHours()}:${serverPostponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
             }
         }
+
+        // Перерисовываем текущий день, чтобы обновить все данные
+        renderGroupsForDate(selectedDay);
     })
     .catch(err => {
-        console.error(err);
+        console.error('Ошибка откладывания:', err);
+        // Откат изменений в карточке
         if (card) {
             card.classList.remove('postponed');
             card.classList.add('pending');
@@ -2434,6 +2440,7 @@ function optimisticPostponeReminder(reminderId, card) {
                 statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
             }
         }
+        alert('Не удалось отложить приём. Попробуйте ещё раз.');
     });
 }
 
