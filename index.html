@@ -2430,18 +2430,22 @@ function optimisticPostponeReminder(reminderId, card) {
         renderGroupsForDate(selectedDay);
     })
     .catch(err => {
-        console.error('Ошибка откладывания:', err);
-        // Откат изменений в карточке
-        if (card) {
-            card.classList.remove('postponed');
-            card.classList.add('pending');
-            const statusSpan = card.querySelector('.med-status');
-            if (statusSpan) {
-                statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
-            }
+    console.error('Ошибка откладывания:', err);
+    // Попробуем распарсить тело ответа, если оно есть
+    if (err.response) {
+        err.response.text().then(text => console.error('Ответ сервера:', text));
+    }
+    // Откат изменений в карточке
+    if (card) {
+        card.classList.remove('postponed');
+        card.classList.add('pending');
+        const statusSpan = card.querySelector('.med-status');
+        if (statusSpan) {
+            statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
         }
-        alert('Не удалось отложить приём. Попробуйте ещё раз.');
-    });
+    }
+    alert(`Не удалось отложить приём: ${err.message}`);
+});
 }
 
         async function optimisticDeleteReminder(reminderId) {
