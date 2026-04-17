@@ -2373,22 +2373,10 @@ function setDateControlsVisible(visible) {
 }
 
 function optimisticPostponeReminder(reminderId, card) {
-    const now = new Date();
-    const postponedTime = new Date(now.getTime() + 10 * 60000); // для оптимистичного UI
-
-    // Оптимистичное обновление карточки
-    if (card) {
-        card.classList.add('postponed');
-        card.classList.remove('pending', 'taken', 'skipped', 'missed');
-        const statusSpan = card.querySelector('.med-status');
-        if (statusSpan) {
-            statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
-        }
-        card.style.transform = 'translateX(0)';
-    }
-
     const token = localStorage.getItem('med_token');
     const dateKey = selectedDay.toISOString().split('T')[0];
+
+    debugLog && debugLog('🔄 POSTPONE', 'Starting for reminderId=' + reminderId);
 
     fetch(`${API_BASE}/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
         method: 'POST',
@@ -2403,44 +2391,73 @@ function optimisticPostponeReminder(reminderId, card) {
         }
         return res.json();
     })
-.then(data => {
-    // Принудительно ставим статус POSTPONED (на случай, если сервер вернул PENDING)
-    data.status = 'POSTPONED';
+    .then(data => {
+        debugLog && debugLog('✅ POSTPONE SUCCESS', 'scheduledTime=' + data.scheduledTime);
 
-    const dateKey = selectedDay.toISOString().split('T')[0];
-    let histories = historyMap.get(dateKey) || [];
-    histories = histories.filter(h => !h.reminder || String(h.reminder.id) !== String(reminderId));
-    histories.push(data);
-    historyMap.set(dateKey, histories);
-    historyCache.delete(dateKey);
+        // 🔥 Парсим дату (она в UTC с Z на конце)
+        const serverTime = new Date(data.scheduledTime);
 
-    // Обновляем карточку
-    if (card) {
-        const serverPostponedTime = new Date(data.scheduledTime + 'Z');
-        const statusSpan = card.querySelector('.med-status');
-        if (statusSpan) {
-            statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${serverPostponedTime.getHours()}:${serverPostponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+        // Проверяем валидность
+        if (isNaN(serverTime.getTime())) {
+            console.error('Invalid date:', data.scheduledTime);
+            throw new Error('Invalid date from server');
         }
-    }
 
-    // Перерисовываем текущий день
-    renderGroupsForDate(selectedDay);
+        // 🔥 ВАЖНО: Преобразуем в локальное время для отображения
+        const hours = serverTime.getHours();
+        const minutes = serverTime.getMinutes();
+        const timeStr = `${hours}:${minutes.toString().padStart(2, '0')}`;
 
-    // Дополнительно создаём "обычное" напоминание для бота с полным набором кнопок
-    fetch(`${API_BASE}/medicine-history/schedule`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('med_token')}`
-        },
-        body: JSON.stringify({
-            reminderId: reminderId,
-            scheduledTime: data.scheduledTime
-        })
-    }).catch(e => console.warn('Не удалось создать повторное уведомление для бота:', e));
-})
+        debugLog && debugLog('⏰ DISPLAY TIME', timeStr);
+
+        // Обновляем historyMap
+        let histories = historyMap.get(dateKey) || [];
+        histories = histories.filter(h => !h.reminder || String(h.reminder.id) !== String(reminderId));
+        histories.push(data);
+        historyMap.set(dateKey, histories);
+        historyCache.delete(dateKey);
+
+        // 🔥 Обновляем UI карточки
+        if (card) {
+            card.classList.add('postponed');
+            card.classList.remove('pending', 'taken', 'skipped', 'missed');
+
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-postponed status-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg> Отложено до ${timeStr}
+                </span>`;
+            }
+        }
+
+        // Перерисовываем
+        renderGroupsForDate(selectedDay);
+
+        debugLog && debugLog('✅ POSTPONE COMPLETE', 'UI updated');
+    })
+    .catch(err => {
+        debugLog && debugLog('❌ POSTPONE ERROR', err.message);
+        console.error('Postpone error:', err);
+
+        // Возвращаем карточку в исходное состояние при ошибке
+        if (card) {
+            card.classList.remove('postponed');
+            card.classList.add('pending');
+            const statusSpan = card.querySelector('.med-status');
+            if (statusSpan) {
+                statusSpan.innerHTML = `<span class="status-pending status-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#7a8fa8" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg> Ожидается
+                </span>`;
+            }
+        }
+    });
 }
-
         async function optimisticDeleteReminder(reminderId) {
             if (!reminderId) return;
 
