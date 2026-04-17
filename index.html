@@ -2404,6 +2404,8 @@ function optimisticPostponeReminder(reminderId, card) {
         return res.json();
     })
 .then(data => {
+    alert(`✅ Сервер вернул статус: ${data.status}, время: ${data.scheduledTime}`);
+
     const dateKey = selectedDay.toISOString().split('T')[0];
     let histories = historyMap.get(dateKey) || [];
 
@@ -2412,12 +2414,12 @@ function optimisticPostponeReminder(reminderId, card) {
         !h.reminder || String(h.reminder.id) !== String(reminderId)
     );
 
-    // Добавляем новую запись из ответа сервера
+    // Добавляем новую запись
     histories.push(data);
     historyMap.set(dateKey, histories);
     historyCache.delete(dateKey);
 
-    // Обновляем карточку с точным временем из ответа
+    // Обновляем карточку
     if (card) {
         const serverPostponedTime = new Date(data.scheduledTime + 'Z');
         const statusSpan = card.querySelector('.med-status');
@@ -2426,7 +2428,7 @@ function optimisticPostponeReminder(reminderId, card) {
         }
     }
 
-    // Перерисовываем текущий день
+    // Перерисовываем
     renderGroupsForDate(selectedDay);
 })
     .catch(err => {
