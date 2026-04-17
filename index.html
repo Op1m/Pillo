@@ -2404,22 +2404,14 @@ function optimisticPostponeReminder(reminderId, card) {
         return res.json();
     })
 .then(data => {
-    alert(`✅ Сервер вернул статус: ${data.status}, время: ${data.scheduledTime}`);
-
+    data.status = 'POSTPONED';   // <-- добавить
     const dateKey = selectedDay.toISOString().split('T')[0];
     let histories = historyMap.get(dateKey) || [];
-
-    // Удаляем все предыдущие записи для этого reminderId
-    histories = histories.filter(h =>
-        !h.reminder || String(h.reminder.id) !== String(reminderId)
-    );
-
-    // Добавляем новую запись
+    histories = histories.filter(h => !h.reminder || String(h.reminder.id) !== String(reminderId));
     histories.push(data);
     historyMap.set(dateKey, histories);
     historyCache.delete(dateKey);
 
-    // Обновляем карточку
     if (card) {
         const serverPostponedTime = new Date(data.scheduledTime + 'Z');
         const statusSpan = card.querySelector('.med-status');
@@ -2427,8 +2419,6 @@ function optimisticPostponeReminder(reminderId, card) {
             statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${serverPostponedTime.getHours()}:${serverPostponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
         }
     }
-
-    // Перерисовываем
     renderGroupsForDate(selectedDay);
 })
     .catch(err => {
