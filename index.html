@@ -2404,7 +2404,9 @@ function optimisticPostponeReminder(reminderId, card) {
         return res.json();
     })
 .then(data => {
-    data.status = 'POSTPONED';   // <-- добавить
+    // Принудительно ставим статус POSTPONED (на случай, если сервер вернул PENDING)
+    data.status = 'POSTPONED';
+
     const dateKey = selectedDay.toISOString().split('T')[0];
     let histories = historyMap.get(dateKey) || [];
     histories = histories.filter(h => !h.reminder || String(h.reminder.id) !== String(reminderId));
@@ -2412,6 +2414,7 @@ function optimisticPostponeReminder(reminderId, card) {
     historyMap.set(dateKey, histories);
     historyCache.delete(dateKey);
 
+    // Обновляем карточку
     if (card) {
         const serverPostponedTime = new Date(data.scheduledTime + 'Z');
         const statusSpan = card.querySelector('.med-status');
@@ -2419,24 +2422,23 @@ function optimisticPostponeReminder(reminderId, card) {
             statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${serverPostponedTime.getHours()}:${serverPostponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
         }
     }
+
+    // Перерисовываем текущий день
     renderGroupsForDate(selectedDay);
+
+    // Дополнительно создаём "обычное" напоминание для бота с полным набором кнопок
+    fetch(`${API_BASE}/medicine-history/schedule`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('med_token')}`
+        },
+        body: JSON.stringify({
+            reminderId: reminderId,
+            scheduledTime: data.scheduledTime
+        })
+    }).catch(e => console.warn('Не удалось создать повторное уведомление для бота:', e));
 })
-    .catch(err => {
-    console.error('Ошибка откладывания:', err);
-    // Попробуем распарсить тело ответа, если оно есть
-    if (err.response) {
-        err.response.text().then(text => console.error('Ответ сервера:', text));
-    }
-    // Откат изменений в карточке
-    if (card) {
-        card.classList.remove('postponed');
-        card.classList.add('pending');
-        const statusSpan = card.querySelector('.med-status');
-        if (statusSpan) {
-            statusSpan.innerHTML = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
-        }
-    }
-});
 }
 
         async function optimisticDeleteReminder(reminderId) {
