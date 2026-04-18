@@ -2373,10 +2373,22 @@ function setDateControlsVisible(visible) {
 }
 
 function optimisticPostponeReminder(reminderId, card) {
+    const now = new Date();
+    const postponedTime = new Date(now.getTime() + 10 * 60000); // для оптимистичного UI
+
+    // Оптимистичное обновление карточки
+    if (card) {
+        card.classList.add('postponed');
+        card.classList.remove('pending', 'taken', 'skipped', 'missed');
+        const statusSpan = card.querySelector('.med-status');
+        if (statusSpan) {
+            statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
+        }
+        card.style.transform = 'translateX(0)';
+    }
+
     const token = localStorage.getItem('med_token');
     const dateKey = selectedDay.toISOString().split('T')[0];
-
-    debugLog && debugLog('🔄 POSTPONE', 'Starting for reminderId=' + reminderId);
 
     fetch(`${API_BASE}/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
         method: 'POST',
@@ -2391,73 +2403,44 @@ function optimisticPostponeReminder(reminderId, card) {
         }
         return res.json();
     })
-    .then(data => {
-        debugLog && debugLog('✅ POSTPONE SUCCESS', 'scheduledTime=' + data.scheduledTime);
+.then(data => {
+    // Принудительно ставим статус POSTPONED (на случай, если сервер вернул PENDING)
+    data.status = 'POSTPONED';
 
-        // 🔥 Парсим дату (она в UTC с Z на конце)
-        const serverTime = new Date(data.scheduledTime);
+    const dateKey = selectedDay.toISOString().split('T')[0];
+    let histories = historyMap.get(dateKey) || [];
+    histories = histories.filter(h => !h.reminder || String(h.reminder.id) !== String(reminderId));
+    histories.push(data);
+    historyMap.set(dateKey, histories);
+    historyCache.delete(dateKey);
 
-        // Проверяем валидность
-        if (isNaN(serverTime.getTime())) {
-            console.error('Invalid date:', data.scheduledTime);
-            throw new Error('Invalid date from server');
+    // Обновляем карточку
+    if (card) {
+const serverPostponedTime = parseIsoSafe(data.scheduledTime);
+        const statusSpan = card.querySelector('.med-status');
+        if (statusSpan) {
+            statusSpan.innerHTML = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${serverPostponedTime.getHours()}:${serverPostponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
         }
+    }
 
-        // 🔥 ВАЖНО: Преобразуем в локальное время для отображения
-        const hours = serverTime.getHours();
-        const minutes = serverTime.getMinutes();
-        const timeStr = `${hours}:${minutes.toString().padStart(2, '0')}`;
+    // Перерисовываем текущий день
+    renderGroupsForDate(selectedDay);
 
-        debugLog && debugLog('⏰ DISPLAY TIME', timeStr);
-
-        // Обновляем historyMap
-        let histories = historyMap.get(dateKey) || [];
-        histories = histories.filter(h => !h.reminder || String(h.reminder.id) !== String(reminderId));
-        histories.push(data);
-        historyMap.set(dateKey, histories);
-        historyCache.delete(dateKey);
-
-        // 🔥 Обновляем UI карточки
-        if (card) {
-            card.classList.add('postponed');
-            card.classList.remove('pending', 'taken', 'skipped', 'missed');
-
-            const statusSpan = card.querySelector('.med-status');
-            if (statusSpan) {
-                statusSpan.innerHTML = `<span class="status-postponed status-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg> Отложено до ${timeStr}
-                </span>`;
-            }
-        }
-
-        // Перерисовываем
-        renderGroupsForDate(selectedDay);
-
-        debugLog && debugLog('✅ POSTPONE COMPLETE', 'UI updated');
-    })
-    .catch(err => {
-        debugLog && debugLog('❌ POSTPONE ERROR', err.message);
-        console.error('Postpone error:', err);
-
-        // Возвращаем карточку в исходное состояние при ошибке
-        if (card) {
-            card.classList.remove('postponed');
-            card.classList.add('pending');
-            const statusSpan = card.querySelector('.med-status');
-            if (statusSpan) {
-                statusSpan.innerHTML = `<span class="status-pending status-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#7a8fa8" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg> Ожидается
-                </span>`;
-            }
-        }
-    });
+    // Дополнительно создаём "обычное" напоминание для бота с полным набором кнопок
+    fetch(`${API_BASE}/medicine-history/schedule`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('med_token')}`
+        },
+        body: JSON.stringify({
+            reminderId: reminderId,
+            scheduledTime: data.scheduledTime
+        })
+    }).catch(e => console.warn('Не удалось создать повторное уведомление для бота:', e));
+})
 }
+
         async function optimisticDeleteReminder(reminderId) {
             if (!reminderId) return;
 
@@ -2683,6 +2666,11 @@ function optimisticPostponeReminder(reminderId, card) {
     }
 }
 
+function parseIsoSafe(value) {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function getStatusForReminderOnDate(reminder, date) {
     const dateKey = date.toISOString().split('T')[0];
     let histories = historyMap.get(dateKey) || [];
@@ -2821,7 +2809,7 @@ function renderGroupsForDate(date) {
                         statusHtml = `<span class="status-missed status-icon"><svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" fill="none"><path d="M18 6L6 18M6 6l12 12"/></svg> Пропущено</span>`;
                     } else if (status === 'postponed') {
                         const historyEntry = getHistoryForReminder(r, date);
-                        const postponedTime = historyEntry ? new Date(historyEntry.scheduledTime + 'Z') : new Date(Date.now() + 10*60000);
+const postponedTime = historyEntry ? parseIsoSafe(historyEntry.scheduledTime) : new Date(Date.now() + 10 * 60000);
                         statusHtml = `<span class="status-postponed status-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Отложено до ${postponedTime.getHours()}:${postponedTime.getMinutes().toString().padStart(2, '0')}</span>`;
                     } else {
                         statusHtml = `<span class="status-pending status-icon"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 4px;"><path d="M12 7V12L13.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#7a8fa8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Ожидается</span>`;
@@ -4915,204 +4903,6 @@ function renderProfileContent() {
         console.log('✅ PILLO: Патч часового пояса применён');
     })();
 </script>
-<!-- ВРЕМЕННЫЙ ОТЛАДОЧНЫЙ БЛОК -->
-<div id="debugConsole" style="
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    max-height: 200px;
-    background: #1a1a2e;
-    color: #00ff88;
-    font-family: monospace;
-    font-size: 11px;
-    padding: 8px;
-    overflow-y: auto;
-    z-index: 99999;
-    border-top: 2px solid #00ff88;
-    display: none;
-"></div>
 
-<button id="toggleDebug" style="
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
-    border-radius: 20px;
-    background: #1a1a2e;
-    color: #00ff88;
-    border: 1px solid #00ff88;
-    font-size: 16px;
-    font-weight: bold;
-    z-index: 999999;
-    cursor: pointer;
-">🐛</button>
-
-<script>
-    // ВРЕМЕННЫЙ ОТЛАДЧИК ДЛЯ TG WEBAPP
-    (function() {
-        const debugDiv = document.getElementById('debugConsole');
-        const toggleBtn = document.getElementById('toggleDebug');
-
-        let logs = [];
-        const MAX_LOGS = 50;
-
-        window.debugLog = function(type, ...args) {
-            const timestamp = new Date().toLocaleTimeString();
-            const message = args.map(a => {
-                if (typeof a === 'object') {
-                    try { return JSON.stringify(a, null, 2); }
-                    catch(e) { return String(a); }
-                }
-                return String(a);
-            }).join(' ');
-
-            const logEntry = `[${timestamp}] ${type}: ${message}`;
-            logs.push(logEntry);
-            if (logs.length > MAX_LOGS) logs.shift();
-
-            if (debugDiv) {
-                debugDiv.innerHTML = logs.map(l => `<div style="border-bottom:1px solid #333; padding:2px 0;">${l}</div>`).join('');
-                debugDiv.scrollTop = debugDiv.scrollHeight;
-            }
-
-            // Также выводим в обычную консоль если доступна
-            if (typeof console !== 'undefined' && console.log) {
-                console.log(`[${type}]`, ...args);
-            }
-        };
-
-        // Перехватываем fetch запросы
-        const originalFetch = window.fetch;
-        window.fetch = function(...args) {
-            const url = args[0];
-            const options = args[1] || {};
-
-            debugLog('📡 FETCH', options.method || 'GET', url);
-
-            if (options.body) {
-                try {
-                    debugLog('📤 BODY', JSON.parse(options.body));
-                } catch(e) {
-                    debugLog('📤 BODY', options.body);
-                }
-            }
-
-            return originalFetch.apply(this, args)
-                .then(async (response) => {
-                    const clonedResponse = response.clone();
-                    const text = await clonedResponse.text();
-
-                    debugLog('📥 RESPONSE', response.status, text.substring(0, 300));
-
-                    try {
-                        const json = JSON.parse(text);
-                        debugLog('✅ JSON', json);
-                    } catch(e) {
-                        // не JSON
-                    }
-
-                    return response;
-                })
-                .catch(err => {
-                    debugLog('❌ FETCH ERROR', err.message);
-                    throw err;
-                });
-        };
-
-        // Кнопка показа/скрытия
-        toggleBtn.addEventListener('click', () => {
-            if (debugDiv.style.display === 'none') {
-                debugDiv.style.display = 'block';
-                toggleBtn.textContent = '❌';
-                toggleBtn.style.background = '#2a2a4e';
-            } else {
-                debugDiv.style.display = 'none';
-                toggleBtn.textContent = '🐛';
-                toggleBtn.style.background = '#1a1a2e';
-            }
-        });
-
-        // Автоматически логируем ошибки
-        window.addEventListener('error', (e) => {
-            debugLog('❌ GLOBAL ERROR', e.message, 'at', e.filename, ':', e.lineno);
-        });
-
-        window.addEventListener('unhandledrejection', (e) => {
-            debugLog('❌ UNHANDLED PROMISE', e.reason);
-        });
-
-        // Патчим optimisticPostponeReminder для детального логирования
-        const originalPostpone = window.optimisticPostponeReminder;
-        if (typeof originalPostpone === 'function') {
-            window.optimisticPostponeReminder = function(reminderId, card) {
-                debugLog('🔄 POSTPONE', 'reminderId=' + reminderId);
-
-                const token = localStorage.getItem('med_token');
-
-                fetch(`${API_BASE}/medicine-history/reminder/${reminderId}/postpone?minutes=10`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
-                .then(async res => {
-                    const text = await res.text();
-                    debugLog('📦 RAW POSTPONE RESPONSE', text);
-
-                    if (!res.ok) {
-                        throw new Error(`HTTP ${res.status}: ${text}`);
-                    }
-
-                    return JSON.parse(text);
-                })
-                .then(data => {
-                    debugLog('✅ POSTPONE SUCCESS', 'id=' + data.id, 'scheduledTime=' + data.scheduledTime);
-
-                    const date = new Date(data.scheduledTime);
-                    debugLog('📅 PARSED DATE', date.toString(), 'valid=' + !isNaN(date.getTime()));
-
-                    const hours = date.getHours();
-                    const minutes = date.getMinutes();
-                    debugLog('⏰ TIME', hours + ':' + String(minutes).padStart(2, '0'));
-
-                    // Вызываем оригинальную логику обновления UI
-                    if (originalPostpone) {
-                        // Обновляем карточку
-                        const card = document.querySelector(`.med-card[data-id="${reminderId}"]`);
-                        if (card) {
-                            card.classList.add('postponed');
-                            card.classList.remove('pending', 'taken', 'skipped', 'missed');
-                            const statusSpan = card.querySelector('.med-status');
-                            if (statusSpan) {
-                                const timeStr = `${hours}:${String(minutes).padStart(2, '0')}`;
-                                statusSpan.innerHTML = `<span class="status-postponed status-icon">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"/>
-                                        <polyline points="12 6 12 12 16 14"/>
-                                    </svg> Отложено до ${timeStr}
-                                </span>`;
-                            }
-                        }
-
-                        // Обновляем historyMap
-                        const dateKey = selectedDay.toISOString().split('T')[0];
-                        let histories = historyMap.get(dateKey) || [];
-                        histories = histories.filter(h => !h.reminder || String(h.reminder.id) !== String(reminderId));
-                        histories.push(data);
-                        historyMap.set(dateKey, histories);
-                        historyCache.delete(dateKey);
-                    }
-
-                    renderGroupsForDate(selectedDay);
-                })
-                .catch(err => {
-                    debugLog('❌ POSTPONE ERROR', err.message);
-                });
-            };
-        }
-
-        debugLog('🐛 DEBUG', 'Отладчик активирован. Нажмите кнопку 🐛 чтобы показать/скрыть логи');
-    })();
-</script>
 </body>
 </html>
