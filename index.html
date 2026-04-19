@@ -1706,6 +1706,20 @@
     flex: 1;
     overflow-y: auto;
     padding: 0 16px 8px;
+    -webkit-overflow-scrolling: touch;  /* ← добавить */
+    overscroll-behavior: contain;       /* ← добавить */
+}
+
+.bottom-sheet-detail {
+    /* ... существующие стили ... */
+    -webkit-overflow-scrolling: touch;  /* ← добавить */
+    overscroll-behavior: contain;       /* ← добавить */
+}
+
+.courses-list, .medicines-list {
+    overflow-y: auto;
+    max-height: 100%;
+    -webkit-overflow-scrolling: touch;  /* ← добавить */
 }
 .courses-list, .medicines-list {
     overflow-y: auto;
@@ -2234,6 +2248,8 @@
         let isSwipingOnCard = false;
         let isAnimatingDayChange = false;
 
+        let editingMedicineId = null;
+
         let currentCourses = [];
     let currentMedicines = []; // отдельные препараты
     let editingCourseId = null;
@@ -2278,6 +2294,17 @@ async function fetchCourses() {
             return [];
         }
     }
+
+    function openEditMedicineSheet(medicine) {
+    document.getElementById('medName').value = medicine.name || '';
+    document.getElementById('medDose').value = medicine.dosage || '';
+    document.getElementById('medFood').value = medicine.instructions || 'во время еды';
+    // время не редактируется, можно оставить дефолт
+    document.getElementById('medTime').value = '08:30';
+    editingMedicineId = medicine.id;
+    document.querySelector('#createMedSheet .sheet-detail-title').textContent = 'Редактировать препарат';
+    document.getElementById('createMedSheet').style.display = 'flex';
+}
 
     async function fetchMedicines() {
         try {
@@ -3496,18 +3523,40 @@ function calculateMedicationStats(reminderId) {
             if (medFoodSelect) medFoodSelect.value = 'во время еды';
             if (createMedSheet) createMedSheet.style.display = 'flex';
         }
-        function closeCreateSheet() { if (createMedSheet) createMedSheet.style.display = 'none'; }
+function closeCreateSheet() {
+    if (createMedSheet) createMedSheet.style.display = 'none';
+    editingMedicineId = null;
+    document.querySelector('#createMedSheet .sheet-detail-title').textContent = 'Новый препарат';
+}
 
-        saveCreateMed?.addEventListener('click', () => {
-            const name = medNameInput?.value?.trim();
-            if (!name) return;
-            const dose = medDoseInput?.value?.trim() || '1 таб.';
-            const time = medTimeInput?.value;
-            if (!time) return;
-            const food = medFoodSelect?.value;
-            createMedicineAndReminder(name, dose, time, food);
-            closeCreateSheet();
-        });
+        saveCreateMed?.addEventListener('click', async () => {
+    const name = medNameInput?.value?.trim();
+    if (!name) return;
+    const dose = medDoseInput?.value?.trim() || '1 таб.';
+    const time = medTimeInput?.value;
+    const food = medFoodSelect?.value;
+
+    try {
+        if (editingMedicineId) {
+            // Редактирование существующего
+            await apiFetch(`/medicines/${editingMedicineId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ name, dosage: dose, instructions: food })
+            });
+            editingMedicineId = null;
+        } else {
+            // Создание нового
+            await createMedicineAndReminder(name, dose, time || '08:30', food);
+        }
+        closeCreateSheet();
+        // Если открыта вкладка "Препараты", обновить список
+        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
+            loadAndRenderMedicines();
+        }
+    } catch (e) {
+        alert('Ошибка: ' + e.message);
+    }
+});
         cancelCreateMed?.addEventListener('click', closeCreateSheet);
         closeCreateMed?.addEventListener('click', closeCreateSheet);
         infoCreateMed?.addEventListener('click', () => {  });
@@ -3659,17 +3708,33 @@ function calculateMedicationStats(reminderId) {
 
 function updatePlusButton(activeTab) {
     const plusBtn = document.getElementById('plusBtn');
+    if (!plusBtn) return;
+
+    // Удаляем старые обработчики (на всякий случай)
+    const newPlusBtn = plusBtn.cloneNode(true);
+    plusBtn.parentNode.replaceChild(newPlusBtn, plusBtn);
+
     if (activeTab === 'home') {
-        plusBtn.onclick = () => { if (addChoiceSheet) addChoiceSheet.style.display = 'flex'; };
+        newPlusBtn.onclick = (e) => {
+            e.stopPropagation();
+            const addChoiceSheet = document.getElementById('addChoiceSheet');
+            if (addChoiceSheet) addChoiceSheet.style.display = 'flex';
+        };
     } else if (activeTab === 'stats') {
         const activeTabBtn = document.querySelector('.tab-btn.active');
         if (activeTabBtn && activeTabBtn.dataset.tab === 'courses') {
-            plusBtn.onclick = () => openCourseSheet();
+            newPlusBtn.onclick = (e) => {
+                e.stopPropagation();
+                openCourseSheet();
+            };
         } else {
-            plusBtn.onclick = () => openCreateMedSheet();
+            newPlusBtn.onclick = (e) => {
+                e.stopPropagation();
+                openCreateMedSheet();
+            };
         }
-    } else {
-        plusBtn.onclick = null;
+    } else if (activeTab === 'profile') {
+        newPlusBtn.onclick = null;
     }
 }
 
@@ -3698,6 +3763,7 @@ function setActiveTab(tabId) {
         contentDiv.innerHTML = '';
         dynamicContent.appendChild(contentDiv);
 
+        // Принудительно перезагружаем историю и рендерим
         const dateKey = selectedDay.toISOString().split('T')[0];
         historyCache.delete(dateKey);
         loadHistoryForDate(selectedDay).then(() => {
@@ -3857,16 +3923,16 @@ async function loadAndRenderCourses() {
             if (course) openCourseSheet(course);
         });
     });
-    document.querySelectorAll('.delete-course').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            const courseId = btn.dataset.courseId;
-            if (confirm('Деактивировать курс? Напоминания будут удалены.')) {
-                await deleteCourse(courseId);
-                await loadAndRenderCourses();
-            }
-        });
+document.querySelectorAll('.delete-course').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const courseId = btn.dataset.courseId;
+        if (confirm('Деактивировать курс? Напоминания будут удалены.')) {
+            await deleteCourse(courseId);
+            await loadAndRenderCourses(); // ← обновляем список
+        }
     });
+});
 }
 
 async function loadAndRenderMedicines() {
@@ -3891,7 +3957,31 @@ async function loadAndRenderMedicines() {
     });
     html += `</div>`;
     container.innerHTML = html;
-    // Обработчики редактирования/удаления препаратов (можно добавить позже)
+
+    // Обработчики редактирования
+    container.querySelectorAll('.edit-medicine').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            const med = currentMedicines.find(m => m.id == id);
+            if (med) openEditMedicineSheet(med);
+        });
+    });
+    // Обработчики удаления
+    container.querySelectorAll('.delete-medicine').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            if (confirm('Удалить препарат?')) {
+                try {
+                    await apiFetch(`/medicines/${id}`, { method: 'DELETE' });
+                    await loadAndRenderMedicines();
+                } catch (e) {
+                    alert('Ошибка удаления');
+                }
+            }
+        });
+    });
 }
 
     // Функции для sheets курсов
@@ -3930,22 +4020,25 @@ async function loadAndRenderMedicines() {
         document.getElementById('courseSheet').style.display = 'none';
     });
     document.getElementById('saveCourseBtn').addEventListener('click', async () => {
-        const name = document.getElementById('courseName').value.trim();
-        const startDate = document.getElementById('courseStartDate').value;
-        const endDate = document.getElementById('courseEndDate').value;
-        if (!name || !startDate || !endDate) return alert('Заполните все поля');
-        try {
-            if (editingCourseId) {
-                // PUT запрос (если есть)
-            } else {
-                await createCourse(name, startDate, endDate);
-            }
-            document.getElementById('courseSheet').style.display = 'none';
-            loadAndRenderCourses();
-        } catch (e) {
-            alert('Ошибка: ' + e.message);
+    const name = document.getElementById('courseName').value.trim();
+    const startDate = document.getElementById('courseStartDate').value;
+    const endDate = document.getElementById('courseEndDate').value;
+    if (!name || !startDate || !endDate) return alert('Заполните все поля');
+    try {
+        let course;
+        if (editingCourseId) {
+            course = await updateCourse(editingCourseId, name, startDate, endDate);
+        } else {
+            course = await createCourse(name, startDate, endDate);
+            editingCourseId = course.id;
         }
-    });
+        await regenerateRemindersForCourse(course.id);
+        document.getElementById('courseSheet').style.display = 'none';
+        loadAndRenderCourses();
+    } catch (e) {
+        alert('Ошибка: ' + e.message);
+    }
+});
 
 async function loadExistingMedicinesForSelect() {
     const medicines = await fetchMedicines();
@@ -3956,6 +4049,7 @@ async function loadExistingMedicinesForSelect() {
 function openCourseMedicationSheet(medication = null) {
     editingCourseMedication = medication;
     document.getElementById('courseMedicationSheet').style.display = 'flex';
+
     // Сброс полей
     document.getElementById('courseMedType').value = 'new';
     document.getElementById('newMedFields').style.display = 'block';
@@ -3970,7 +4064,6 @@ function openCourseMedicationSheet(medication = null) {
     document.getElementById('intervalDaysGroup').style.display = 'none';
 
     if (medication) {
-        // Заполнить поля для редактирования (можно расширить)
         document.getElementById('courseMedName').value = medication.medicineName || '';
         document.getElementById('courseMedDosage').value = medication.dosage || '';
         document.getElementById('courseMedInstructions').value = medication.instructions || '';
@@ -3979,12 +4072,19 @@ function openCourseMedicationSheet(medication = null) {
         document.getElementById('courseMedScheduleType').value = medication.scheduleType || 'EVERY_DAY';
         document.getElementById('courseMedIntervalDays').value = medication.intervalDays || 1;
         document.getElementById('intervalDaysGroup').style.display = medication.scheduleType === 'EVERY_DAY' ? 'none' : 'block';
-        // Для существующего препарата можно скрыть поля нового
+
         if (medication.medicineId) {
             document.getElementById('courseMedType').value = 'existing';
             document.getElementById('newMedFields').style.display = 'none';
             document.getElementById('existingMedFields').style.display = 'block';
-            // Выбрать нужный препарат в селекте
+            // После загрузки списка выберем нужный препарат
+            loadExistingMedicinesForSelect().then(() => {
+                document.getElementById('existingMedSelect').value = medication.medicineId;
+            });
+        } else {
+            document.getElementById('courseMedType').value = 'new';
+            document.getElementById('newMedFields').style.display = 'block';
+            document.getElementById('existingMedFields').style.display = 'none';
         }
     }
 
@@ -3999,33 +4099,43 @@ function openCourseMedicationSheet(medication = null) {
         openCourseMedicationSheet();
     });
 
-    function openCourseMedicationSheet(medication = null) {
-        editingCourseMedication = medication;
-        document.getElementById('courseMedicationSheet').style.display = 'flex';
-        // Заполнить поля, если редактирование
-    }
-
     document.getElementById('closeCourseMedSheet').addEventListener('click', () => {
         document.getElementById('courseMedicationSheet').style.display = 'none';
     });
     document.getElementById('saveCourseMedBtn').addEventListener('click', async () => {
-        const data = {
-            medicineName: document.getElementById('courseMedName').value,
-            dosage: document.getElementById('courseMedDosage').value,
-            instructions: document.getElementById('courseMedInstructions').value,
-            mealMode: document.getElementById('courseMedMealMode').value,
-            timeOfDay: document.getElementById('courseMedTime').value,
-            scheduleType: document.getElementById('courseMedScheduleType').value,
-            intervalDays: parseInt(document.getElementById('courseMedIntervalDays').value) || 1
-        };
-        try {
-            await addMedicationToCourse(editingCourseId, data);
-            document.getElementById('courseMedicationSheet').style.display = 'none';
-            loadCourseMedications(editingCourseId);
-        } catch (e) {
-            alert('Ошибка: ' + e.message);
+    const type = document.getElementById('courseMedType').value;
+    let medicationData = {
+        mealMode: document.getElementById('courseMedMealMode').value,
+        timeOfDay: document.getElementById('courseMedTime').value,
+        scheduleType: document.getElementById('courseMedScheduleType').value,
+        intervalDays: parseInt(document.getElementById('courseMedIntervalDays').value) || 1
+    };
+
+    if (type === 'new') {
+        medicationData.medicineName = document.getElementById('courseMedName').value.trim();
+        medicationData.dosage = document.getElementById('courseMedDosage').value.trim();
+        medicationData.instructions = document.getElementById('courseMedInstructions').value.trim();
+        if (!medicationData.medicineName) return alert('Введите название');
+    } else {
+        const existingId = document.getElementById('existingMedSelect').value;
+        if (!existingId) return alert('Выберите препарат');
+        medicationData.medicineId = existingId;
+    }
+
+    try {
+        if (editingCourseMedication) {
+            await updateCourseMedication(editingCourseId, editingCourseMedication.id, medicationData);
+        } else {
+            await addMedicationToCourse(editingCourseId, medicationData);
         }
-    });
+        // ВАЖНО: регенерируем напоминания после изменения
+        await regenerateRemindersForCourse(editingCourseId);
+        document.getElementById('courseMedicationSheet').style.display = 'none';
+        loadCourseMedications(editingCourseId);
+    } catch (e) {
+        alert('Ошибка: ' + e.message);
+    }
+});
 
     // Показать/скрыть поле интервала в зависимости от типа расписания
     document.getElementById('courseMedScheduleType').addEventListener('change', (e) => {
