@@ -3671,14 +3671,17 @@ function setActiveTab(tabId) {
     monthBar.style.display = '';
     weekRow.style.display = '';
     dividerLight.style.display = '';
+
+    // 🔥 ВАЖНО: Полностью очищаем contentDiv от любого мусора
+    contentDiv.innerHTML = '';
     contentDiv.style.display = '';
 
     if (dynamicContent) {
-        // Полностью очищаем контейнер
+        // Полностью очищаем dynamicContent
         while (dynamicContent.firstChild) {
             dynamicContent.removeChild(dynamicContent.firstChild);
         }
-        // Добавляем ТОЛЬКО contentDiv
+        // Добавляем ОЧИЩЕННЫЙ contentDiv
         dynamicContent.appendChild(contentDiv);
     }
 
@@ -3691,12 +3694,6 @@ function setActiveTab(tabId) {
     });
 
     updatePlusButton('home');
-
-    // Дополнительная защита: удаляем классы табов, если они каким-то образом появились
-    const tabsContainer = document.querySelector('.tabs-container');
-    if (tabsContainer) tabsContainer.remove();
-    const tabContent = document.getElementById('tabContent');
-    if (tabContent) tabContent.remove();
 } else if (active === 'stats') {
         monthBar.style.display = 'none';
         weekRow.style.display = 'none';
