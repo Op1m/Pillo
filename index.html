@@ -3053,7 +3053,12 @@ function getStatusForReminderOnDate(reminder, date) {
         }
 
 function renderGroupsForDate(date) {
-    if (!contentDiv) return;
+    const contentDiv = document.getElementById('content');
+    if (!contentDiv) {
+        console.warn('contentDiv not found, retrying...');
+        setTimeout(() => renderGroupsForDate(date), 50);
+        return;
+    }
     const filtered = remindersForDate(date);
 
     filtered.forEach(r => {
@@ -3763,7 +3768,6 @@ function setActiveTab(tabId) {
     const monthBar = document.getElementById('monthBar');
     const weekRow = document.getElementById('weekRow');
     const dividerLight = document.getElementById('dividerLight');
-    const contentDiv = document.getElementById('content');
     const dynamicContent = document.getElementById('dynamicContent');
 
     // Всегда полностью очищаем dynamicContent
@@ -3776,42 +3780,35 @@ function setActiveTab(tabId) {
         weekRow.style.display = '';
         dividerLight.style.display = '';
 
-        // Восстанавливаем контент главной
-        contentDiv.innerHTML = '';
-        contentDiv.style.display = ''; // ← важно!
+        // Создаём новый content div для главной
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'content';
+        contentDiv.id = 'content';
         dynamicContent.appendChild(contentDiv);
 
         // Принудительно перезагружаем историю и рендерим
-        const dateKey = selectedDay.toISOString().split('T')[0];
-        historyCache.delete(dateKey);
-
-        // Дожидаемся загрузки и рендерим
-        loadHistoryForDate(selectedDay).then(() => {
-            renderGroupsForDate(selectedDay);
-        });
+        if (selectedDay) {
+            const dateKey = selectedDay.toISOString().split('T')[0];
+            historyCache.delete(dateKey);
+            loadHistoryForDate(selectedDay).then(() => {
+                renderGroupsForDate(selectedDay);
+            });
+        }
 
         updatePlusButton('home');
+
     } else if (active === 'stats') {
         monthBar.style.display = 'none';
         weekRow.style.display = 'none';
         dividerLight.style.display = 'none';
 
-        // Скрываем contentDiv, но не удаляем из DOM
-        if (contentDiv.parentNode) {
-            contentDiv.remove();
-        }
-
         renderCoursesAndMedsTabs();
         updatePlusButton('stats');
+
     } else if (active === 'profile') {
         monthBar.style.display = 'none';
         weekRow.style.display = 'none';
         dividerLight.style.display = 'none';
-
-        // Скрываем contentDiv, но не удаляем из DOM
-        if (contentDiv.parentNode) {
-            contentDiv.remove();
-        }
 
         renderProfileContent();
         updatePlusButton('profile');
@@ -3829,6 +3826,19 @@ function setActiveTab(tabId) {
                 const addChoiceSheet = document.getElementById('addChoiceSheet');
                 if (addChoiceSheet) addChoiceSheet.style.display = 'flex';
             };
+        } else if (active === 'stats') {
+            const activeTabBtn = document.querySelector('.tab-btn.active');
+            if (activeTabBtn && activeTabBtn.dataset.tab === 'courses') {
+                newPlusBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openCourseSheet();
+                };
+            } else {
+                newPlusBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openCreateMedSheet();
+                };
+            }
         }
     }
 }
@@ -3899,6 +3909,8 @@ function calculateCourseProgress(course) {
 
     function renderCoursesAndMedsTabs() {
     const dynamicContent = document.getElementById('dynamicContent');
+    if (!dynamicContent) return;
+
     dynamicContent.innerHTML = `
         <div class="tabs-container">
             <button class="tab-btn active" data-tab="courses">Курсы</button>
@@ -3925,8 +3937,12 @@ function calculateCourseProgress(course) {
 }
 
 async function loadAndRenderCourses() {
-    currentCourses = await fetchCourses();
     const container = document.getElementById('tabContent');
+    if (!container) {
+        console.warn('tabContent not found');
+        return;
+    }
+    currentCourses = await fetchCourses();
     if (!currentCourses.length) {
         container.innerHTML = `<div class="empty-state"><p>Нет активных курсов</p></div>`;
         return;
@@ -3983,8 +3999,12 @@ document.querySelectorAll('.delete-course').forEach(btn => {
 }
 
 async function loadAndRenderMedicines() {
-    currentMedicines = await fetchMedicines();
     const container = document.getElementById('tabContent');
+    if (!container) {
+        console.warn('tabContent not found');
+        return;
+    }
+    currentMedicines = await fetchMedicines();
     if (!currentMedicines.length) {
         container.innerHTML = `<div class="empty-state"><p>Нет препаратов</p></div>`;
         return;
@@ -4202,31 +4222,46 @@ function openCourseMedicationSheet(medication = null) {
 }
 
 function renderProfileContent() {
-            if (!contentDiv) return;
-            if (!currentUser) {
-                contentDiv.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">Пользователь не авторизован</div>';
-                return;
-            }
+    const dynamicContent = document.getElementById('dynamicContent');
+    if (!dynamicContent) return;
 
-            const firstName = currentUser.firstName || currentUser.username || 'Пользователь';
-            const photoUrl = currentUser.photoUrl || '';
+    // Создаём контейнер для профиля
+    const profileContainer = document.createElement('div');
+    profileContainer.className = 'content';
+    profileContainer.style.padding = '20px';
+    profileContainer.style.textAlign = 'center';
 
-            let avatarHtml = '';
-            if (photoUrl) {
-                avatarHtml = `<div style="width:120px;height:120px;margin:0 auto 20px;border-radius:60px;background-size:cover;background-position:center;background-image:url('${photoUrl}')"></div>`;
-            } else {
-                const initial = (firstName[0] || '?').toUpperCase();
-                avatarHtml = `<div style="width:120px;height:120px;margin:0 auto 20px;border-radius:60px;background:#e1efff;display:flex;align-items:center;justify-content:center;font-size:48px;color:#1f5080;">${initial}</div>`;
-            }
+    if (!currentUser) {
+        profileContainer.innerHTML = '<div style="padding:30px; text-align:center; color:#6f8fb0;">Пользователь не авторизован</div>';
+        dynamicContent.appendChild(profileContainer);
+        return;
+    }
 
-            contentDiv.innerHTML = `
-                <div style="padding:20px;text-align:center;">
-                    ${avatarHtml}
-                    <div style="font-weight:700;font-size:24px;color:#01254a;margin-bottom:10px;">${escapeHtml(firstName)}</div>
-                    <div style="color:#6f8fb0;font-size:16px;">Ваш профиль</div>
-                </div>
-            `;
-        }
+    const firstName = currentUser.firstName || currentUser.username || 'Пользователь';
+    const photoUrl = currentUser.photoUrl || '';
+
+    let avatarHtml = '';
+    if (photoUrl) {
+        avatarHtml = `<div style="width:120px;height:120px;margin:0 auto 20px;border-radius:60px;background-size:cover;background-position:center;background-image:url('${photoUrl}')"></div>`;
+    } else {
+        const initial = (firstName[0] || '?').toUpperCase();
+        avatarHtml = `<div style="width:120px;height:120px;margin:0 auto 20px;border-radius:60px;background:#e1efff;display:flex;align-items:center;justify-content:center;font-size:48px;color:#1f5080;">${initial}</div>`;
+    }
+
+    profileContainer.innerHTML = `
+        <div style="padding:20px;text-align:center;">
+            ${avatarHtml}
+            <div style="font-weight:700;font-size:24px;color:#01254a;margin-bottom:10px;">${escapeHtml(firstName)}</div>
+            <div style="color:#6f8fb0;font-size:16px;">Ваш профиль</div>
+            <div style="margin-top:30px;padding:20px;background:#f5f8ff;border-radius:20px;">
+                <div style="color:#1d4d7c;font-size:14px;">ID пользователя</div>
+                <div style="font-weight:600;color:#01254a;margin-top:5px;">${currentUser.id || '—'}</div>
+            </div>
+        </div>
+    `;
+
+    dynamicContent.appendChild(profileContainer);
+}
 
         function renderCoursesContent() {
             if (!contentDiv) return;
@@ -4262,26 +4297,35 @@ document.getElementById('navHome')?.addEventListener('click', () => {
         document.getElementById('navProfile')?.addEventListener('click', () => setActiveTab('navProfile'));
 
 
-        (async function init() {
-            const savedUser = localStorage.getItem(USER_KEY);
-            if (savedUser) {
-                try {
-                    currentUser = safeJSONParse(savedUser);
-                    window.currentUser = currentUser;
-                    authToken = localStorage.getItem(TOKEN_KEY);
-                    updateUserInfo(currentUser);
-                    await loadInitialData();
-                    startAutoRefresh();
-                    setupSSE();
-                } catch (e) { console.warn('Ошибка парсинга пользователя', e); }
-            }
-            if (!currentUser) {
-                await loginWithTelegram();
-                await loadInitialData();
-                startAutoRefresh();
-                setupSSE();
-            }
-        })();
+(async function init() {
+    const savedUser = localStorage.getItem(USER_KEY);
+    if (savedUser) {
+        try {
+            currentUser = safeJSONParse(savedUser);
+            window.currentUser = currentUser;
+            authToken = localStorage.getItem(TOKEN_KEY);
+            updateUserInfo(currentUser);
+            await loadInitialData();
+            startAutoRefresh();
+            setupSSE();
+
+            // Убеждаемся, что главная отрендерилась
+            setTimeout(() => {
+                if (selectedDay) {
+                    renderGroupsForDate(selectedDay);
+                }
+            }, 100);
+        } catch (e) {
+            console.warn('Ошибка парсинга пользователя', e);
+        }
+    }
+    if (!currentUser) {
+        await loginWithTelegram();
+        await loadInitialData();
+        startAutoRefresh();
+        setupSSE();
+    }
+})();
 
         let tapCount = 0;
         let tapTimer = null;
