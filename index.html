@@ -1700,6 +1700,16 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;  /* важно для flex-прокрутки */
+}
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px 8px;
+}
+.courses-list, .medicines-list {
+    overflow-y: auto;
+    max-height: 100%;
 }
     </style>
 </head>
@@ -3632,7 +3642,6 @@ function calculateMedicationStats(reminderId) {
 function updatePlusButton(activeTab) {
         const plusBtn = document.getElementById('plusBtn');
         if (activeTab === 'home') {
-            plusBtn.onclick = () => { document.getElementById('addChoiceSheet').style.display = 'flex'; };
         } else if (activeTab === 'stats') {
             // В зависимости от активного таба (курсы/препараты) меняем действие
             const activeTabBtn = document.querySelector('.tab-btn.active');
@@ -3657,40 +3666,45 @@ function setActiveTab(tabId) {
     const contentDiv = document.getElementById('content');
     const dynamicContent = document.getElementById('dynamicContent');
 
-if (active === 'home') {
-    monthBar.style.display = '';
-    weekRow.style.display = '';
-    dividerLight.style.display = '';
+    if (active === 'home') {
+        monthBar.style.display = '';
+        weekRow.style.display = '';
+        dividerLight.style.display = '';
 
-    // Восстанавливаем contentDiv
-    contentDiv.style.display = '';
+        // Восстанавливаем contentDiv
+        contentDiv.style.display = '';
 
-    if (dynamicContent) {
-        // Полностью очищаем контейнер
-        while (dynamicContent.firstChild) {
-            dynamicContent.removeChild(dynamicContent.firstChild);
+        if (dynamicContent) {
+            // Полностью удаляем все дочерние элементы
+            while (dynamicContent.firstChild) {
+                dynamicContent.removeChild(dynamicContent.firstChild);
+            }
+            // Возвращаем contentDiv на место
+            dynamicContent.appendChild(contentDiv);
         }
-        // Возвращаем contentDiv на место
-        dynamicContent.appendChild(contentDiv);
-    }
 
-    // Принудительно обновляем данные
-    const dateKey = selectedDay.toISOString().split('T')[0];
-    historyCache.delete(dateKey);
+        // Принудительно обновляем данные
+        const dateKey = selectedDay.toISOString().split('T')[0];
+        historyCache.delete(dateKey);
 
-    // Небольшая задержка, чтобы DOM обновился
-    setTimeout(() => {
         loadHistoryForDate(selectedDay).then(() => {
             renderGroupsForDate(selectedDay);
         });
-    }, 10);
 
-    updatePlusButton('home');
-} else if (active === 'stats') {
+        updatePlusButton('home');
+    } else if (active === 'stats') {
         monthBar.style.display = 'none';
         weekRow.style.display = 'none';
         dividerLight.style.display = 'none';
         if (contentDiv) contentDiv.style.display = 'none';
+
+        // Очищаем dynamicContent перед рендерингом табов
+        if (dynamicContent) {
+            while (dynamicContent.firstChild) {
+                dynamicContent.removeChild(dynamicContent.firstChild);
+            }
+        }
+
         renderCoursesAndMedsTabs();
         updatePlusButton('stats');
     } else if (active === 'profile') {
@@ -3698,6 +3712,15 @@ if (active === 'home') {
         weekRow.style.display = 'none';
         dividerLight.style.display = 'none';
         if (contentDiv) contentDiv.style.display = 'none';
+
+        if (dynamicContent) {
+            while (dynamicContent.firstChild) {
+                dynamicContent.removeChild(dynamicContent.firstChild);
+            }
+            // Для профиля просто показываем контент
+            dynamicContent.appendChild(contentDiv);
+        }
+
         renderProfileContent();
         updatePlusButton('profile');
     }
