@@ -4332,46 +4332,6 @@ document.getElementById('saveCourseBtn').addEventListener('click', async () => {
     }
 });
 
-    // Закрываем sheet
-    document.getElementById('courseSheet').style.display = 'none';
-
-    // Добавляем в список оптимистично
-    currentCourses.push(tempCourse);
-    if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
-        renderCoursesListOptimistic(currentCourses);
-    }
-
-    try {
-        let course;
-        if (editingCourseId) {
-            course = await updateCourse(editingCourseId, name, startDate, endDate);
-        } else {
-            course = await createCourse(name, startDate, endDate);
-        }
-
-        // Заменяем временный курс на реальный
-        const index = currentCourses.findIndex(c => c.id === tempId);
-        if (index !== -1) {
-            currentCourses[index] = course;
-        }
-        editingCourseId = course.id;
-
-        // Регенерируем напоминания
-        await regenerateRemindersForCourse(course.id);
-
-        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
-            renderCoursesListOptimistic(currentCourses);
-        }
-    } catch (e) {
-        // Откат
-        currentCourses = currentCourses.filter(c => c.id !== tempId);
-        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
-            renderCoursesListOptimistic(currentCourses);
-        }
-        alert('Ошибка: ' + e.message);
-    }
-});
-
 async function loadExistingMedicinesForSelect() {
     const medicines = await fetchMedicines();
     const select = document.getElementById('existingMedSelect');
