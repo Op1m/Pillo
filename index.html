@@ -1692,6 +1692,15 @@
             justify-content: center;
             cursor: pointer;
         }
+        .bottom-nav {
+    flex-shrink: 0;
+}
+#dynamicContent {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
     </style>
 </head>
 <body>
@@ -3648,18 +3657,23 @@ function setActiveTab(tabId) {
     const contentDiv = document.getElementById('content');
     const dynamicContent = document.getElementById('dynamicContent');
 
-    if (active === 'home') {
-        monthBar.style.display = '';
-        weekRow.style.display = '';
-        dividerLight.style.display = '';
-        contentDiv.style.display = '';
-        if (dynamicContent) {
-            dynamicContent.innerHTML = '';
-            dynamicContent.appendChild(contentDiv);
-        }
+if (active === 'home') {
+    monthBar.style.display = '';
+    weekRow.style.display = '';
+    dividerLight.style.display = '';
+    contentDiv.style.display = '';
+    if (dynamicContent) {
+        dynamicContent.innerHTML = '';
+        dynamicContent.appendChild(contentDiv);
+    }
+    // Принудительно обновим историю
+    const dateKey = selectedDay.toISOString().split('T')[0];
+    historyCache.delete(dateKey);
+    loadHistoryForDate(selectedDay).then(() => {
         renderGroupsForDate(selectedDay);
-        updatePlusButton('home');
-    } else if (active === 'stats') {
+    });
+    updatePlusButton('home');
+} else if (active === 'stats') {
         monthBar.style.display = 'none';
         weekRow.style.display = 'none';
         dividerLight.style.display = 'none';
