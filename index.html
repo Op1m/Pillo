@@ -519,6 +519,23 @@
     cursor: pointer;
     transition: background 0.2s, transform 0.1s;
 }
+.courses-list, .medicines-list {
+    overflow-y: auto;
+    max-height: 100%;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 16px;
+    /* Важно: задаём высоту относительно родителя */
+    height: 100%;
+    flex: 1;
+}
+
+#tabContent {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
 .btn-outline:active {
     background: #d4e3ff;
     transform: scale(0.94);
@@ -3761,11 +3778,14 @@ function setActiveTab(tabId) {
 
         // Восстанавливаем контент главной
         contentDiv.innerHTML = '';
+        contentDiv.style.display = ''; // ← важно!
         dynamicContent.appendChild(contentDiv);
 
         // Принудительно перезагружаем историю и рендерим
         const dateKey = selectedDay.toISOString().split('T')[0];
         historyCache.delete(dateKey);
+
+        // Дожидаемся загрузки и рендерим
         loadHistoryForDate(selectedDay).then(() => {
             renderGroupsForDate(selectedDay);
         });
@@ -3776,6 +3796,11 @@ function setActiveTab(tabId) {
         weekRow.style.display = 'none';
         dividerLight.style.display = 'none';
 
+        // Скрываем contentDiv, но не удаляем из DOM
+        if (contentDiv.parentNode) {
+            contentDiv.remove();
+        }
+
         renderCoursesAndMedsTabs();
         updatePlusButton('stats');
     } else if (active === 'profile') {
@@ -3783,8 +3808,28 @@ function setActiveTab(tabId) {
         weekRow.style.display = 'none';
         dividerLight.style.display = 'none';
 
+        // Скрываем contentDiv, но не удаляем из DOM
+        if (contentDiv.parentNode) {
+            contentDiv.remove();
+        }
+
         renderProfileContent();
         updatePlusButton('profile');
+    }
+
+    // Явно привязываем обработчик для plusBtn
+    const plusBtn = document.getElementById('plusBtn');
+    if (plusBtn) {
+        const newPlusBtn = plusBtn.cloneNode(true);
+        plusBtn.parentNode.replaceChild(newPlusBtn, plusBtn);
+
+        if (active === 'home') {
+            newPlusBtn.onclick = (e) => {
+                e.stopPropagation();
+                const addChoiceSheet = document.getElementById('addChoiceSheet');
+                if (addChoiceSheet) addChoiceSheet.style.display = 'flex';
+            };
+        }
     }
 }
 
@@ -3813,7 +3858,7 @@ async function updateCourse(courseId, name, startDate, endDate) {
 }
 
 async function deleteCourse(courseId) {
-    return await apiFetch(`/courses/${courseId}/deactivate`, { method: 'PATCH' });
+    return await apiFetch(`/courses/${courseId}`, { method: 'DELETE' });
 }
 
 async function addMedicationToCourse(courseId, medication) {
@@ -3859,8 +3904,9 @@ function calculateCourseProgress(course) {
             <button class="tab-btn active" data-tab="courses">Курсы</button>
             <button class="tab-btn" data-tab="medicines">Препараты</button>
         </div>
-        <div id="tabContent"></div>
+        <div id="tabContent" style="flex:1; overflow:hidden; display:flex; flex-direction:column;"></div>
     `;
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -3874,7 +3920,8 @@ function calculateCourseProgress(course) {
             updatePlusButton('stats');
         });
     });
-    loadAndRenderCourses(); // по умолчанию
+
+    loadAndRenderCourses();
 }
 
 async function loadAndRenderCourses() {
@@ -4200,7 +4247,17 @@ function renderProfileContent() {
         }
 
         // Привязка обработчиков навигации
-        document.getElementById('navHome')?.addEventListener('click', () => setActiveTab('navHome'));
+document.getElementById('navHome')?.addEventListener('click', () => {
+    setActiveTab('navHome');
+    // Дополнительная гарантия рендеринга
+    setTimeout(() => {
+        if (selectedDay) {
+            loadHistoryForDate(selectedDay).then(() => {
+                renderGroupsForDate(selectedDay);
+            });
+        }
+    }, 50);
+});
         document.getElementById('navStats')?.addEventListener('click', () => setActiveTab('navStats'));
         document.getElementById('navProfile')?.addEventListener('click', () => setActiveTab('navProfile'));
 
