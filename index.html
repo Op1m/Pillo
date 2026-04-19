@@ -3610,56 +3610,6 @@ function attachMedicinesEvents() {
         });
     });
 }
-
-saveCreateMed?.addEventListener('click', async () => {
-    const name = medNameInput?.value?.trim();
-    if (!name) return;
-    const dose = medDoseInput?.value?.trim() || '1 таб.';
-    const food = medFoodSelect?.value;
-
-    // Оптимистичное обновление UI
-    const tempId = 'temp-' + Date.now();
-    const tempMedicine = {
-        id: tempId,
-        name,
-        dosage: dose,
-        instructions: food,
-        __optimistic: true
-    };
-
-    // Добавляем в список препаратов оптимистично
-    currentMedicines.push(tempMedicine);
-
-    // Закрываем sheet сразу
-    closeCreateSheet();
-
-    // Если открыта вкладка "Препараты", обновляем список оптимистично
-    if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
-        renderMedicinesListOptimistic(currentMedicines);
-    }
-
-    try {
-        const medicine = await createMedicine(name, dose, food);
-
-        // Заменяем временный препарат на реальный
-        const index = currentMedicines.findIndex(m => m.id === tempId);
-        if (index !== -1) {
-            currentMedicines[index] = medicine;
-        }
-
-        // Обновляем список если нужно
-        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
-            renderMedicinesListOptimistic(currentMedicines);
-        }
-    } catch (e) {
-        // Откат при ошибке
-        currentMedicines = currentMedicines.filter(m => m.id !== tempId);
-        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
-            renderMedicinesListOptimistic(currentMedicines);
-        }
-        alert('Ошибка создания препарата: ' + e.message);
-    }
-});
         cancelCreateMed?.addEventListener('click', closeCreateSheet);
         closeCreateMed?.addEventListener('click', closeCreateSheet);
         infoCreateMed?.addEventListener('click', () => {  });
@@ -3973,10 +3923,7 @@ async function deleteCourseMedication(courseId, medicationId) {
 }
 
 async function regenerateRemindersForCourse(courseId) {
-    // Проверьте правильный эндпоинт:
-    return await apiFetch(`/courses/${courseId}/regenerate-future-reminders`, { method: 'POST' });
-    // или
-    // return await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
+    return await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
 }
 
 function calculateCourseProgress(course) {
@@ -4263,67 +4210,53 @@ document.getElementById('saveCourseBtn').addEventListener('click', async () => {
     const endDate = document.getElementById('courseEndDate').value;
     if (!name || !startDate || !endDate) return alert('Заполните все поля');
 
-    // Оптимистичное обновление UI
-    const tempId = 'temp-course-' + Date.now();
     const isNewCourse = !editingCourseId;
 
-    // Закрываем sheet только если это редактирование существующего
+    // Для редактирования закрываем sheet сразу
     if (!isNewCourse) {
         document.getElementById('courseSheet').style.display = 'none';
     }
 
-    // Добавляем в список оптимистично (только если редактируем существующий)
+    // Оптимистичное обновление для существующего курса
+    let originalCourse = null;
     if (!isNewCourse) {
-        const tempCourse = {
-            id: tempId,
-            name,
-            startDate,
-            endDate,
-            active: true,
-            __optimistic: true
-        };
-        currentCourses.push(tempCourse);
-        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
-            renderCoursesListOptimistic(currentCourses);
+        originalCourse = currentCourses.find(c => c.id == editingCourseId);
+        if (originalCourse) {
+            originalCourse.name = name;
+            originalCourse.startDate = startDate;
+            originalCourse.endDate = endDate;
+            if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
+                renderCoursesListOptimistic(currentCourses);
+            }
         }
     }
 
     try {
         let course;
-        if (editingCourseId) {
-            course = await updateCourse(editingCourseId, name, startDate, endDate);
-        } else {
-            course = await createCourse(name, startDate, endDate);
-            // ВАЖНО: сразу обновляем editingCourseId для нового курса
-            editingCourseId = course.id;
-            // Меняем заголовок на "Редактировать курс"
-            document.getElementById('courseSheetTitle').textContent = 'Редактировать курс';
-            // Показываем кнопку добавления препарата
-            document.getElementById('addMedicationToCourseBtn').style.display = 'block';
-        }
-
-        // Если это был новый курс - sheet остаётся открытым
         if (isNewCourse) {
-            // Загружаем пустой список препаратов (или уже добавленные)
+            course = await createCourse(name, startDate, endDate);
+            editingCourseId = course.id;
+            document.getElementById('courseSheetTitle').textContent = 'Редактировать курс';
+            document.getElementById('addMedicationToCourseBtn').style.display = 'block';
             loadCourseMedications(course.id);
-            // Показываем сообщение об успехе
             alert('Курс создан! Теперь добавьте препараты.');
-        } else {
-            // Для редактирования - закрываем и обновляем список
-            const index = currentCourses.findIndex(c => c.id === tempId);
-            if (index !== -1) {
-                currentCourses[index] = course;
+            currentCourses.push(course);
+            if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
+                renderCoursesListOptimistic(currentCourses);
             }
+        } else {
+            course = await updateCourse(editingCourseId, name, startDate, endDate);
+            const index = currentCourses.findIndex(c => c.id == editingCourseId);
+            if (index !== -1) currentCourses[index] = course;
             await regenerateRemindersForCourse(course.id);
             if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
                 renderCoursesListOptimistic(currentCourses);
             }
-            document.getElementById('courseSheet').style.display = 'none';
         }
     } catch (e) {
-        // Откат
-        if (!isNewCourse) {
-            currentCourses = currentCourses.filter(c => c.id !== tempId);
+        if (!isNewCourse && originalCourse) {
+            const index = currentCourses.findIndex(c => c.id == editingCourseId);
+            if (index !== -1) currentCourses[index] = originalCourse;
             if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
                 renderCoursesListOptimistic(currentCourses);
             }
