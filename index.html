@@ -3057,15 +3057,25 @@ function getStatusForReminderOnDate(reminder, date) {
     return (relevant[0].status || 'pending').toLowerCase();
 }
 
-        function remindersForDate(date) {
-            const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
-            return reminders.filter(r => {
-                const days = r.daysOfWeek;
-                if (!days) return false;
-                if (days === 'everyday') return true;
-                return String(days).split(',').map(x => parseInt(x)).includes(dayOfWeek);
-            });
+function remindersForDate(date) {
+    const dateKey = date.toISOString().split('T')[0];
+    const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay();
+
+    return reminders.filter(r => {
+        // Для курсовых напоминаний (имеют specificDate)
+        if (r.specificDate) {
+            // Для отладки можно раскомментировать
+            // console.log('Checking course reminder:', r.id, 'specificDate:', r.specificDate, 'vs', dateKey);
+            return r.specificDate === dateKey;
         }
+
+        // Для обычных напоминаний (имеют daysOfWeek)
+        const days = r.daysOfWeek;
+        if (!days) return false;
+        if (days === 'everyday') return true;
+        return String(days).split(',').map(x => parseInt(x)).includes(dayOfWeek);
+    });
+}
 
         function getStatusForReminderOnDate(reminder, date) {
             const dateKey = date.toISOString().split('T')[0];
@@ -5908,14 +5918,14 @@ document.getElementById('navHome')?.addEventListener('click', () => {
         }
 
 if (typeof originalGetStatus === 'function') {
-    window.getStatusForReminderOnDate = function(reminder, date) {
-        const serverKey = getServerDateKey(date);
-        const histories = historyMap.get(serverKey) || [];
-        const history = histories.find(h =>
-            h.reminder && String(h.reminder.id) === String(reminder.id)
-        );
-        return history ? (history.status || 'pending').toLowerCase() : 'pending';
-    };
+window.getStatusForReminderOnDate = function(reminder, date) {
+    const serverKey = getServerDateKey(date);
+    const histories = historyMap.get(serverKey) || [];
+    const history = histories.find(h =>
+        h.reminder && String(h.reminder.id) === String(reminder.id)
+    );
+    return history ? (history.status || 'pending').toLowerCase() : 'pending';
+};
 }
 
         function patchOptimisticFunction(name) {
