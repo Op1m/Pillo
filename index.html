@@ -3662,11 +3662,16 @@ if (active === 'home') {
     weekRow.style.display = '';
     dividerLight.style.display = '';
     contentDiv.style.display = '';
+
     if (dynamicContent) {
-        dynamicContent.innerHTML = '';
+        // Полностью очищаем контейнер
+        while (dynamicContent.firstChild) {
+            dynamicContent.removeChild(dynamicContent.firstChild);
+        }
         dynamicContent.appendChild(contentDiv);
     }
-    // Принудительно обновим историю
+
+    // Принудительно обновляем данные
     const dateKey = selectedDay.toISOString().split('T')[0];
     historyCache.delete(dateKey);
     loadHistoryForDate(selectedDay).then(() => {
