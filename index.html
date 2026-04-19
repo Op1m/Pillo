@@ -530,6 +530,29 @@
     flex: 1;
 }
 
+.medicine-card-simple.optimistic,
+.course-card.optimistic {
+    opacity: 0.7;
+    position: relative;
+}
+
+.medicine-card-simple.optimistic::after,
+.course-card.optimistic::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
 #tabContent {
     flex: 1;
     overflow: hidden;
@@ -2339,10 +2362,12 @@ async function fetchCourses() {
         });
     }
 
-    async function updateCourse(courseId, name, startDate, endDate) {
-        // Бэкенд пока не имеет PUT /courses/{id}, можно добавить позже
-        // Пока пропустим
-    }
+async function updateCourse(courseId, name, startDate, endDate) {
+    return await apiFetch(`/courses/${courseId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name, startDate, endDate })
+    });
+}
 
     async function deleteCourse(courseId) {
         return await apiFetch(`/courses/${courseId}/deactivate`, { method: 'PATCH' });
@@ -3264,47 +3289,23 @@ function calculateMedicationStats(reminderId) {
 }
 
         async function createMedicineAndReminder(name, dosage, time, food) {
-            if (!currentUser) return;
-            const tmpId = 'tmp-' + Date.now();
-            const tempReminder = {
-                id: tmpId,
-                medicine: { id: null, name, dosage, instructions: food },
-                reminderTime: time,
-                userId: currentUser.id,
-                daysOfWeek: 'everyday'
-            };
-            reminders.push(tempReminder);
-            remindersCache.data = reminders;
-            remindersCache.timestamp = Date.now();
-            try {
-                renderGroupsForDate(selectedDay);
-            } catch (e) {}
-            try {
-                const medicine = await apiFetch('/medicines', {
-                    method: 'POST',
-                    body: JSON.stringify({ name, dosage, description: '', instructions: food }),
-                });
-                const reminder = await apiFetch('/reminders', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        userId: currentUser.id,
-                        medicineId: medicine.id,
-                        reminderTime: time,
-                        daysOfWeek: 'everyday'
-                    }),
-                });
-                const idx = reminders.findIndex(r => r.id === tmpId);
-                if (idx !== -1) reminders[idx] = reminder;
-                else reminders.push(reminder);
-                remindersCache.data = reminders;
-                remindersCache.timestamp = Date.now();
-                await loadHistoryForDate(selectedDay);
-            } catch (err) {
-                reminders = reminders.filter(r => r.id !== tmpId);
-                remindersCache.data = reminders;
-                remindersCache.timestamp = Date.now();
-                await loadHistoryForDate(selectedDay).catch(()=>{});
-            }
+            if (!currentUser) return null;
+
+    try {
+        const medicine = await apiFetch('/medicines', {
+            method: 'POST',
+            body: JSON.stringify({
+                name,
+                dosage,
+                description: '',
+                instructions
+            }),
+        });
+        return medicine;
+    } catch (err) {
+        console.warn('Ошибка создания препарата', err);
+        throw err;
+    }
         }
 
         function getHistoryForReminder(reminder, date) {
@@ -3551,32 +3552,108 @@ function closeCreateSheet() {
     document.querySelector('#createMedSheet .sheet-detail-title').textContent = 'Новый препарат';
 }
 
-        saveCreateMed?.addEventListener('click', async () => {
+function renderMedicinesListOptimistic(medicines) {
+    const container = document.getElementById('tabContent');
+    if (!container) return;
+
+    if (!medicines.length) {
+        container.innerHTML = `<div class="empty-state"><p>Нет препаратов</p></div>`;
+        return;
+    }
+
+    let html = `<div class="medicines-list">`;
+    medicines.forEach(med => {
+        const isOptimistic = med.__optimistic;
+        html += `
+            <div class="medicine-card-simple ${isOptimistic ? 'optimistic' : ''}" data-medicine-id="${med.id}">
+                <div><strong>${escapeHtml(med.name)}</strong> ${med.dosage || ''}</div>
+                <div style="color:#6f8fb0; font-size:14px;">${med.instructions || ''}</div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    ${!isOptimistic ? `
+                        <button class="btn-outline edit-medicine" data-id="${med.id}">✎</button>
+                        <button class="btn-outline delete-medicine" data-id="${med.id}">🗑</button>
+                    ` : '<span style="color:#6f8fb0;">Создание...</span>'}
+                </div>
+            </div>
+        `;
+    });
+    html += `</div>`;
+    container.innerHTML = html;
+
+    // Привязываем события только для не-оптимистичных
+    if (!medicines.some(m => m.__optimistic)) {
+        attachMedicinesEvents();
+    }
+}
+
+function attachMedicinesEvents() {
+    const container = document.getElementById('tabContent');
+    container.querySelectorAll('.edit-medicine').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            const med = currentMedicines.find(m => m.id == id);
+            if (med) openEditMedicineSheet(med);
+        });
+    });
+    container.querySelectorAll('.delete-medicine').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            if (confirm('Удалить препарат?')) {
+                await optimisticDeleteMedicine(id);
+            }
+        });
+    });
+}
+
+saveCreateMed?.addEventListener('click', async () => {
     const name = medNameInput?.value?.trim();
     if (!name) return;
     const dose = medDoseInput?.value?.trim() || '1 таб.';
-    const time = medTimeInput?.value;
     const food = medFoodSelect?.value;
 
+    // Оптимистичное обновление UI
+    const tempId = 'temp-' + Date.now();
+    const tempMedicine = {
+        id: tempId,
+        name,
+        dosage: dose,
+        instructions: food,
+        __optimistic: true
+    };
+
+    // Добавляем в список препаратов оптимистично
+    currentMedicines.push(tempMedicine);
+
+    // Закрываем sheet сразу
+    closeCreateSheet();
+
+    // Если открыта вкладка "Препараты", обновляем список оптимистично
+    if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
+        renderMedicinesListOptimistic(currentMedicines);
+    }
+
     try {
-        if (editingMedicineId) {
-            // Редактирование существующего
-            await apiFetch(`/medicines/${editingMedicineId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ name, dosage: dose, instructions: food })
-            });
-            editingMedicineId = null;
-        } else {
-            // Создание нового
-            await createMedicineAndReminder(name, dose, time || '08:30', food);
+        const medicine = await createMedicine(name, dose, food);
+
+        // Заменяем временный препарат на реальный
+        const index = currentMedicines.findIndex(m => m.id === tempId);
+        if (index !== -1) {
+            currentMedicines[index] = medicine;
         }
-        closeCreateSheet();
-        // Если открыта вкладка "Препараты", обновить список
+
+        // Обновляем список если нужно
         if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
-            loadAndRenderMedicines();
+            renderMedicinesListOptimistic(currentMedicines);
         }
     } catch (e) {
-        alert('Ошибка: ' + e.message);
+        // Откат при ошибке
+        currentMedicines = currentMedicines.filter(m => m.id !== tempId);
+        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
+            renderMedicinesListOptimistic(currentMedicines);
+        }
+        alert('Ошибка создания препарата: ' + e.message);
     }
 });
         cancelCreateMed?.addEventListener('click', closeCreateSheet);
@@ -3892,7 +3969,10 @@ async function deleteCourseMedication(courseId, medicationId) {
 }
 
 async function regenerateRemindersForCourse(courseId) {
-    return await apiFetch(`/courses/${courseId}/regenerate-reminders`, { method: 'POST' });
+    // Проверьте правильный эндпоинт:
+    return await apiFetch(`/courses/${courseId}/regenerate-future-reminders`, { method: 'POST' });
+    // или
+    // return await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
 }
 
 function calculateCourseProgress(course) {
@@ -3990,12 +4070,68 @@ document.querySelectorAll('.delete-course').forEach(btn => {
     btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const courseId = btn.dataset.courseId;
-        if (confirm('Деактивировать курс? Напоминания будут удалены.')) {
-            await deleteCourse(courseId);
-            await loadAndRenderCourses(); // ← обновляем список
+        if (confirm('Удалить курс? Все связанные напоминания будут удалены.')) {
+            await optimisticDeleteCourse(courseId);
         }
     });
 });
+}
+
+async function optimisticDeleteCourse(courseId) {
+    const course = currentCourses.find(c => c.id == courseId);
+    if (!course) return;
+
+    // Оптимистично удаляем из UI
+    currentCourses = currentCourses.filter(c => c.id != courseId);
+    renderCoursesListOptimistic(currentCourses);
+
+    try {
+        await deleteCourse(courseId);
+    } catch (e) {
+        // Откат при ошибке
+        currentCourses.push(course);
+        renderCoursesListOptimistic(currentCourses);
+        alert('Ошибка удаления: ' + e.message);
+    }
+}
+
+function renderCoursesListOptimistic(courses) {
+    const container = document.getElementById('tabContent');
+    if (!container) return;
+
+    const activeCourses = courses.filter(c => c.active !== false);
+    if (!activeCourses.length) {
+        container.innerHTML = `<div class="empty-state"><p>Нет активных курсов</p></div>`;
+        return;
+    }
+
+    let html = `<div class="courses-list">`;
+    activeCourses.forEach(course => {
+        const progress = calculateCourseProgress(course);
+        const isOptimistic = course.__optimistic;
+
+        html += `
+            <div class="course-card ${isOptimistic ? 'optimistic' : ''}" data-course-id="${course.id}">
+                <div class="course-title">${escapeHtml(course.name)}</div>
+                <div class="course-dates">${course.startDate} – ${course.endDate}</div>
+                <div class="course-progress">
+                    <div class="course-progress-fill" style="width:${progress}%"></div>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    ${!isOptimistic ? `
+                        <button class="btn-outline edit-course" data-course-id="${course.id}">✎</button>
+                        <button class="btn-outline delete-course" data-course-id="${course.id}">🗑</button>
+                    ` : '<span style="color:#6f8fb0;">Создание...</span>'}
+                </div>
+            </div>
+        `;
+    });
+    html += `</div>`;
+    container.innerHTML = html;
+
+    if (!courses.some(c => c.__optimistic)) {
+        attachCourseEvents();
+    }
 }
 
 async function loadAndRenderMedicines() {
@@ -4082,6 +4218,24 @@ async function loadAndRenderMedicines() {
     }
 }
 
+async function optimisticDeleteMedicine(medicineId) {
+    const medicine = currentMedicines.find(m => m.id == medicineId);
+    if (!medicine) return;
+
+    // Оптимистично удаляем из UI
+    currentMedicines = currentMedicines.filter(m => m.id != medicineId);
+    renderMedicinesListOptimistic(currentMedicines);
+
+    try {
+        await apiFetch(`/medicines/${medicineId}`, { method: 'DELETE' });
+    } catch (e) {
+        // Откат при ошибке
+        currentMedicines.push(medicine);
+        renderMedicinesListOptimistic(currentMedicines);
+        alert('Ошибка удаления: ' + e.message);
+    }
+}
+
     // Обработчики для sheet курса
     document.getElementById('closeCourseSheet').addEventListener('click', () => {
         document.getElementById('courseSheet').style.display = 'none';
@@ -4091,18 +4245,54 @@ async function loadAndRenderMedicines() {
     const startDate = document.getElementById('courseStartDate').value;
     const endDate = document.getElementById('courseEndDate').value;
     if (!name || !startDate || !endDate) return alert('Заполните все поля');
+
+    // Оптимистичное обновление
+    const tempId = 'temp-course-' + Date.now();
+    const tempCourse = {
+        id: tempId,
+        name,
+        startDate,
+        endDate,
+        active: true,
+        __optimistic: true
+    };
+
+    // Закрываем sheet
+    document.getElementById('courseSheet').style.display = 'none';
+
+    // Добавляем в список оптимистично
+    currentCourses.push(tempCourse);
+    if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
+        renderCoursesListOptimistic(currentCourses);
+    }
+
     try {
         let course;
         if (editingCourseId) {
             course = await updateCourse(editingCourseId, name, startDate, endDate);
         } else {
             course = await createCourse(name, startDate, endDate);
-            editingCourseId = course.id;
         }
+
+        // Заменяем временный курс на реальный
+        const index = currentCourses.findIndex(c => c.id === tempId);
+        if (index !== -1) {
+            currentCourses[index] = course;
+        }
+        editingCourseId = course.id;
+
+        // Регенерируем напоминания
         await regenerateRemindersForCourse(course.id);
-        document.getElementById('courseSheet').style.display = 'none';
-        loadAndRenderCourses();
+
+        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
+            renderCoursesListOptimistic(currentCourses);
+        }
     } catch (e) {
+        // Откат
+        currentCourses = currentCourses.filter(c => c.id !== tempId);
+        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
+            renderCoursesListOptimistic(currentCourses);
+        }
         alert('Ошибка: ' + e.message);
     }
 });
