@@ -3661,6 +3661,8 @@ if (active === 'home') {
     monthBar.style.display = '';
     weekRow.style.display = '';
     dividerLight.style.display = '';
+
+    // Восстанавливаем contentDiv
     contentDiv.style.display = '';
 
     if (dynamicContent) {
@@ -3668,15 +3670,21 @@ if (active === 'home') {
         while (dynamicContent.firstChild) {
             dynamicContent.removeChild(dynamicContent.firstChild);
         }
+        // Возвращаем contentDiv на место
         dynamicContent.appendChild(contentDiv);
     }
 
     // Принудительно обновляем данные
     const dateKey = selectedDay.toISOString().split('T')[0];
     historyCache.delete(dateKey);
-    loadHistoryForDate(selectedDay).then(() => {
-        renderGroupsForDate(selectedDay);
-    });
+
+    // Небольшая задержка, чтобы DOM обновился
+    setTimeout(() => {
+        loadHistoryForDate(selectedDay).then(() => {
+            renderGroupsForDate(selectedDay);
+        });
+    }, 10);
+
     updatePlusButton('home');
 } else if (active === 'stats') {
         monthBar.style.display = 'none';
@@ -3696,6 +3704,9 @@ if (active === 'home') {
 }
 
     function renderCoursesAndMedsTabs() {
+    // Проверяем, что мы действительно на вкладке stats
+    const activeTab = document.querySelector('.nav-item.active');
+    if (!activeTab || activeTab.id !== 'navStats') return;
         const dynamicContent = document.getElementById('dynamicContent');
         dynamicContent.innerHTML = `
             <div class="tabs-container">
