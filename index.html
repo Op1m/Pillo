@@ -4596,6 +4596,31 @@ document.getElementById('navHome')?.addEventListener('click', () => {
         startAutoRefresh();
         setupSSE();
     }
+
+    // 👇 ДОБАВЬТЕ ЭТОТ КОД ЗДЕСЬ 👇
+    // Принудительно проверяем загрузку курсовых напоминаний
+    setTimeout(() => {
+        if (currentUser && reminders) {
+            const courseCount = reminders.filter(r => r.specificDate).length;
+            console.log('📊 Диагностика после загрузки:');
+            console.log('   - Всего напоминаний:', reminders.length);
+            console.log('   - Курсовых напоминаний:', courseCount);
+
+            if (courseCount === 0) {
+                console.warn('⚠️ Курсовые напоминания не загружены! Пробуем перезагрузить...');
+                loadReminders(true).then(() => {
+                    console.log('   - После перезагрузки курсовых:', reminders.filter(r => r.specificDate).length);
+                    if (selectedDay) {
+                        loadHistoryForDate(selectedDay).then(() => {
+                            renderGroupsForDate(selectedDay);
+                        });
+                    }
+                });
+            }
+        }
+    }, 1000);
+    // 👆 КОНЕЦ ДОБАВЛЯЕМОГО КОДА 👆
+
 })();
 
         let tapCount = 0;
