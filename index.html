@@ -508,6 +508,22 @@
     opacity: 0.6;
 }
 
+.btn-outline {
+    background: #eaf1fb;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 40px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f4d8a;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+.btn-outline:active {
+    background: #d4e3ff;
+    transform: scale(0.94);
+}
+
 .time-input-wrapper input[type="time"]::-webkit-datetime-edit-fields-wrapper {
     padding: 0;
 }
@@ -1589,7 +1605,6 @@
             color: #e8f5ff;
             line-height: 1.4;
         }
-        /* === ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ КУРСОВ === */
         .tabs-container {
             display: flex;
             gap: 8px;
@@ -1607,7 +1622,7 @@
             background: #f4faff;
             color: #2f4b70;
             cursor: pointer;
-            transition: all 0.2s var(--anim-ease);
+            transition: all 0.2s ease;
         }
         .tab-btn.active {
             background: linear-gradient(90deg, #4DA9FF, #2E86FF, #1E6BFF);
@@ -1634,12 +1649,11 @@
             font-weight: 700;
             font-size: 18px;
             color: #01254a;
-            margin-bottom: 4px;
         }
         .course-dates {
             color: #6f8fb0;
             font-size: 14px;
-            margin-bottom: 8px;
+            margin-top: 4px;
         }
         .course-progress {
             margin-top: 8px;
@@ -1653,33 +1667,16 @@
             background: #2e7aff;
             border-radius: 3px;
         }
-        .course-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
+        .add-button {
+            margin: 16px;
         }
-        .btn-outline-small {
-            background: #eaf1fb;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 40px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #1f4d8a;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-        }
-        .btn-outline-small:active {
-            background: #d4e3ff;
-            transform: scale(0.94);
-        }
+        /* Стили для формы добавления препарата в курс */
         .medications-list-in-course {
             margin: 16px 0;
         }
         .medication-item {
             display: flex;
             align-items: center;
-            justify-content: space-between;
             padding: 12px;
             background: #f9fcff;
             border-radius: 16px;
@@ -1694,10 +1691,6 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-icon-small:active {
-            background: #e6f0ff;
         }
     </style>
 </head>
@@ -1714,9 +1707,7 @@
     </div>
 </div>
 
-<!-- === ОСНОВНОЕ ПРИЛОЖЕНИЕ === -->
 <div class="app" id="app">
-    <!-- Верхняя панель -->
     <div class="top-pill">
         <div class="avatar" id="avatarContainer">
             <svg id="avatarPlaceholder" viewBox="0 0 24 24" style="display: block;">
@@ -1725,13 +1716,12 @@
         </div>
         <div class="user-info">
             <div class="user-name" id="userName">Загрузка...</div>
+            <!-- <div class="user-switch" id="userSwitchBtn">Сменить пользователя</div> -->
         </div>
         <div class="app-logo">
             <img src="logo.PNG" alt="Logo">
         </div>
     </div>
-
-    <!-- Панель месяца (скрывается на вкладке "Курсы") -->
     <div class="month-bar" id="monthBar">
         <span class="month-left" id="monthLabel">
           Февраль 2026
@@ -1755,13 +1745,9 @@
     </div>
     <div class="week-row" id="weekRow"></div>
     <div class="divider-light" id="dividerLight"></div>
-
-    <!-- Динамический контент: либо календарь, либо список курсов/препаратов -->
     <div id="dynamicContent">
-        <div class="content" id="content"></div>
-    </div>
-
-    <!-- Нижняя навигация -->
+    <div class="content" id="content"></div>
+</div>
     <div class="bottom-nav">
         <div class="nav-items">
             <div class="nav-item active" id="navHome">
@@ -1775,8 +1761,8 @@
             <div class="nav-item" id="navStats">
                 <span class="icon">
                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18 11.9999H17.1986C16.3689 11.9999 15.9541 11.9999 15.6102 12.1946C15.2664 12.3893 15.0529 12.745 14.6261 13.4564L14.5952 13.5079C14.1976 14.1706 13.9987 14.502 13.7095 14.4965C13.4202 14.4911 13.2339 14.1525 12.8615 13.4753L11.1742 10.4075C10.8269 9.77606 10.6533 9.46034 10.3759 9.44537C10.0986 9.43039 9.892 9.72558 9.47875 10.3159L9.19573 10.7203C8.75681 11.3473 8.53734 11.6608 8.21173 11.8303C7.88612 11.9999 7.50342 11.9999 6.73803 11.9999H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        <path d="M8.96173 18.9108L9.42605 18.3219L8.96173 18.9108ZM12 5.5006L11.4596 6.0207C11.601 6.1676 11.7961 6.2506 12 6.2506C12.2039 6.2506 12.399 6.1676 12.5404 6.0207L12 5.5006ZM15.0383 18.9109L15.5026 19.4999V19.4999L15.0383 18.9109ZM12 20.4859L12 19.7359L12 20.4859ZM2.65666 13.3964C2.87558 13.748 3.33811 13.8556 3.68974 13.6367C4.04137 13.4178 4.14895 12.9552 3.93003 12.6036L2.65666 13.3964ZM6.52969 15.7718C6.23645 15.4793 5.76158 15.4798 5.46903 15.7731C5.17649 16.0663 5.17706 16.5412 5.47031 16.8337L6.52969 15.7718ZM2.75 9.13707C2.75 6.33419 4.00722 4.59507 5.57921 3.99711C7.15546 3.39753 9.35129 3.8302 11.4596 6.0207L12.5404 4.9805C10.1489 2.49583 7.3447 1.72069 5.04591 2.59512C2.74286 3.47116 1.25 5.88785 1.25 9.13707H2.75ZM15.5026 19.4999C16.9949 18.3234 18.7837 16.7461 20.2061 14.9838C21.6126 13.2412 22.75 11.2089 22.75 9.13703H21.25C21.25 10.688 20.3777 12.3829 19.0389 14.0417C17.716 15.6807 16.0239 17.1788 14.574 18.3219L15.5026 19.4999ZM22.75 9.13703C22.75 5.88784 21.2571 3.47115 18.9541 2.59511C16.6553 1.7207 13.8511 2.49583 11.4596 4.9805L12.5404 6.0207C14.6487 3.8302 16.8445 3.39753 18.4208 3.99711C19.9928 4.59506 21.25 6.33418 21.25 9.13703H22.75ZM8.49742 19.4998C9.77172 20.5044 10.6501 21.2359 12 21.2359L12 19.7359C11.2693 19.7359 10.8157 19.4174 9.42605 18.3219L8.49742 19.4998ZM14.574 18.3219C13.1843 19.4174 12.7307 19.7359 12 19.7359L12 21.2359C13.3499 21.2359 14.2283 20.5044 15.5026 19.4999L14.574 18.3219ZM3.93003 12.6036C3.18403 11.4054 2.75 10.2312 2.75 9.13707H1.25C1.25 10.617 1.83054 12.0695 2.65666 13.3964L3.93003 12.6036ZM9.42605 18.3219C8.50908 17.599 7.49093 16.7307 6.52969 15.7718L5.47031 16.8337C6.48347 17.8445 7.54819 18.7515 8.49742 19.4998L9.42605 18.3219Z" fill="currentColor"/>
+    <path d="M18 11.9999H17.1986C16.3689 11.9999 15.9541 11.9999 15.6102 12.1946C15.2664 12.3893 15.0529 12.745 14.6261 13.4564L14.5952 13.5079C14.1976 14.1706 13.9987 14.502 13.7095 14.4965C13.4202 14.4911 13.2339 14.1525 12.8615 13.4753L11.1742 10.4075C10.8269 9.77606 10.6533 9.46034 10.3759 9.44537C10.0986 9.43039 9.892 9.72558 9.47875 10.3159L9.19573 10.7203C8.75681 11.3473 8.53734 11.6608 8.21173 11.8303C7.88612 11.9999 7.50342 11.9999 6.73803 11.9999H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M8.96173 18.9108L9.42605 18.3219L8.96173 18.9108ZM12 5.5006L11.4596 6.0207C11.601 6.1676 11.7961 6.2506 12 6.2506C12.2039 6.2506 12.399 6.1676 12.5404 6.0207L12 5.5006ZM15.0383 18.9109L15.5026 19.4999V19.4999L15.0383 18.9109ZM12 20.4859L12 19.7359L12 20.4859ZM2.65666 13.3964C2.87558 13.748 3.33811 13.8556 3.68974 13.6367C4.04137 13.4178 4.14895 12.9552 3.93003 12.6036L2.65666 13.3964ZM6.52969 15.7718C6.23645 15.4793 5.76158 15.4798 5.46903 15.7731C5.17649 16.0663 5.17706 16.5412 5.47031 16.8337L6.52969 15.7718ZM2.75 9.13707C2.75 6.33419 4.00722 4.59507 5.57921 3.99711C7.15546 3.39753 9.35129 3.8302 11.4596 6.0207L12.5404 4.9805C10.1489 2.49583 7.3447 1.72069 5.04591 2.59512C2.74286 3.47116 1.25 5.88785 1.25 9.13707H2.75ZM15.5026 19.4999C16.9949 18.3234 18.7837 16.7461 20.2061 14.9838C21.6126 13.2412 22.75 11.2089 22.75 9.13703H21.25C21.25 10.688 20.3777 12.3829 19.0389 14.0417C17.716 15.6807 16.0239 17.1788 14.574 18.3219L15.5026 19.4999ZM22.75 9.13703C22.75 5.88784 21.2571 3.47115 18.9541 2.59511C16.6553 1.7207 13.8511 2.49583 11.4596 4.9805L12.5404 6.0207C14.6487 3.8302 16.8445 3.39753 18.4208 3.99711C19.9928 4.59506 21.25 6.33418 21.25 9.13703H22.75ZM8.49742 19.4998C9.77172 20.5044 10.6501 21.2359 12 21.2359L12 19.7359C11.2693 19.7359 10.8157 19.4174 9.42605 18.3219L8.49742 19.4998ZM14.574 18.3219C13.1843 19.4174 12.7307 19.7359 12 19.7359L12 21.2359C13.3499 21.2359 14.2283 20.5044 15.5026 19.4999L14.574 18.3219ZM3.93003 12.6036C3.18403 11.4054 2.75 10.2312 2.75 9.13707H1.25C1.25 10.617 1.83054 12.0695 2.65666 13.3964L3.93003 12.6036ZM9.42605 18.3219C8.50908 17.599 7.49093 16.7307 6.52969 15.7718L5.47031 16.8337C6.48347 17.8445 7.54819 18.7515 8.49742 19.4998L9.42605 18.3219Z" fill="currentColor"/>
                     </svg>
                 </span>
                 <span class="text">Курсы</span>
@@ -1804,26 +1790,6 @@
             </svg>
         </button>
     </div>
-
-    <!-- === МОДАЛЬНЫЕ ОКНА (существующие) === -->
-    <div class="modal-sheet-overlay" id="takeAllSheet">
-        <!-- ... содержимое без изменений ... -->
-    </div>
-    <div class="modal-sheet-overlay" id="addChoiceSheet">
-        <!-- ... содержимое без изменений ... -->
-    </div>
-    <div class="sheet-overlay" id="createMedSheet">
-        <!-- ... содержимое без изменений ... -->
-    </div>
-    <div class="sheet-overlay" id="userSwitchSheet">
-        <!-- ... содержимое без изменений ... -->
-    </div>
-    <div class="sheet-overlay" id="sheetOverlay">
-        <!-- ... содержимое без изменений ... -->
-    </div>
-
-    <!-- === НОВЫЕ МОДАЛЬНЫЕ ОКНА ДЛЯ КУРСОВ === -->
-    <!-- Создание/редактирование курса -->
     <div class="sheet-overlay" id="courseSheet">
         <div class="bottom-sheet-detail create-sheet">
             <div class="sheet-handle"></div>
@@ -1848,16 +1814,13 @@
                 <label>Дата окончания</label>
                 <input type="date" id="courseEndDate">
             </div>
+            <!-- Здесь будет список добавленных препаратов (для редактирования) -->
             <div id="courseMedicationsList" class="medications-list-in-course"></div>
             <button class="action-btn" id="addMedicationToCourseBtn" style="margin-top:8px;">+ Добавить препарат</button>
-            <div class="action-row" style="margin-top:20px;">
-                <button class="action-btn" id="cancelCourseBtn">Отмена</button>
-                <button class="action-btn primary" id="generateRemindersBtn">Сгенерировать напоминания</button>
-            </div>
         </div>
     </div>
 
-    <!-- Добавление/редактирование препарата в курсе -->
+    <!-- Sheet для добавления/редактирования препарата в курсе -->
     <div class="sheet-overlay" id="courseMedicationSheet">
         <div class="bottom-sheet-detail create-sheet">
             <div class="sheet-handle"></div>
@@ -1908,6 +1871,156 @@
             <div class="input-group" id="intervalDaysGroup">
                 <label>Интервал (дней)</label>
                 <input type="number" id="courseMedIntervalDays" value="1" min="1">
+            </div>
+        </div>
+    </div>
+</div>
+    <div class="modal-sheet-overlay" id="takeAllSheet">
+        <div class="modal-sheet">
+            <div class="modal-card">
+                <div class="modal-title">Принять все препараты</div>
+                <div class="take-all-subtitle" id="takeAllSubtitle">Отметить 3 лекарства на 09:00</div>
+                <div class="modal-divider"></div>
+                <div class="modal-option-group">
+                    <div class="modal-option take-all-option" id="takeAllConfirm">Принять все</div>
+                    <div class="modal-option take-all-option" id="skipAllConfirm">Пропустить все</div>
+                    <div class="modal-option take-all-option" id="postponeAllConfirm">Перенести все</div>
+                </div>
+            </div>
+            <div class="modal-cancel-btn" id="cancelTakeAll">Отменить</div>
+        </div>
+    </div>
+    <div class="modal-sheet-overlay" id="addChoiceSheet">
+        <div class="modal-sheet">
+            <div class="modal-card">
+                <div class="modal-title">Что вы хотите добавить?</div>
+                <div class="modal-divider"></div>
+                <div class="modal-option-group">
+                    <div class="modal-option take-all-option" id="chooseNewMed">Новый препарат</div>
+                    <div class="modal-option take-all-option" id="chooseNewCourse">Новый курс</div>
+                </div>
+            </div>
+            <div class="modal-cancel-btn" id="cancelAddChoice">Отменить</div>
+        </div>
+    </div>
+    <div class="sheet-overlay" id="createMedSheet">
+        <div class="bottom-sheet-detail create-sheet" id="createSheetDetail">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header-buttons">
+                <div class="btn-icon" id="closeCreateMed">
+                    <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+                </div>
+                <div class="btn-icon" id="infoCreateMed">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="pill-image-frame">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+                </svg>
+            </div>
+            <div class="sheet-detail-title">Новый препарат</div>
+            <div class="input-group">
+                <label>Название</label>
+                <input type="text" id="medName" placeholder="например, Парацетамол" value="Новый препарат">
+            </div>
+            <div class="input-group">
+                <label>Дозировка</label>
+                <input type="text" id="medDose" placeholder="например, 1 таб." value="1 таб.">
+            </div>
+            <div class="input-group time-group-ios">
+                <label>Время приёма</label>
+                <div class="time-input-wrapper">
+                    <input type="time" id="medTime" value="08:30">
+                    <span class="time-placeholder">08:30</span>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Приём пищи</label>
+                <select id="medFood">
+                    <option value="во время еды" selected>Во время еды</option>
+                    <option value="до еды">До еды</option>
+                    <option value="после еды">После еды</option>
+                    <option value="независимо">Независимо от еды</option>
+                </select>
+            </div>
+            <div class="action-row">
+                <button class="action-btn" id="cancelCreateMed">Отмена</button>
+                <button class="action-btn primary" id="saveCreateMed">Создать</button>
+            </div>
+        </div>
+    </div>
+    <div class="sheet-overlay" id="userSwitchSheet">
+        <div class="bottom-sheet-detail user-switch-sheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-detail-title">Сменить пользователя</div>
+            <div id="userSwitchList" style="margin-top: 16px;"></div>
+        </div>
+    </div>
+    <div class="sheet-overlay" id="sheetOverlay">
+        <div class="bottom-sheet-detail" id="detailSheet">
+            <div class="sheet-handle"></div>
+            <div class="sheet-header-buttons">
+                <div class="btn-icon" id="btnBack">
+                    <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+                </div>
+                <div class="btn-icon" id="btnInfo">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="pill-image-frame">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+                </svg>
+            </div>
+            <div class="sheet-detail-title" id="sheetName">Бак-Сет Форте</div>
+            <div class="sheet-subtitle" id="sheetSub">Последний приём в 10:00 13 июля\nПринимают: Екатерина, Ольга</div>
+            <div class="progress-label" id="sheetProgressText">7/14 дней принято</div>
+            <div class="progress-bar-bg"><div class="progress-fill" id="sheetProgressFill" style="width:50%"></div></div>
+            <div class="info-card-blue">
+                <div>
+                    <div class="info-row">
+                        <svg viewBox="0 0 24 24"><path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/></svg>
+                        <span class="info-text" id="sheetDose">Дозировка: 2 таб.</span>
+                    </div>
+                    <div class="info-row">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 12C2 8.22876 2 6.34315 3.17157 5.17157C4.34315 4 6.22876 4 10 4H14C17.7712 4 19.6569 4 20.8284 5.17157C22 6.34315 22 8.22876 22 12V14C22 17.7712 22 19.6569 20.8284 20.8284C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.8284C2 19.6569 2 17.7712 2 14V12Z" stroke="currentColor" stroke-width="1.5"/>
+                            <path d="M7 4V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M17 4V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M2.5 9H21.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <span class="info-text" id="sheetDay">Сегодня</span>
+                    </div>
+                    <div class="info-row">
+                        <svg viewBox="0 -3.84 122.88 122.88" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M29.03,100.46l20.79-25.21l9.51,12.13L41,110.69C33.98,119.61,20.99,110.21,29.03,100.46L29.03,100.46z M53.31,43.05 c1.98-6.46,1.07-11.98-6.37-20.18L28.76,1c-2.58-3.03-8.66,1.42-6.12,5.09L37.18,24c2.75,3.34-2.36,7.76-5.2,4.32L16.94,9.8 c-2.8-3.21-8.59,1.03-5.66,4.7c4.24,5.1,10.8,13.43,15.04,18.53c2.94,2.99-1.53,7.42-4.43,3.69L6.96,18.32 c-2.19-2.38-5.77-0.9-6.72,1.88c-1.02,2.97,1.49,5.14,3.2,7.34L20.1,49.06c5.17,5.99,10.95,9.54,17.67,7.53 c1.03-0.31,2.29-0.94,3.64-1.77l44.76,57.78c2.41,3.11,7.06,3.44,10.08,0.93l0.69-0.57c3.4-2.83,3.95-8,1.04-11.34L50.58,47.16 C51.96,45.62,52.97,44.16,53.31,43.05L53.31,43.05z M65.98,55.65l7.37-8.94C63.87,23.21,99-8.11,116.03,6.29 C136.72,23.8,105.97,66,84.36,55.57l-8.73,11.09L65.98,55.65L65.98,55.65z"/>
+                        </svg>
+                        <span class="info-text" id="sheetWhen">Во время еды</span>
+                    </div>
+                </div>
+                <div class="edit-icon-btn" id="editMed">
+                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </div>
+            </div>
+            <div class="action-row">
+                <button class="action-btn" id="skipBtn">Пропустить</button>
+                <button class="action-btn primary" id="takeBtn">Принять</button>
+            </div>
+            <div class="bottom-bar">
+                <div class="bottom-bar-item" id="postponeBtn">
+                    <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
+                    <span class="text">Отложить</span>
+                </div>
+                <div class="divider-vertical"></div>
+                <div class="bottom-bar-item" id="deleteBtn">
+                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    <span class="text delete-text">Удалить</span>
+                </div>
             </div>
         </div>
     </div>
@@ -2084,393 +2197,10 @@
         let isAnimatingDayChange = false;
 
         let currentCourses = [];
-    let currentMedicines = [];
+    let currentMedicines = []; // отдельные препараты
     let editingCourseId = null;
-    let editingCourseMedication = null;
+    let editingCourseMedication = null; // для редактирования препарата курса
     let currentCourseForMedications = null;
-
-    // API функции для курсов
-    async function fetchCourses() {
-        if (!currentUser) return [];
-        try {
-            return await apiFetch(`/courses/user/${currentUser.id}`);
-        } catch (e) {
-            console.warn('Ошибка загрузки курсов', e);
-            return [];
-        }
-    }
-
-    async function fetchMedicines() {
-        try {
-            return await apiFetch('/medicines');
-        } catch (e) {
-            console.warn('Ошибка загрузки препаратов', e);
-            return [];
-        }
-    }
-
-    async function createCourse(name, startDate, endDate) {
-        return await apiFetch('/courses', {
-            method: 'POST',
-            body: JSON.stringify({ userId: currentUser.id, name, startDate, endDate })
-        });
-    }
-
-    async function deleteCourse(courseId) {
-        return await apiFetch(`/courses/${courseId}/deactivate`, { method: 'PATCH' });
-    }
-
-    async function addMedicationToCourse(courseId, medication) {
-        return await apiFetch(`/courses/${courseId}/medications`, {
-            method: 'POST',
-            body: JSON.stringify(medication)
-        });
-    }
-
-    async function generateRemindersForCourse(courseId) {
-        return await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
-    }
-
-    async function loadCourseMedications(courseId) {
-        try {
-            const course = await apiFetch(`/courses/${courseId}`);
-            return course.medications || [];
-        } catch (e) {
-            console.warn('Не удалось загрузить препараты курса', e);
-            return [];
-        }
-    }
-
-    // Переопределяем setActiveTab для управления видимостью календаря и контента курсов
-    const originalSetActiveTab = setActiveTab;
-    setActiveTab = function(tabId) {
-        originalSetActiveTab(tabId);
-        const active = tabId.replace('nav', '').toLowerCase();
-        const monthBar = document.getElementById('monthBar');
-        const weekRow = document.getElementById('weekRow');
-        const dividerLight = document.getElementById('dividerLight');
-        const contentDiv = document.getElementById('content');
-        const dynamicContent = document.getElementById('dynamicContent');
-
-        if (active === 'home') {
-            // Показываем календарь
-            monthBar.style.display = '';
-            weekRow.style.display = '';
-            dividerLight.style.display = '';
-            contentDiv.style.display = '';
-            dynamicContent.innerHTML = '';
-            dynamicContent.appendChild(contentDiv);
-            renderGroupsForDate(selectedDay);
-            document.getElementById('plusBtn').onclick = () => {
-                document.getElementById('addChoiceSheet').style.display = 'flex';
-            };
-        } else if (active === 'stats') {
-            // Скрываем календарь, показываем табы курсов/препаратов
-            monthBar.style.display = 'none';
-            weekRow.style.display = 'none';
-            dividerLight.style.display = 'none';
-            contentDiv.style.display = 'none';
-            renderCoursesAndMedsTabs();
-        } else if (active === 'profile') {
-            monthBar.style.display = 'none';
-            weekRow.style.display = 'none';
-            dividerLight.style.display = 'none';
-            contentDiv.style.display = 'none';
-            renderProfileContent();
-            document.getElementById('plusBtn').onclick = null;
-        }
-    };
-
-    function renderCoursesAndMedsTabs() {
-        const dynamicContent = document.getElementById('dynamicContent');
-        dynamicContent.innerHTML = `
-            <div class="tabs-container">
-                <button class="tab-btn active" data-tab="courses">Курсы</button>
-                <button class="tab-btn" data-tab="medicines">Препараты</button>
-            </div>
-            <div id="tabContent"></div>
-        `;
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const tab = btn.dataset.tab;
-                if (tab === 'courses') {
-                    loadAndRenderCourses();
-                    document.getElementById('plusBtn').onclick = () => openCourseSheet();
-                } else {
-                    loadAndRenderMedicines();
-                    document.getElementById('plusBtn').onclick = () => openCreateMedSheet();
-                }
-            });
-        });
-        loadAndRenderCourses();
-        document.getElementById('plusBtn').onclick = () => openCourseSheet();
-    }
-
-    async function loadAndRenderCourses() {
-        currentCourses = await fetchCourses();
-        const container = document.getElementById('tabContent');
-        if (currentCourses.length === 0) {
-            container.innerHTML = `<div class="empty-state"><p>Нет активных курсов</p></div>`;
-            return;
-        }
-        let html = `<div class="courses-list">`;
-        currentCourses.forEach(course => {
-            html += `
-                <div class="course-card" data-course-id="${course.id}">
-                    <div class="course-title">${escapeHtml(course.name)}</div>
-                    <div class="course-dates">${course.startDate} – ${course.endDate}</div>
-                    <div class="course-progress">
-                        <div class="course-progress-fill" style="width:${calculateCourseProgress(course)}%"></div>
-                    </div>
-                    <div class="course-actions">
-                        <button class="btn-outline-small generate-reminders" data-course-id="${course.id}">⚡ Сгенерировать</button>
-                        <button class="btn-outline-small edit-course" data-course-id="${course.id}">✎</button>
-                        <button class="btn-outline-small delete-course" data-course-id="${course.id}">🗑</button>
-                    </div>
-                </div>
-            `;
-        });
-        html += `</div>`;
-        container.innerHTML = html;
-        attachCourseEvents();
-    }
-
-    function calculateCourseProgress(course) {
-        // Заглушка: можно реализовать подсчёт на основе истории
-        return 50;
-    }
-
-    function attachCourseEvents() {
-        document.querySelectorAll('.course-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') return;
-                const courseId = card.dataset.courseId;
-                const course = currentCourses.find(c => c.id == courseId);
-                if (course) openCourseSheet(course);
-            });
-        });
-        document.querySelectorAll('.generate-reminders').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const courseId = btn.dataset.courseId;
-                try {
-                    await generateRemindersForCourse(courseId);
-                    alert('Напоминания сгенерированы');
-                } catch (err) {
-                    alert('Ошибка: ' + err.message);
-                }
-            });
-        });
-        document.querySelectorAll('.edit-course').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const courseId = btn.dataset.courseId;
-                const course = currentCourses.find(c => c.id == courseId);
-                if (course) openCourseSheet(course);
-            });
-        });
-        document.querySelectorAll('.delete-course').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const courseId = btn.dataset.courseId;
-                if (confirm('Деактивировать курс?')) {
-                    await deleteCourse(courseId);
-                    loadAndRenderCourses();
-                }
-            });
-        });
-    }
-
-    async function loadAndRenderMedicines() {
-        currentMedicines = await fetchMedicines();
-        const container = document.getElementById('tabContent');
-        if (currentMedicines.length === 0) {
-            container.innerHTML = `<div class="empty-state"><p>Нет препаратов</p></div>`;
-            return;
-        }
-        let html = `<div class="medicines-list">`;
-        currentMedicines.forEach(med => {
-            html += `
-                <div class="medicine-card-simple" data-medicine-id="${med.id}">
-                    <div><strong>${escapeHtml(med.name)}</strong> ${med.dosage || ''}</div>
-                    <div style="color:#6f8fb0; font-size:14px;">${med.instructions || ''}</div>
-                </div>
-            `;
-        });
-        html += `</div>`;
-        container.innerHTML = html;
-    }
-
-    // Функции для sheets курсов
-    function openCourseSheet(course = null) {
-        editingCourseId = course?.id || null;
-        document.getElementById('courseSheetTitle').textContent = course ? 'Редактировать курс' : 'Новый курс';
-        document.getElementById('courseName').value = course?.name || '';
-        document.getElementById('courseStartDate').value = course?.startDate || '';
-        document.getElementById('courseEndDate').value = course?.endDate || '';
-        const listDiv = document.getElementById('courseMedicationsList');
-        listDiv.innerHTML = '';
-        if (course) {
-            loadCourseMedications(course.id).then(meds => {
-                listDiv.innerHTML = meds.map(m => `
-                    <div class="medication-item">
-                        <span>${m.medicineName} ${m.dosage} (${m.timeOfDay})</span>
-                        <div style="display:flex; gap:8px;">
-                            <button class="btn-icon-small edit-course-med" data-med='${JSON.stringify(m).replace(/'/g, "&apos;")}'>✎</button>
-                            <button class="btn-icon-small delete-course-med" data-med-id="${m.id}">🗑</button>
-                        </div>
-                    </div>
-                `).join('');
-                attachCourseMedEvents();
-            });
-        }
-        document.getElementById('courseSheet').style.display = 'flex';
-    }
-
-    function attachCourseMedEvents() {
-        document.querySelectorAll('.edit-course-med').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const med = JSON.parse(btn.dataset.med);
-                openCourseMedicationSheet(med);
-            });
-        });
-        // Удаление препарата из курса (опционально)
-    }
-
-    function openCourseMedicationSheet(medication = null) {
-        editingCourseMedication = medication;
-        if (medication) {
-            document.getElementById('courseMedName').value = medication.medicineName || '';
-            document.getElementById('courseMedDosage').value = medication.dosage || '';
-            document.getElementById('courseMedInstructions').value = medication.instructions || '';
-            document.getElementById('courseMedMealMode').value = medication.mealMode || 'ANYTIME';
-            document.getElementById('courseMedTime').value = medication.timeOfDay || '08:00';
-            document.getElementById('courseMedScheduleType').value = medication.scheduleType || 'EVERY_DAY';
-            document.getElementById('courseMedIntervalDays').value = medication.intervalDays || 1;
-            document.getElementById('intervalDaysGroup').style.display =
-                medication.scheduleType === 'EVERY_DAY' ? 'none' : 'block';
-        } else {
-            document.getElementById('courseMedName').value = '';
-            document.getElementById('courseMedDosage').value = '';
-            document.getElementById('courseMedInstructions').value = '';
-            document.getElementById('courseMedMealMode').value = 'ANYTIME';
-            document.getElementById('courseMedTime').value = '08:00';
-            document.getElementById('courseMedScheduleType').value = 'EVERY_DAY';
-            document.getElementById('courseMedIntervalDays').value = 1;
-            document.getElementById('intervalDaysGroup').style.display = 'none';
-        }
-        document.getElementById('courseMedicationSheet').style.display = 'flex';
-    }
-
-    // Обработчики событий для новых элементов
-    document.addEventListener('DOMContentLoaded', () => {
-        // Курс sheet
-        document.getElementById('closeCourseSheet').addEventListener('click', () => {
-            document.getElementById('courseSheet').style.display = 'none';
-        });
-        document.getElementById('cancelCourseBtn').addEventListener('click', () => {
-            document.getElementById('courseSheet').style.display = 'none';
-        });
-        document.getElementById('saveCourseBtn').addEventListener('click', async () => {
-            const name = document.getElementById('courseName').value.trim();
-            const startDate = document.getElementById('courseStartDate').value;
-            const endDate = document.getElementById('courseEndDate').value;
-            if (!name || !startDate || !endDate) return alert('Заполните все поля');
-            try {
-                if (editingCourseId) {
-                    // PUT /courses/{id} пока нет, можно пропустить или добавить
-                    alert('Редактирование курса пока не реализовано');
-                } else {
-                    await createCourse(name, startDate, endDate);
-                }
-                document.getElementById('courseSheet').style.display = 'none';
-                loadAndRenderCourses();
-            } catch (e) {
-                alert('Ошибка: ' + e.message);
-            }
-        });
-
-        document.getElementById('addMedicationToCourseBtn').addEventListener('click', () => {
-            if (!editingCourseId) {
-                alert('Сначала сохраните курс');
-                return;
-            }
-            openCourseMedicationSheet();
-        });
-
-        document.getElementById('generateRemindersBtn').addEventListener('click', async () => {
-            if (!editingCourseId) {
-                alert('Сначала сохраните курс');
-                return;
-            }
-            try {
-                await generateRemindersForCourse(editingCourseId);
-                alert('Напоминания сгенерированы');
-            } catch (e) {
-                alert('Ошибка: ' + e.message);
-            }
-        });
-
-        // Препарат курса sheet
-        document.getElementById('closeCourseMedSheet').addEventListener('click', () => {
-            document.getElementById('courseMedicationSheet').style.display = 'none';
-        });
-        document.getElementById('saveCourseMedBtn').addEventListener('click', async () => {
-            if (!editingCourseId) {
-                alert('Курс не выбран');
-                return;
-            }
-            const data = {
-                medicineName: document.getElementById('courseMedName').value.trim(),
-                dosage: document.getElementById('courseMedDosage').value.trim(),
-                instructions: document.getElementById('courseMedInstructions').value.trim(),
-                mealMode: document.getElementById('courseMedMealMode').value,
-                timeOfDay: document.getElementById('courseMedTime').value,
-                scheduleType: document.getElementById('courseMedScheduleType').value,
-                intervalDays: parseInt(document.getElementById('courseMedIntervalDays').value) || 1
-            };
-            if (!data.medicineName) return alert('Введите название');
-            try {
-                await addMedicationToCourse(editingCourseId, data);
-                document.getElementById('courseMedicationSheet').style.display = 'none';
-                // Обновить список препаратов
-                const course = currentCourses.find(c => c.id == editingCourseId);
-                if (course) openCourseSheet(course);
-            } catch (e) {
-                alert('Ошибка: ' + e.message);
-            }
-        });
-
-        document.getElementById('courseMedScheduleType').addEventListener('change', (e) => {
-            document.getElementById('intervalDaysGroup').style.display =
-                e.target.value === 'EVERY_DAY' ? 'none' : 'block';
-        });
-
-        // Закрытие по клику на оверлей
-        document.querySelectorAll('.sheet-overlay').forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) overlay.style.display = 'none';
-            });
-        });
-    });
-
-    // Переопределяем openCreateSheet для совместимости
-    const originalOpenCreateSheet = openCreateSheet;
-    openCreateSheet = function() {
-        document.getElementById('createMedSheet').style.display = 'flex';
-    };
-
-    // Небольшой патч для обработки выбора "Новый препарат" в addChoiceSheet
-    const chooseNewMedBtn = document.getElementById('chooseNewMed');
-    if (chooseNewMedBtn) {
-        chooseNewMedBtn.addEventListener('click', () => {
-            document.getElementById('addChoiceSheet').style.display = 'none';
-            openCreateSheet();
-        });
-    }
 
         function hideSplash() {
             if (!splash) return;
@@ -2500,6 +2230,52 @@ function setDateControlsVisible(visible) {
     if (weekRow) weekRow.style.display = display;
     if (dividerLight) dividerLight.style.display = display;
 }
+
+async function fetchCourses() {
+        if (!currentUser) return [];
+        try {
+            return await apiFetch(`/courses/user/${currentUser.id}`);
+        } catch (e) {
+            console.warn('Ошибка загрузки курсов', e);
+            return [];
+        }
+    }
+
+    async function fetchMedicines() {
+        try {
+            return await apiFetch('/medicines');
+        } catch (e) {
+            console.warn('Ошибка загрузки препаратов', e);
+            return [];
+        }
+    }
+
+    async function createCourse(name, startDate, endDate) {
+        return await apiFetch('/courses', {
+            method: 'POST',
+            body: JSON.stringify({ userId: currentUser.id, name, startDate, endDate })
+        });
+    }
+
+    async function updateCourse(courseId, name, startDate, endDate) {
+        // Бэкенд пока не имеет PUT /courses/{id}, можно добавить позже
+        // Пока пропустим
+    }
+
+    async function deleteCourse(courseId) {
+        return await apiFetch(`/courses/${courseId}/deactivate`, { method: 'PATCH' });
+    }
+
+    async function addMedicationToCourse(courseId, medication) {
+        return await apiFetch(`/courses/${courseId}/medications`, {
+            method: 'POST',
+            body: JSON.stringify(medication)
+        });
+    }
+
+    async function generateRemindersForCourse(courseId) {
+        return await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
+    }
 
 
         function getSunday(date) {
@@ -3844,26 +3620,287 @@ function calculateMedicationStats(reminderId) {
         $('userSwitchBtn')?.addEventListener('click', () => { renderUserSwitchList(); if (userSwitchSheet) userSwitchSheet.style.display = 'flex'; });
         userSwitchSheet?.addEventListener('click', (e) => { if (e.target === userSwitchSheet) userSwitchSheet.style.display = 'none'; });
 
+function updatePlusButton(activeTab) {
+        const plusBtn = document.getElementById('plusBtn');
+        if (activeTab === 'home') {
+            plusBtn.onclick = () => { document.getElementById('addChoiceSheet').style.display = 'flex'; };
+        } else if (activeTab === 'stats') {
+            // В зависимости от активного таба (курсы/препараты) меняем действие
+            const activeTabBtn = document.querySelector('.tab-btn.active');
+            if (activeTabBtn && activeTabBtn.dataset.tab === 'courses') {
+                plusBtn.onclick = () => openCourseSheet();
+            } else {
+                plusBtn.onclick = () => openCreateMedSheet();
+            }
+        } else {
+            plusBtn.onclick = null;
+        }
+    }
+
 function setActiveTab(tabId) {
     document.querySelectorAll('.nav-item')?.forEach(item => item.classList.remove('active'));
     document.getElementById(tabId)?.classList.add('active');
     const active = tabId.replace('nav', '').toLowerCase();
 
+    const monthBar = document.getElementById('monthBar');
+    const weekRow = document.getElementById('weekRow');
+    const dividerLight = document.getElementById('dividerLight');
+    const contentDiv = document.getElementById('content');
+    const dynamicContent = document.getElementById('dynamicContent');
+
     if (active === 'home') {
-        setDateControlsVisible(true);
+        monthBar.style.display = '';
+        weekRow.style.display = '';
+        dividerLight.style.display = '';
+        contentDiv.style.display = '';
+        if (dynamicContent) {
+            dynamicContent.innerHTML = '';
+            dynamicContent.appendChild(contentDiv);
+        }
         renderGroupsForDate(selectedDay);
-        plusBtn.onclick = () => { if (addChoiceSheet) addChoiceSheet.style.display = 'flex'; };
+        updatePlusButton('home');
     } else if (active === 'stats') {
-        setDateControlsVisible(false);
-        renderCoursesContent();
-        plusBtn.onclick = () => { alert('Функция создания курса появится позже'); };
+        monthBar.style.display = 'none';
+        weekRow.style.display = 'none';
+        dividerLight.style.display = 'none';
+        if (contentDiv) contentDiv.style.display = 'none';
+        renderCoursesAndMedsTabs();
+        updatePlusButton('stats');
     } else if (active === 'profile') {
-        setDateControlsVisible(false);
+        monthBar.style.display = 'none';
+        weekRow.style.display = 'none';
+        dividerLight.style.display = 'none';
+        if (contentDiv) contentDiv.style.display = 'none';
         renderProfileContent();
-        plusBtn.onclick = null;
+        updatePlusButton('profile');
     }
 }
 
+    function renderCoursesAndMedsTabs() {
+        const dynamicContent = document.getElementById('dynamicContent');
+        dynamicContent.innerHTML = `
+            <div class="tabs-container">
+                <button class="tab-btn active" data-tab="courses">Курсы</button>
+                <button class="tab-btn" data-tab="medicines">Препараты</button>
+            </div>
+            <div id="tabContent"></div>
+        `;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = btn.dataset.tab;
+                if (tab === 'courses') {
+                    loadAndRenderCourses();
+                } else {
+                    loadAndRenderMedicines();
+                }
+                updatePlusButton('stats');
+            });
+        });
+        loadAndRenderCourses(); // по умолчанию
+    }
+
+    async function loadAndRenderCourses() {
+        currentCourses = await fetchCourses();
+        const container = document.getElementById('tabContent');
+        if (currentCourses.length === 0) {
+            container.innerHTML = `<div class="empty-state"><p>Нет активных курсов</p></div>`;
+            return;
+        }
+        let html = `<div class="courses-list">`;
+        currentCourses.forEach(course => {
+            html += `
+                <div class="course-card" data-course-id="${course.id}">
+                    <div class="course-title">${escapeHtml(course.name)}</div>
+                    <div class="course-dates">${course.startDate} – ${course.endDate}</div>
+                    <div class="course-progress">
+                        <div class="course-progress-fill" style="width:${calculateCourseProgress(course)}%"></div>
+                    </div>
+                    <div style="display:flex; gap:8px; margin-top:12px;">
+                        <button class="btn-outline generate-reminders" data-course-id="${course.id}">Сгенерировать</button>
+                        <button class="btn-outline edit-course" data-course-id="${course.id}">✎</button>
+                        <button class="btn-outline delete-course" data-course-id="${course.id}">🗑</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+        attachCourseEvents();
+    }
+
+    function calculateCourseProgress(course) {
+        // Упрощённо: можно запросить статистику, пока заглушка
+        return 50;
+    }
+
+    function attachCourseEvents() {
+    document.querySelectorAll('.course-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') return;
+            const courseId = card.dataset.courseId;  // ← ДОБАВИТЬ ЭТУ СТРОКУ
+            const course = currentCourses.find(c => c.id == courseId);
+            if (course) openCourseSheet(course);
+        });
+    });
+        document.querySelectorAll('.generate-reminders').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const courseId = btn.dataset.courseId;
+                try {
+                    await generateRemindersForCourse(courseId);
+                    alert('Напоминания сгенерированы');
+                } catch (err) {
+                    alert('Ошибка: ' + err.message);
+                }
+            });
+        });
+        document.querySelectorAll('.edit-course').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const courseId = btn.dataset.courseId;
+                const course = currentCourses.find(c => c.id == courseId);
+                if (course) openCourseSheet(course);
+            });
+        });
+        document.querySelectorAll('.delete-course').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const courseId = btn.dataset.courseId;
+                if (confirm('Деактивировать курс?')) {
+                    await deleteCourse(courseId);
+                    loadAndRenderCourses();
+                }
+            });
+        });
+    }
+
+    async function loadAndRenderMedicines() {
+        currentMedicines = await fetchMedicines();
+        const container = document.getElementById('tabContent');
+        if (currentMedicines.length === 0) {
+            container.innerHTML = `<div class="empty-state"><p>Нет препаратов</p></div>`;
+            return;
+        }
+        let html = `<div class="medicines-list">`;
+        currentMedicines.forEach(med => {
+            html += `
+                <div class="medicine-card-simple" data-medicine-id="${med.id}">
+                    <div><strong>${escapeHtml(med.name)}</strong> ${med.dosage || ''}</div>
+                    <div style="color:#6f8fb0; font-size:14px;">${med.instructions || ''}</div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+
+    // Функции для sheets курсов
+    function openCourseSheet(course = null) {
+        editingCourseId = course?.id || null;
+        document.getElementById('courseSheetTitle').textContent = course ? 'Редактировать курс' : 'Новый курс';
+        document.getElementById('courseName').value = course?.name || '';
+        document.getElementById('courseStartDate').value = course?.startDate || '';
+        document.getElementById('courseEndDate').value = course?.endDate || '';
+        document.getElementById('courseMedicationsList').innerHTML = '';
+        if (course) {
+            // Загрузить препараты курса и отобразить
+            loadCourseMedications(course.id);
+        }
+        document.getElementById('courseSheet').style.display = 'flex';
+    }
+
+    async function loadCourseMedications(courseId) {
+    try {
+        const course = await apiFetch(`/courses/${courseId}`);
+        const meds = course.medications || [];
+        const listDiv = document.getElementById('courseMedicationsList');
+        listDiv.innerHTML = meds.map(m => `
+            <div class="medication-item">
+                <span>${m.medicineName} ${m.dosage || ''} (${m.timeOfDay || ''})</span>
+                <button class="btn-icon-small edit-course-med" data-med='${JSON.stringify(m).replace(/'/g, "&apos;")}'>✎</button>
+            </div>
+        `).join('');
+    } catch (e) {
+        console.warn('Не удалось загрузить препараты курса', e);
+    }
+}
+
+    // Обработчики для sheet курса
+    document.getElementById('closeCourseSheet').addEventListener('click', () => {
+        document.getElementById('courseSheet').style.display = 'none';
+    });
+    document.getElementById('saveCourseBtn').addEventListener('click', async () => {
+        const name = document.getElementById('courseName').value.trim();
+        const startDate = document.getElementById('courseStartDate').value;
+        const endDate = document.getElementById('courseEndDate').value;
+        if (!name || !startDate || !endDate) return alert('Заполните все поля');
+        try {
+            if (editingCourseId) {
+                // PUT запрос (если есть)
+            } else {
+                await createCourse(name, startDate, endDate);
+            }
+            document.getElementById('courseSheet').style.display = 'none';
+            loadAndRenderCourses();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    });
+
+    document.getElementById('addMedicationToCourseBtn').addEventListener('click', () => {
+        if (!editingCourseId) {
+            alert('Сначала сохраните курс');
+            return;
+        }
+        openCourseMedicationSheet();
+    });
+
+    function openCourseMedicationSheet(medication = null) {
+        editingCourseMedication = medication;
+        document.getElementById('courseMedicationSheet').style.display = 'flex';
+        // Заполнить поля, если редактирование
+    }
+
+    document.getElementById('closeCourseMedSheet').addEventListener('click', () => {
+        document.getElementById('courseMedicationSheet').style.display = 'none';
+    });
+    document.getElementById('saveCourseMedBtn').addEventListener('click', async () => {
+        const data = {
+            medicineName: document.getElementById('courseMedName').value,
+            dosage: document.getElementById('courseMedDosage').value,
+            instructions: document.getElementById('courseMedInstructions').value,
+            mealMode: document.getElementById('courseMedMealMode').value,
+            timeOfDay: document.getElementById('courseMedTime').value,
+            scheduleType: document.getElementById('courseMedScheduleType').value,
+            intervalDays: parseInt(document.getElementById('courseMedIntervalDays').value) || 1
+        };
+        try {
+            await addMedicationToCourse(editingCourseId, data);
+            document.getElementById('courseMedicationSheet').style.display = 'none';
+            loadCourseMedications(editingCourseId);
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    });
+
+    // Показать/скрыть поле интервала в зависимости от типа расписания
+    document.getElementById('courseMedScheduleType').addEventListener('change', (e) => {
+        const intervalGroup = document.getElementById('intervalDaysGroup');
+        intervalGroup.style.display = e.target.value === 'EVERY_DAY' ? 'none' : 'block';
+    });
+
+    // Переопределим openCreateSheet для использования в табе "Препараты"
+    const originalOpenCreateSheet = openCreateSheet;
+    openCreateSheet = function() {
+        // Используем существующую форму создания препарата
+        document.getElementById('createMedSheet').style.display = 'flex';
+    };
+
+    function openCreateMedSheet() {
+    openCreateSheet();
+}
 
 function renderProfileContent() {
             if (!contentDiv) return;
