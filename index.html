@@ -2385,7 +2385,21 @@ async function updateCourse(courseId, name, startDate, endDate) {
     }
 
     async function generateRemindersForCourse(courseId) {
-        return await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
+    const result = await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
+
+    // Принудительно обновляем список напоминаний
+    if (currentUser) {
+        console.log('🔄 Обновление напоминаний после генерации курса...');
+        await loadReminders(true); // true = принудительная загрузка с сервера
+
+        // Если мы на главном экране, перерисовываем
+        if (selectedDay) {
+            await loadHistoryForDate(selectedDay);
+            renderGroupsForDate(selectedDay);
+        }
+    }
+
+    return result;
     }
 
 
@@ -3817,28 +3831,36 @@ function setActiveTab(tabId) {
     }
 
     if (active === 'home') {
-        monthBar.style.display = '';
-        weekRow.style.display = '';
-        dividerLight.style.display = '';
+    monthBar.style.display = '';
+    weekRow.style.display = '';
+    dividerLight.style.display = '';
 
-        // Создаём новый content div для главной
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'content';
-        contentDiv.id = 'content';
-        dynamicContent.appendChild(contentDiv);
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'content';
+    contentDiv.id = 'content';
+    dynamicContent.appendChild(contentDiv);
 
-        // Принудительно перезагружаем историю и рендерим
-        if (selectedDay) {
-            const dateKey = selectedDay.toISOString().split('T')[0];
-            historyCache.delete(dateKey);
-            loadHistoryForDate(selectedDay).then(() => {
-                renderGroupsForDate(selectedDay);
-            });
-        }
+    // 🔄 ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ НАПОМИНАНИЯ
+    if (currentUser) {
+        loadReminders(true).then(() => {
+            if (selectedDay) {
+                const dateKey = selectedDay.toISOString().split('T')[0];
+                historyCache.delete(dateKey);
+                loadHistoryForDate(selectedDay).then(() => {
+                    renderGroupsForDate(selectedDay);
+                });
+            }
+        });
+    } else if (selectedDay) {
+        const dateKey = selectedDay.toISOString().split('T')[0];
+        historyCache.delete(dateKey);
+        loadHistoryForDate(selectedDay).then(() => {
+            renderGroupsForDate(selectedDay);
+        });
+    }
 
-        updatePlusButton('home');
-
-    } else if (active === 'stats') {
+    updatePlusButton('home');
+} else if (active === 'stats') {
         monthBar.style.display = 'none';
         weekRow.style.display = 'none';
         dividerLight.style.display = 'none';
@@ -3933,7 +3955,21 @@ async function deleteCourseMedication(courseId, medicationId) {
 }
 
 async function regenerateRemindersForCourse(courseId) {
-    return await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
+    const result = await apiFetch(`/courses/${courseId}/generate-reminders`, { method: 'POST' });
+
+    // Принудительно обновляем список напоминаний
+    if (currentUser) {
+        console.log('🔄 Обновление напоминаний после генерации курса...');
+        await loadReminders(true); // true = принудительная загрузка с сервера
+
+        // Если мы на главном экране, перерисовываем
+        if (selectedDay) {
+            await loadHistoryForDate(selectedDay);
+            renderGroupsForDate(selectedDay);
+        }
+    }
+
+    return result;
 }
 
 function calculateCourseProgress(course) {
