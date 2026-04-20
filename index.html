@@ -599,6 +599,48 @@
     display: block;
 }
 
+@media (hover: hover) {
+    .med-card {
+        cursor: pointer;
+        transition: transform 0.1s ease, background 0.2s ease;
+    }
+
+    .med-card:hover {
+        transform: scale(0.99);
+        background: #f8fcff;
+    }
+
+    .med-card:active {
+        transform: scale(0.98);
+    }
+
+    .day-chip:hover {
+        background: #eef5fc;
+        transform: scale(0.98);
+    }
+
+    .group-header .btn-outline:hover {
+        background: #d4e3ff;
+    }
+
+    .action-btn:hover {
+        background: #e6f0ff;
+        transform: scale(0.98);
+    }
+
+    .action-btn.primary:hover {
+        background: #1a5ad0;
+    }
+}
+
+.sheet-overlay {
+    pointer-events: auto;
+}
+
+.sheet-overlay .bottom-sheet-detail {
+    pointer-events: auto;
+}
+
 @media (max-width: 768px) {
     .input-group.time-group-ios {
         margin-bottom: 20px;
@@ -2609,7 +2651,7 @@ if (originalGenerate) {
         }
 
         function attachSwipeToCard(card, reminderId) {
-    if (!('ontouchstart' in window)) return;
+    if (!card) return;
 
     let startX = 0;
     let startY = 0;
@@ -2618,7 +2660,77 @@ if (originalGenerate) {
     let isVerticalScroll = false;
     let touchMoved = false;
     let touchDuration = 0;
+    let isMouseDown = false;
 
+    // Для мыши (ПК)
+    card.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return; // только левая кнопка
+        startX = e.clientX;
+        startY = e.clientY;
+        startTime = Date.now();
+        swiping = false;
+        isVerticalScroll = false;
+        touchMoved = false;
+        isMouseDown = true;
+        card.style.transition = 'none';
+        card.classList.remove('is-dragging');
+        e.preventDefault();
+    });
+
+    card.addEventListener('mousemove', (e) => {
+        if (!isMouseDown) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        touchMoved = true;
+
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 10) {
+            isVerticalScroll = true;
+            return;
+        }
+
+        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+            swiping = true;
+            card.style.transform = `translateX(${dx}px)`;
+            card.classList.add('is-swiping');
+        }
+    });
+
+    card.addEventListener('mouseup', (e) => {
+        if (!isMouseDown) return;
+        isMouseDown = false;
+
+        const dx = e.clientX - startX;
+        const dt = Date.now() - startTime;
+        touchDuration = dt;
+
+        card.style.transition = 'transform 200ms ease';
+
+        if (swiping && Math.abs(dx) > 60) {
+            if (dx > 0) {
+                optimisticMarkTaken(reminderId, card);
+            } else {
+                optimisticMarkSkipped(reminderId, card);
+            }
+            card.classList.remove('is-swiping');
+        }
+        else if (!swiping && !isVerticalScroll && Math.abs(dx) < 15 && dt < 300) {
+            openDetailSheet(reminderId);
+        }
+
+        card.style.transform = 'translateX(0)';
+        setTimeout(() => {
+            card.style.transition = '';
+            card.classList.remove('is-swiping');
+        }, 200);
+
+        startX = 0;
+        startY = 0;
+        swiping = false;
+        isVerticalScroll = false;
+        touchMoved = false;
+    });
+
+    // Для сенсорного экрана (мобильные)
     card.addEventListener('touchstart', (e) => {
         const t = e.touches[0];
         startX = t.clientX;
@@ -2682,11 +2794,17 @@ if (originalGenerate) {
         touchMoved = false;
     }, { passive: true });
 
+    // Обычный клик для ПК (когда не было движения)
     card.addEventListener('click', (e) => {
-        if (!swiping && !touchMoved && touchDuration < 300) {
+        if (swiping || touchMoved) {
             e.stopPropagation();
-            openDetailSheet(reminderId);
+            return;
         }
+        // Если было движение мыши больше 5px — не открываем
+        if (Math.abs(startX - (e.clientX || startX)) > 5) {
+            return;
+        }
+        openDetailSheet(reminderId);
     });
 }
         function optimisticMarkTaken(reminderId, card) {
