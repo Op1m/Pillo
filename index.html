@@ -4380,12 +4380,7 @@ function openCourseMedicationSheet(medication = null) {
     editingCourseMedication = medication;
     document.getElementById('courseMedicationSheet').style.display = 'flex';
 
-    // УБРАТЬ или ЗАКОММЕНТИРОВАТЬ эти три строки:
-    // document.getElementById('courseMedType').style.display = 'none';
-    // document.getElementById('newMedFields').style.display = 'none';
-    // document.getElementById('existingMedFields').style.display = 'block';
-
-    // Вместо этого показываем оба варианта:
+    // Показываем оба варианта (выбор типа виден)
     document.getElementById('courseMedType').style.display = 'block';
     document.getElementById('newMedFields').style.display = 'block';
     document.getElementById('existingMedFields').style.display = 'block';
@@ -4393,15 +4388,38 @@ function openCourseMedicationSheet(medication = null) {
     // Загружаем список существующих препаратов
     loadExistingMedicinesForSelect();
 
+    // Устанавливаем начальное состояние: по умолчанию выбран "Новый препарат"
+    document.getElementById('courseMedType').value = 'new';
+    document.getElementById('newMedFields').style.display = 'block';
+    document.getElementById('existingMedFields').style.display = 'none';
+
+    // Очищаем поля нового препарата
+    document.getElementById('courseMedName').value = '';
+    document.getElementById('courseMedDosage').value = '';
+    document.getElementById('courseMedInstructions').value = '';
+
+    // Если редактируем существующий препарат в курсе
     if (medication && medication.medicineId) {
+        // Переключаем на существующий
+        document.getElementById('courseMedType').value = 'existing';
+        document.getElementById('newMedFields').style.display = 'none';
+        document.getElementById('existingMedFields').style.display = 'block';
         document.getElementById('existingMedSelect').value = medication.medicineId;
+        document.getElementById('courseMedMealMode').value = medication.mealMode || 'ANYTIME';
+        document.getElementById('courseMedTime').value = medication.timeOfDay || '08:00';
+        document.getElementById('courseMedScheduleType').value = medication.scheduleType || 'EVERY_DAY';
+        document.getElementById('courseMedIntervalDays').value = medication.intervalDays || 1;
+    } else {
+        // Сброс общих полей для нового препарата
+        document.getElementById('courseMedMealMode').value = 'ANYTIME';
+        document.getElementById('courseMedTime').value = '08:00';
+        document.getElementById('courseMedScheduleType').value = 'EVERY_DAY';
+        document.getElementById('courseMedIntervalDays').value = 1;
     }
 
-    document.getElementById('courseMedType').addEventListener('change', (e) => {
-    const isNew = e.target.value === 'new';
-    document.getElementById('newMedFields').style.display = isNew ? 'block' : 'none';
-    document.getElementById('existingMedFields').style.display = isNew ? 'none' : 'block';
-});
+    document.getElementById('intervalDaysGroup').style.display =
+        document.getElementById('courseMedScheduleType').value === 'EVERY_DAY' ? 'none' : 'block';
+}
 
     // Заполняем остальные поля
     document.getElementById('courseMedMealMode').value = medication?.mealMode || 'ANYTIME';
@@ -4428,6 +4446,96 @@ document.getElementById('addMedicationToCourseBtn').addEventListener('click', ()
         document.getElementById('courseMedicationSheet').style.display = 'none';
     });
     document.getElementById('saveCourseMedBtn').addEventListener('click', async () => {
+    const medType = document.getElementById('courseMedType').value; // 'new' или 'existing'
+
+    if (medType === 'new') {
+        // Создаём новый препарат
+        const name = document.getElementById('courseMedName').value.trim();
+        const dosage = document.getElementById('courseMedDosage').value.trim();
+        const instructions = document.getElementById('courseMedInstructions').value.trim();
+
+        if (!name) {
+            alert('Введите название препарата');
+            return;
+        }
+
+        // Сначала создаём препарат через API
+        let newMedicine;
+        try {
+            newMedicine = await apiFetch('/medicines', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: name,
+                    dosage: dosage || '',
+                    description: '',
+                    instructions: instructions || ''
+                })
+            });
+            if (!newMedicine || !newMedicine.id) throw new Error('Не удалось создать препарат');
+        } catch (err) {
+            alert('Ошибка создания препарата: ' + err.message);
+            return;
+        }
+
+        // Теперь добавляем этот препарат в курс
+        const medicationData = {
+            medicineId: newMedicine.id,
+            mealMode: document.getElementById('courseMedMealMode').value,
+            timeOfDay: document.getElementById('courseMedTime').value,
+            scheduleType: document.getElementById('courseMedScheduleType').value,
+            intervalDays: parseInt(document.getElementById('courseMedIntervalDays').value) || 1
+        };
+
+        // Оптимистичное добавление...
+        const tempId = 'temp-med-' + Date.now();
+        const tempMedication = {
+            id: tempId,
+            medicineName: newMedicine.name,
+            dosage: newMedicine.dosage || '',
+            timeOfDay: medicationData.timeOfDay,
+            mealMode: medicationData.mealMode,
+            __optimistic: true
+        };
+
+        const listDiv = document.getElementById('courseMedicationsList');
+        const tempItem = document.createElement('div');
+        tempItem.className = 'medication-item optimistic';
+        tempItem.id = tempId;
+        tempItem.innerHTML = `
+            <span>${escapeHtml(tempMedication.medicineName)} ${escapeHtml(tempMedication.dosage)} (${tempMedication.timeOfDay})</span>
+            <span style="color:#6f8fb0; margin-left:auto;">Добавление...</span>
+        `;
+        listDiv.appendChild(tempItem);
+        document.getElementById('courseMedicationSheet').style.display = 'none';
+
+        try {
+            let savedMedication;
+            if (editingCourseMedication) {
+                savedMedication = await updateCourseMedication(editingCourseId, editingCourseMedication.id, medicationData);
+            } else {
+                savedMedication = await addMedicationToCourse(editingCourseId, medicationData);
+            }
+            const tempElement = document.getElementById(tempId);
+            if (tempElement) {
+                tempElement.classList.remove('optimistic');
+                tempElement.innerHTML = `
+                    <span>${escapeHtml(savedMedication.medicineName)} ${escapeHtml(savedMedication.dosage || '')} (${savedMedication.timeOfDay || ''})</span>
+                    <button class="btn-icon-small edit-course-med" data-id="${savedMedication.id}">✎</button>
+                    <button class="btn-icon-small delete-course-med" data-id="${savedMedication.id}">🗑</button>
+                `;
+                tempElement.id = `med-${savedMedication.id}`;
+                attachMedicationItemEvents(tempElement, savedMedication);
+            }
+            await regenerateRemindersForCourse(editingCourseId);
+        } catch (e) {
+            const tempElement = document.getElementById(tempId);
+            if (tempElement) tempElement.remove();
+            alert('Ошибка: ' + e.message);
+        }
+        return;
+    }
+
+    // Существующий препарат
     const medicineId = document.getElementById('existingMedSelect').value;
     if (!medicineId) return alert('Выберите препарат');
 
@@ -4444,7 +4552,6 @@ document.getElementById('addMedicationToCourseBtn').addEventListener('click', ()
         return;
     }
 
-    // Оптимистичное добавление (как в оригинале)
     const tempId = 'temp-med-' + Date.now();
     const selectedMed = currentMedicines.find(m => m.id == medicineId);
     const tempMedication = {
@@ -4474,7 +4581,6 @@ document.getElementById('addMedicationToCourseBtn').addEventListener('click', ()
         } else {
             savedMedication = await addMedicationToCourse(editingCourseId, medicationData);
         }
-
         const tempElement = document.getElementById(tempId);
         if (tempElement) {
             tempElement.classList.remove('optimistic');
