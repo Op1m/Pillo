@@ -4388,6 +4388,13 @@ function openCourseMedicationSheet(medication = null) {
     // Загружаем список существующих препаратов
     loadExistingMedicinesForSelect();
 
+    // Добавить обработчик переключения типа препарата
+    document.getElementById('courseMedType').onchange = function() {
+        const isNew = this.value === 'new';
+        document.getElementById('newMedFields').style.display = isNew ? 'block' : 'none';
+        document.getElementById('existingMedFields').style.display = isNew ? 'none' : 'block';
+    };
+
     // Устанавливаем начальное состояние: по умолчанию выбран "Новый препарат"
     document.getElementById('courseMedType').value = 'new';
     document.getElementById('newMedFields').style.display = 'block';
@@ -5286,18 +5293,18 @@ ${apiCourseCount === 0 ? '❌ На сервере нет курсовых нап
                 e.preventDefault();
                 return;
             }
-            if (e.target.closest('#saveCreateMed')) {
-                const name = medNameInput?.value?.trim();
-                if (!name) return;
-                const dose = medDoseInput?.value?.trim() || '1 таб.';
-                const time = medTimeInput?.value;
-                if (!time) return;
-                const food = medFoodSelect?.value;
-                createMedicineAndReminder(name, dose, time, food);
-                closeCreateSheet();
-                e.preventDefault();
-                return;
-            }
+if (e.target.closest('#saveCreateMed')) {
+    const name = medNameInput?.value?.trim();
+    if (!name) return;
+    const dose = medDoseInput?.value?.trim() || '1 таб.';
+    const time = medTimeInput?.value;
+    if (!time) return;
+    const food = medFoodSelect?.value;
+    createMedicineAndReminder(name, dose, time, food);
+    closeCreateSheet();
+    e.preventDefault();
+    return;
+}
             if (e.target.closest('#cancelCreateMed') || e.target.closest('#closeCreateMed')) {
                 closeCreateSheet();
                 e.preventDefault();
