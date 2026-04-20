@@ -4736,87 +4736,76 @@ document.getElementById('navHome')?.addEventListener('click', () => {
         startAutoRefresh();
         setupSSE();
     }
-    const panel = document.createElement('div');
-panel.style.cssText = `
-    position: fixed;
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
-    background: #1a1a2e;
-    color: #0f0;
-    font-family: monospace;
-    font-size: 12px;
-    padding: 10px;
-    border-radius: 10px;
-    z-index: 99999;
-    max-height: 200px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
-`;
-document.body.appendChild(panel);
+    if (!document.getElementById('miniDiag')) {
+    const btn = document.createElement('button');
+    btn.id = 'miniDiag';
+    btn.textContent = '🐛';
+    btn.style.cssText = `
+        position: fixed;
+        bottom: 80px;
+        right: 10px;
+        width: 44px;
+        height: 44px;
+        border-radius: 22px;
+        background: #2E86FF;
+        color: white;
+        border: none;
+        font-size: 24px;
+        z-index: 99999;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    `;
 
-function log(msg) {
-    panel.innerHTML += msg + '\n';
-    panel.scrollTop = panel.scrollHeight;
+    const resultDiv = document.createElement('div');
+    resultDiv.id = 'diagResult';
+    resultDiv.style.cssText = `
+        position: fixed;
+        bottom: 130px;
+        right: 10px;
+        background: rgba(0,0,0,0.85);
+        color: #0f0;
+        font-family: monospace;
+        font-size: 10px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        z-index: 99999;
+        max-width: 250px;
+        display: none;
+        white-space: pre-wrap;
+        word-break: break-all;
+        pointer-events: none;
+    `;
+
+    document.body.appendChild(btn);
+    document.body.appendChild(resultDiv);
+
+    btn.onclick = async () => {
+        resultDiv.style.display = 'block';
+        const token = localStorage.getItem('med_token');
+        const user = window.currentUser;
+
+        let text = `👤 ${user?.firstName?.slice(0,8) || '?'}\n`;
+
+        try {
+            const res = await fetch(`https://medicine-reminder-app-t3u9.onrender.com/api/reminders/user/${user?.id}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            const total = data.length;
+            const courseCount = data.filter(r => r.specificDate).length;
+            text += `📊 ${total} напом.\n`;
+            text += `📅 курсовых: ${courseCount}\n`;
+            if (courseCount === 0 && total > 0) text += `⚠️ НЕТ КУРСОВЫХ!\n`;
+        } catch(e) {
+            text += `❌ Ошибка\n`;
+        }
+
+        resultDiv.textContent = text;
+        setTimeout(() => { resultDiv.style.display = 'none'; }, 5000);
+    };
+
+    console.log('✅ Кнопка диагностики добавлена (🐛 в правом нижнем углу)');
 }
-
-log('🔍 Диагностика запущена...');
-
-// Проверяем текущего пользователя
-log('👤 Пользователь: ' + (window.currentUser?.firstName || 'не найден'));
-
-// Проверяем напоминания
-if (window.reminders) {
-    const total = window.reminders.length;
-    const courseReminders = window.reminders.filter(r => r.specificDate);
-    log('📊 Напоминаний всего: ' + total);
-    log('📊 Курсовых: ' + courseReminders.length);
-    if (courseReminders.length) {
-        log('📅 Пример: ' + courseReminders[0].specificDate + ' для reminder ' + courseReminders[0].id);
-    } else {
-        log('❌ Нет курсовых напоминаний!');
-    }
-} else {
-    log('❌ reminders не загружены');
-}
-
-// Проверяем курсы
-fetch('https://medicine-reminder-app-t3u9.onrender.com/api/courses/user/' + currentUser.id, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('med_token')}` }
-})
-.then(r => r.json())
-.then(courses => {
-    log('📚 Курсов найдено: ' + courses.length);
-    if (courses.length) {
-        courses.forEach(c => {
-            log(`   - ${c.name} (${c.startDate} – ${c.endDate})`);
-        });
-    } else {
-        log('❌ Нет курсов!');
-    }
-})
-.catch(e => log('❌ Ошибка курсов: ' + e.message));
-
-// Проверяем напоминания через API
-fetch('https://medicine-reminder-app-t3u9.onrender.com/api/reminders/user/' + currentUser.id, {
-    headers: { 'Authorization': `Bearer ${localStorage.getItem('med_token')}` }
-})
-.then(r => r.json())
-.then(reminders => {
-    const total = reminders.length;
-    const courseReminders = reminders.filter(r => r.specificDate);
-    log('🌐 API напоминаний: ' + total + ' шт');
-    log('🌐 API курсовых: ' + courseReminders.length);
-    if (total > 0 && courseReminders.length === 0) {
-        log('⚠️ ПРОБЛЕМА: Напоминания есть, но курсовых нет!');
-        log('   Пример обычного напоминания: ' + JSON.stringify(reminders[0]));
-    }
-    if (total === 0) {
-        log('❌ Нет ни одного напоминания!');
-    }
-})
-.catch(e => log('❌ Ошибка API: ' + e.message));
 })();
 
         let tapCount = 0;
