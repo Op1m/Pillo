@@ -4421,13 +4421,11 @@ function openCourseMedicationSheet(medication = null) {
         document.getElementById('courseMedScheduleType').value === 'EVERY_DAY' ? 'none' : 'block';
 }
 
-
 document.getElementById('addMedicationToCourseBtn').addEventListener('click', () => {
     if (!editingCourseId) {
         alert('Сначала сохраните курс');
         return;
     }
-    // Проверяем, что курс уже сохранён (не временный ID)
     if (String(editingCourseId).startsWith('temp-')) {
         alert('Курс сохраняется, подождите секунду...');
         return;
