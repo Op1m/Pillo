@@ -4421,13 +4421,6 @@ function openCourseMedicationSheet(medication = null) {
         document.getElementById('courseMedScheduleType').value === 'EVERY_DAY' ? 'none' : 'block';
 }
 
-    // Заполняем остальные поля
-    document.getElementById('courseMedMealMode').value = medication?.mealMode || 'ANYTIME';
-    document.getElementById('courseMedTime').value = medication?.timeOfDay || '08:00';
-    document.getElementById('courseMedScheduleType').value = medication?.scheduleType || 'EVERY_DAY';
-    document.getElementById('courseMedIntervalDays').value = medication?.intervalDays || 1;
-    document.getElementById('intervalDaysGroup').style.display = medication?.scheduleType === 'EVERY_DAY' ? 'none' : 'block';
-}
 
 document.getElementById('addMedicationToCourseBtn').addEventListener('click', () => {
     if (!editingCourseId) {
