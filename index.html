@@ -4465,7 +4465,7 @@ async function loadAndRenderMedicines() {
 
     // Функции для sheets курсов
     function openCourseSheet(course = null) {
-    editingCourseId = course?.id || null;
+    editingCourseId = course.id;
     document.getElementById('courseSheetTitle').textContent = course ? 'Редактировать курс' : 'Новый курс';
     document.getElementById('courseName').value = course?.name || '';
     document.getElementById('courseStartDate').value = course?.startDate || '';
