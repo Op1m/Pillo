@@ -2378,10 +2378,24 @@ async function updateCourse(courseId, name, startDate, endDate) {
     }
 
     async function addMedicationToCourse(courseId, medication) {
-        return await apiFetch(`/courses/${courseId}/medications`, {
-            method: 'POST',
-            body: JSON.stringify(medication)
-        });
+const originalApiFetch = window.apiFetch;
+if (originalApiFetch) {
+    window.apiFetch = async function(endpoint, options = {}) {
+        if (endpoint.includes('/medications') && options.method === 'POST') {
+            console.log('📤 [API] Добавление препарата в курс:', endpoint);
+            console.log('   Тело запроса:', options.body);
+        }
+        if (endpoint.includes('/generate-reminders')) {
+            console.log('🔄 [API] Генерация напоминаний для курса:', endpoint);
+        }
+        const result = await originalApiFetch(endpoint, options);
+        if (endpoint.includes('/generate-reminders')) {
+            console.log('✅ [API] Результат генерации:', result);
+        }
+        return result;
+    };
+    console.log('✅ apiFetch перехвачен');
+}
     }
 
     async function generateRemindersForCourse(courseId) {
@@ -2398,6 +2412,17 @@ async function updateCourse(courseId, name, startDate, endDate) {
             renderGroupsForDate(selectedDay);
         }
     }
+
+    const originalGenerate = window.generateRemindersForCourse;
+if (originalGenerate) {
+    window.generateRemindersForCourse = async function(courseId) {
+        console.log('🔄 ВЫЗОВ generateRemindersForCourse для курса:', courseId);
+        const result = await originalGenerate(courseId);
+        console.log('✅ РЕЗУЛЬТАТ generateRemindersForCourse:', result);
+        return result;
+    };
+    console.log('✅ generateRemindersForCourse перехвачен');
+}
 
     return result;
     }
@@ -3006,6 +3031,18 @@ const serverPostponedTime = parseIsoSafe(data.scheduledTime);
             } catch (err) {
                 console.warn('Ошибка загрузки напоминаний', err);
             }
+
+            const originalLoadReminders = window.loadReminders;
+if (originalLoadReminders) {
+    window.loadReminders = async function(force) {
+        console.log('📋 ЗАГРУЗКА НАПОМИНАНИЙ, force=', force);
+        const result = await originalLoadReminders(force);
+        console.log('📋 Загружено напоминаний:', window.reminders?.length);
+        console.log('📋 Из них курсовых:', window.reminders?.filter(r => r.specificDate).length);
+        return result;
+    };
+    console.log('✅ loadReminders перехвачен');
+}
         }
 
         async function loadHistoryForDate(date) {
