@@ -3319,19 +3319,19 @@ function calculateMedicationStats(reminderId) {
        async function createMedicineAndReminder(name, dosage, time, food) {
     if (!currentUser) return null;
     try {
-        // 1. Создаём препарат
+        // Упрощаем запрос — убираем instructions
         const medicine = await apiFetch('/medicines', {
             method: 'POST',
             body: JSON.stringify({
                 name: name,
                 dosage: dosage,
-                description: '',
-                instructions: food   // ← исправлено: используем food
+                description: ''
+                // instructions НЕ отправляем
             })
         });
         if (!medicine || !medicine.id) throw new Error('Не удалось создать препарат');
 
-        // 2. Создаём напоминание для этого препарата
+        // Создаём напоминание
         const reminder = await apiFetch('/reminders', {
             method: 'POST',
             body: JSON.stringify({
@@ -3342,19 +3342,17 @@ function calculateMedicationStats(reminderId) {
             })
         });
 
-        // 3. Обновляем локальные кэши
         reminders.push(reminder);
         remindersCache.data = reminders;
         remindersCache.timestamp = Date.now();
         currentMedicines.push(medicine);
 
-        // 4. Перерисовываем интерфейс
         if (selectedDay) await loadHistoryForDate(selectedDay);
         if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
             renderMedicinesListOptimistic(currentMedicines);
         }
 
-        alert('✅ Препарат и напоминание созданы!');
+        alert('✅ Препарат создан!');
         return medicine;
     } catch (err) {
         console.error('Ошибка создания:', err);
@@ -4506,6 +4504,8 @@ document.getElementById('addMedicationToCourseBtn').addEventListener('click', ()
         listDiv.appendChild(tempItem);
         document.getElementById('courseMedicationSheet').style.display = 'none';
 
+        await regenerateRemindersForCourse(editingCourseId);
+
         try {
             let savedMedication;
             if (editingCourseMedication) {
@@ -4736,75 +4736,218 @@ document.getElementById('navHome')?.addEventListener('click', () => {
         startAutoRefresh();
         setupSSE();
     }
-    if (!document.getElementById('miniDiag')) {
-    const btn = document.createElement('button');
-    btn.id = 'miniDiag';
-    btn.textContent = '🐛';
-    btn.style.cssText = `
-        position: fixed;
-        bottom: 80px;
-        right: 10px;
-        width: 44px;
-        height: 44px;
-        border-radius: 22px;
-        background: #2E86FF;
-        color: white;
-        border: none;
-        font-size: 24px;
-        z-index: 99999;
-        cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    `;
-
-    const resultDiv = document.createElement('div');
-    resultDiv.id = 'diagResult';
-    resultDiv.style.cssText = `
-        position: fixed;
-        bottom: 130px;
-        right: 10px;
-        background: rgba(0,0,0,0.85);
-        color: #0f0;
-        font-family: monospace;
-        font-size: 10px;
-        padding: 6px 8px;
-        border-radius: 8px;
-        z-index: 99999;
-        max-width: 250px;
-        display: none;
-        white-space: pre-wrap;
-        word-break: break-all;
-        pointer-events: none;
-    `;
-
-    document.body.appendChild(btn);
-    document.body.appendChild(resultDiv);
-
-    btn.onclick = async () => {
-        resultDiv.style.display = 'block';
-        const token = localStorage.getItem('med_token');
-        const user = window.currentUser;
-
-        let text = `👤 ${user?.firstName?.slice(0,8) || '?'}\n`;
-
-        try {
-            const res = await fetch(`https://medicine-reminder-app-t3u9.onrender.com/api/reminders/user/${user?.id}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await res.json();
-            const total = data.length;
-            const courseCount = data.filter(r => r.specificDate).length;
-            text += `📊 ${total} напом.\n`;
-            text += `📅 курсовых: ${courseCount}\n`;
-            if (courseCount === 0 && total > 0) text += `⚠️ НЕТ КУРСОВЫХ!\n`;
-        } catch(e) {
-            text += `❌ Ошибка\n`;
+    if (!document.getElementById('consoleToggleBtn')) {
+    // Стили
+    const style = document.createElement('style');
+    style.textContent = `
+        #consoleToggleBtn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            background: #2E86FF;
+            color: white;
+            border: none;
+            font-size: 24px;
+            z-index: 100001;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
         }
+        #consoleToggleBtn:hover {
+            transform: scale(1.05);
+        }
+        #floatingConsole {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 350px;
+            max-width: 90vw;
+            max-height: 300px;
+            background: rgba(0,0,0,0.92);
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 8px;
+            border-radius: 12px;
+            z-index: 100000;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid #0f0;
+            display: none;
+            pointer-events: auto;
+            backdrop-filter: blur(4px);
+        }
+        #floatingConsole.visible {
+            display: block;
+        }
+        #consoleHeader {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #0f0;
+            font-weight: bold;
+            cursor: move;
+            position: sticky;
+            top: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1;
+        }
+        #consoleClear {
+            background: none;
+            border: none;
+            color: #0f0;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+            padding: 2px 6px;
+        }
+        #consoleClose {
+            background: none;
+            border: none;
+            color: #f66;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 8px;
+            padding: 2px 6px;
+        }
+        .console-log {
+            margin: 2px 0;
+            line-height: 1.3;
+            font-size: 10px;
+        }
+        .console-error {
+            color: #f66;
+        }
+        .console-warn {
+            color: #ff0;
+        }
+        .console-info {
+            color: #0f0;
+        }
+    `;
+    document.head.appendChild(style);
 
-        resultDiv.textContent = text;
-        setTimeout(() => { resultDiv.style.display = 'none'; }, 5000);
+    // Создаём консоль
+    const consoleDiv = document.createElement('div');
+    consoleDiv.id = 'floatingConsole';
+    consoleDiv.innerHTML = `
+        <div id="consoleHeader">
+            <span>📋 ЛОГИ</span>
+            <div>
+                <button id="consoleClear" title="Очистить">🗑</button>
+                <button id="consoleClose" title="Закрыть">✕</button>
+            </div>
+        </div>
+        <div id="consoleContent"></div>
+    `;
+    document.body.appendChild(consoleDiv);
+
+    // Создаём кнопку-переключатель
+    const toggleBtn = document.createElement('button');
+    toggleBtn.id = 'consoleToggleBtn';
+    toggleBtn.innerHTML = '🐛';
+    toggleBtn.title = 'Открыть консоль';
+    document.body.appendChild(toggleBtn);
+
+    const content = document.getElementById('consoleContent');
+    let isVisible = false;
+
+    // Функция для добавления лога
+    window.consoleLog = function(msg, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = `console-log console-${type}`;
+        const time = new Date().toLocaleTimeString();
+        entry.textContent = `[${time}] ${msg}`;
+        content.appendChild(entry);
+        entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
 
-    console.log('✅ Кнопка диагностики добавлена (🐛 в правом нижнем углу)');
+    // Перехватываем console.log
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    console.log = function(...args) {
+        window.consoleLog(args.join(' '), 'info');
+        originalLog.apply(console, args);
+    };
+
+    console.error = function(...args) {
+        window.consoleLog(args.join(' '), 'error');
+        originalError.apply(console, args);
+    };
+
+    console.warn = function(...args) {
+        window.consoleLog(args.join(' '), 'warn');
+        originalWarn.apply(console, args);
+    };
+
+    // Открытие/закрытие
+    toggleBtn.onclick = () => {
+        isVisible = !isVisible;
+        consoleDiv.classList.toggle('visible', isVisible);
+        toggleBtn.innerHTML = isVisible ? '✕' : '🐛';
+        toggleBtn.style.background = isVisible ? '#e74c3c' : '#2E86FF';
+    };
+
+    // Очистка
+    document.getElementById('consoleClear').onclick = () => {
+        content.innerHTML = '';
+        window.consoleLog('Консоль очищена', 'info');
+    };
+
+    // Закрытие через крестик
+    document.getElementById('consoleClose').onclick = () => {
+        isVisible = false;
+        consoleDiv.classList.remove('visible');
+        toggleBtn.innerHTML = '🐛';
+        toggleBtn.style.background = '#2E86FF';
+    };
+
+    // Перетаскивание
+    let isDragging = false;
+    let dragStartX, dragStartY, startLeft, startTop;
+
+    consoleDiv.querySelector('#consoleHeader').addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        const rect = consoleDiv.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
+        consoleDiv.style.transition = 'none';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        let newLeft = startLeft + dx;
+        let newTop = startTop + dy;
+        newLeft = Math.max(5, Math.min(window.innerWidth - consoleDiv.offsetWidth - 5, newLeft));
+        newTop = Math.max(5, Math.min(window.innerHeight - 100, newTop));
+        consoleDiv.style.left = newLeft + 'px';
+        consoleDiv.style.top = newTop + 'px';
+        consoleDiv.style.right = 'auto';
+        consoleDiv.style.bottom = 'auto';
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        consoleDiv.style.transition = '';
+    });
+
+    window.consoleLog('✅ Консоль готова! Нажмите на кнопку 🐛', 'info');
 }
 })();
 
