@@ -2952,6 +2952,76 @@ const serverPostponedTime = parseIsoSafe(data.scheduledTime);
 })
 }
 
+function attachDaySwipe() {
+    const el = contentDiv || document.body;
+    if (!el) return;
+
+    let startX = 0, startY = 0, tracking = false, moved = false, isPointer = false;
+
+    const onStart = (x, y) => {
+        startX = x;
+        startY = y;
+        tracking = true;
+        moved = false;
+    };
+
+    const onMove = (x, y) => {
+        if (!tracking) return;
+        const dx = Math.abs(x - startX);
+        const dy = Math.abs(y - startY);
+        if (dx > 8 || dy > 8) moved = true;
+    };
+
+    const onEnd = (endX, endY) => {
+        if (!tracking) return;
+        tracking = false;
+        if (!moved) return;
+        const dx = endX - startX;
+        const dy = endY - startY;
+        if (Math.abs(dx) > 50 && Math.abs(dy) < 30 && Math.abs(dx) > Math.abs(dy) * 2) {
+            const direction = dx < 0 ? 1 : -1;
+            const newDate = new Date(currentDate);
+            newDate.setDate(currentDate.getDate() + direction);
+            if (typeof changeDayWithAnimation === 'function') {
+                changeDayWithAnimation(newDate, direction);
+            }
+        }
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.med-card')) return;
+        isPointer = true;
+        onStart(e.clientX, e.clientY);
+    }, { passive: true });
+
+    el.addEventListener('pointermove', (e) => {
+        if (isPointer) onMove(e.clientX, e.clientY);
+    }, { passive: true });
+
+    el.addEventListener('pointerup', (e) => {
+        if (isPointer) {
+            onEnd(e.clientX, e.clientY);
+            isPointer = false;
+        }
+    }, { passive: true });
+
+    el.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.med-card')) return;
+        const t = e.touches[0];
+        onStart(t.clientX, t.clientY);
+    }, { passive: true });
+
+    el.addEventListener('touchmove', (e) => {
+        const t = e.touches[0];
+        onMove(t.clientX, t.clientY);
+    }, { passive: true });
+
+    el.addEventListener('touchend', (e) => {
+        const t = e.changedTouches[0];
+        onEnd(t.clientX, t.clientY);
+    }, { passive: true });
+}
+
         async function optimisticDeleteReminder(reminderId) {
             if (!reminderId) return;
 
@@ -6808,7 +6878,6 @@ window.getStatusForReminderOnDate = function(reminder, date) {
         } catch (e) {}
 
         console.log('✅ PILLO: Патч часового пояса применён');
-        }
     })();
 
 </script>
