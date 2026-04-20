@@ -4892,11 +4892,23 @@ document.getElementById('saveCourseMedBtn').addEventListener('click', async () =
     const medType = document.getElementById('courseMedType').value;
     let medicineId = null;
     let medicineName = '';
-    let medicationData = {};
 
     try {
-        if (medType === 'new') {
-            // Получаем данные нового препарата
+        if (medType === 'existing') {
+            // ===== ВАЖНО: ДЛЯ СУЩЕСТВУЮЩЕГО ПРЕПАРАТА - НЕ СОЗДАЁМ НОВЫЙ! =====
+            const select = document.getElementById('existingMedSelect');
+            medicineId = select?.value;
+            medicineName = select?.options[select.selectedIndex]?.text || '';
+
+            if (!medicineId) {
+                alert('Выберите препарат');
+                return;
+            }
+
+            console.log('📦 Используем существующий препарат (БЕЗ создания):', { medicineId, medicineName });
+
+        } else {
+            // Новый препарат
             const name = document.getElementById('courseMedName')?.value?.trim();
             const dosage = document.getElementById('courseMedDosage')?.value?.trim() || '';
             const instructions = document.getElementById('courseMedInstructions')?.value?.trim() || '';
@@ -4909,24 +4921,19 @@ document.getElementById('saveCourseMedBtn').addEventListener('click', async () =
             console.log('📦 Создаём новый препарат:', { name, dosage, instructions });
 
             // Проверяем, не существует ли уже такой препарат
-            const existingMedicine = currentMedicines.find(m => m.name.toLowerCase() === name.toLowerCase());
+            const existingMedicine = currentMedicines.find(m => m.name?.toLowerCase() === name.toLowerCase());
             if (existingMedicine) {
                 medicineId = existingMedicine.id;
                 medicineName = existingMedicine.name;
                 console.log('📦 Препарат уже существует, используем ID:', medicineId);
             } else {
-                // СОЗДАЁМ ТОЛЬКО ОДИН РАЗ
                 const response = await fetch('https://medicine-reminder-app-t3u9.onrender.com/api/medicines', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${localStorage.getItem('med_token')}`
                     },
-                    body: JSON.stringify({
-                        name: name,
-                        dosage: dosage,
-                        description: instructions || ''
-                    })
+                    body: JSON.stringify({ name, dosage, description: instructions })
                 });
 
                 if (!response.ok) {
@@ -4937,30 +4944,18 @@ document.getElementById('saveCourseMedBtn').addEventListener('click', async () =
                 const newMedicine = await response.json();
                 medicineId = newMedicine.id;
                 medicineName = newMedicine.name;
-
                 console.log('✅ Препарат создан, ID:', medicineId);
-
-                // Добавляем в локальный список
                 currentMedicines.push(newMedicine);
             }
-
-        } else {
-            // Существующий препарат - НЕ СОЗДАЁМ НОВЫЙ!
-            const select = document.getElementById('existingMedSelect');
-            medicineId = select?.value;
-            medicineName = select?.options[select.selectedIndex]?.text || '';
-
-            if (!medicineId) {
-                alert('Выберите препарат');
-                return;
-            }
-
-            console.log('📦 Используем существующий препарат (без создания):', { medicineId, medicineName });
         }
 
         // Проверяем, не добавлен ли уже этот препарат в курс
-        const course = await apiFetch(`/courses/${window.editingCourseId}`);
-        const existingMed = course.medications?.find(m => m.medicineId === parseInt(medicineId));
+        const courseCheck = await fetch(`https://medicine-reminder-app-t3u9.onrender.com/api/courses/${window.editingCourseId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('med_token')}` }
+        });
+        const courseData = await courseCheck.json();
+        const existingMed = courseData.medications?.find(m => m.medicineId === parseInt(medicineId));
+
         if (existingMed) {
             alert('Этот препарат уже добавлен в курс!');
             document.getElementById('courseMedicationSheet').style.display = 'none';
@@ -4968,7 +4963,7 @@ document.getElementById('saveCourseMedBtn').addEventListener('click', async () =
         }
 
         // Формируем данные для добавления в курс
-        medicationData = {
+        const medicationData = {
             medicineId: parseInt(medicineId),
             medicineName: medicineName,
             mealMode: document.getElementById('courseMedMealMode').value,
@@ -4994,35 +4989,26 @@ document.getElementById('saveCourseMedBtn').addEventListener('click', async () =
             throw new Error(`HTTP ${addResponse.status}: ${errorText}`);
         }
 
-        const savedMedication = await addResponse.json();
-        console.log('✅ Препарат добавлен в курс:', savedMedication);
+        console.log('✅ Препарат добавлен в курс');
 
         // Генерируем напоминания
-        console.log('🔄 Генерируем напоминания...');
-        const genResponse = await fetch(`https://medicine-reminder-app-t3u9.onrender.com/api/courses/${window.editingCourseId}/generate-reminders`, {
+        await fetch(`https://medicine-reminder-app-t3u9.onrender.com/api/courses/${window.editingCourseId}/generate-reminders`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('med_token')}`
-            }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('med_token')}` }
         });
-
-        if (genResponse.ok) {
-            console.log('✅ Напоминания сгенерированы');
-            // Обновляем напоминания в UI
-            if (window.loadReminders) {
-                await window.loadReminders(true);
-            }
-            if (window.selectedDay) {
-                await window.loadHistoryForDate(window.selectedDay);
-                window.renderGroupsForDate(window.selectedDay);
-            }
-        }
 
         // Закрываем форму
         document.getElementById('courseMedicationSheet').style.display = 'none';
 
         // Обновляем список препаратов в курсе
         await loadCourseMedications(window.editingCourseId);
+
+        // Обновляем напоминания в UI
+        if (window.loadReminders) await window.loadReminders(true);
+        if (window.selectedDay) {
+            await window.loadHistoryForDate(window.selectedDay);
+            window.renderGroupsForDate(window.selectedDay);
+        }
 
         alert('✅ Препарат добавлен! Напоминания созданы.');
 
@@ -5382,121 +5368,6 @@ document.getElementById('navHome')?.addEventListener('click', () => {
         }
     `;
     document.head.appendChild(style);
-
-    // Создаём консоль
-    const consoleDiv = document.createElement('div');
-    consoleDiv.id = 'floatingConsole';
-    consoleDiv.innerHTML = `
-        <div id="consoleHeader">
-            <span>📋 ЛОГИ</span>
-            <div>
-                <button id="consoleClear" title="Очистить">🗑</button>
-                <button id="consoleClose" title="Закрыть">✕</button>
-            </div>
-        </div>
-        <div id="consoleContent"></div>
-    `;
-    document.body.appendChild(consoleDiv);
-
-    // Создаём кнопку-переключатель
-    const toggleBtn = document.createElement('button');
-    toggleBtn.id = 'consoleToggleBtn';
-    toggleBtn.innerHTML = '🐛';
-    toggleBtn.title = 'Открыть консоль';
-    document.body.appendChild(toggleBtn);
-
-    const content = document.getElementById('consoleContent');
-    let isVisible = false;
-
-    // Функция для добавления лога
-    window.consoleLog = function(msg, type = 'info') {
-        const entry = document.createElement('div');
-        entry.className = `console-log console-${type}`;
-        const time = new Date().toLocaleTimeString();
-        entry.textContent = `[${time}] ${msg}`;
-        content.appendChild(entry);
-        entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    };
-
-    // Перехватываем console.log
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalWarn = console.warn;
-
-    console.log = function(...args) {
-        window.consoleLog(args.join(' '), 'info');
-        originalLog.apply(console, args);
-    };
-
-    console.error = function(...args) {
-        window.consoleLog(args.join(' '), 'error');
-        originalError.apply(console, args);
-    };
-
-    console.warn = function(...args) {
-        window.consoleLog(args.join(' '), 'warn');
-        originalWarn.apply(console, args);
-    };
-
-    // Открытие/закрытие
-    toggleBtn.onclick = () => {
-        isVisible = !isVisible;
-        consoleDiv.classList.toggle('visible', isVisible);
-        toggleBtn.innerHTML = isVisible ? '✕' : '🐛';
-        toggleBtn.style.background = isVisible ? '#e74c3c' : '#2E86FF';
-    };
-
-    // Очистка
-    document.getElementById('consoleClear').onclick = () => {
-        content.innerHTML = '';
-        window.consoleLog('Консоль очищена', 'info');
-    };
-
-    // Закрытие через крестик
-    document.getElementById('consoleClose').onclick = () => {
-        isVisible = false;
-        consoleDiv.classList.remove('visible');
-        toggleBtn.innerHTML = '🐛';
-        toggleBtn.style.background = '#2E86FF';
-    };
-
-    // Перетаскивание
-    let isDragging = false;
-    let dragStartX, dragStartY, startLeft, startTop;
-
-    consoleDiv.querySelector('#consoleHeader').addEventListener('mousedown', (e) => {
-        if (e.target.tagName === 'BUTTON') return;
-        isDragging = true;
-        dragStartX = e.clientX;
-        dragStartY = e.clientY;
-        const rect = consoleDiv.getBoundingClientRect();
-        startLeft = rect.left;
-        startTop = rect.top;
-        consoleDiv.style.transition = 'none';
-        e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const dx = e.clientX - dragStartX;
-        const dy = e.clientY - dragStartY;
-        let newLeft = startLeft + dx;
-        let newTop = startTop + dy;
-        newLeft = Math.max(5, Math.min(window.innerWidth - consoleDiv.offsetWidth - 5, newLeft));
-        newTop = Math.max(5, Math.min(window.innerHeight - 100, newTop));
-        consoleDiv.style.left = newLeft + 'px';
-        consoleDiv.style.top = newTop + 'px';
-        consoleDiv.style.right = 'auto';
-        consoleDiv.style.bottom = 'auto';
-    });
-
-    document.addEventListener('mouseup', () => {
-        isDragging = false;
-        consoleDiv.style.transition = '';
-    });
-
-    window.consoleLog('✅ Консоль готова! Нажмите на кнопку 🐛', 'info');
-}
 })();
 
         let tapCount = 0;
