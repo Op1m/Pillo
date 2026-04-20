@@ -4736,157 +4736,87 @@ document.getElementById('navHome')?.addEventListener('click', () => {
         startAutoRefresh();
         setupSSE();
     }
+    const panel = document.createElement('div');
+panel.style.cssText = `
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    background: #1a1a2e;
+    color: #0f0;
+    font-family: monospace;
+    font-size: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    z-index: 99999;
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+`;
+document.body.appendChild(panel);
 
-    // 👇 ДОБАВЬТЕ ЭТОТ КОД ЗДЕСЬ 👇
-    // Принудительно проверяем загрузку курсовых напоминаний
-    setTimeout(() => {
-        if (currentUser && reminders) {
-            const courseCount = reminders.filter(r => r.specificDate).length;
-            console.log('📊 Диагностика после загрузки:');
-            console.log('   - Всего напоминаний:', reminders.length);
-            console.log('   - Курсовых напоминаний:', courseCount);
+function log(msg) {
+    panel.innerHTML += msg + '\n';
+    panel.scrollTop = panel.scrollHeight;
+}
 
-            if (courseCount === 0) {
-                console.warn('⚠️ Курсовые напоминания не загружены! Пробуем перезагрузить...');
-                loadReminders(true).then(() => {
-                    console.log('   - После перезагрузки курсовых:', reminders.filter(r => r.specificDate).length);
-                    if (selectedDay) {
-                        loadHistoryForDate(selectedDay).then(() => {
-                            renderGroupsForDate(selectedDay);
-                        });
-                    }
-                });
-            }
-        }
-    }, 1000);
-    // 👆 КОНЕЦ ДОБАВЛЯЕМОГО КОДА 👆
-    setTimeout(() => {
-    // Создаём плавающую кнопку диагностики
-    const diagBtn = document.createElement('div');
-    diagBtn.style.cssText = `
-        position: fixed;
-        bottom: 100px;
-        right: 20px;
-        width: 50px;
-        height: 50px;
-        background: #2E86FF;
-        border-radius: 25px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        z-index: 10000;
-        cursor: pointer;
-    `;
-    diagBtn.innerHTML = '🔍';
-    diagBtn.onclick = async () => {
-        // Собираем диагностику
-        const total = reminders?.length || 0;
-        const courseReminders = reminders?.filter(r => r.specificDate) || [];
-        const courseCount = courseReminders.length;
+log('🔍 Диагностика запущена...');
 
-        // Проверяем API напрямую
-        let apiTotal = 0;
-        let apiCourseCount = 0;
-        try {
-            const res = await fetch(`${API_BASE}/reminders/user/${currentUser?.id}`, {
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-            const data = await res.json();
-            apiTotal = data.length;
-            apiCourseCount = data.filter(r => r.specificDate).length;
-        } catch(e) {
-            console.error('API error:', e);
-        }
+// Проверяем текущего пользователя
+log('👤 Пользователь: ' + (window.currentUser?.firstName || 'не найден'));
 
-        // Показываем результат
-        alert(`
-📊 ДИАГНОСТИКА НАПОМИНАНИЙ
-━━━━━━━━━━━━━━━━━━━━━━
-📦 В памяти (reminders):
-   • Всего: ${total}
-   • Курсовых: ${courseCount}
+// Проверяем напоминания
+if (window.reminders) {
+    const total = window.reminders.length;
+    const courseReminders = window.reminders.filter(r => r.specificDate);
+    log('📊 Напоминаний всего: ' + total);
+    log('📊 Курсовых: ' + courseReminders.length);
+    if (courseReminders.length) {
+        log('📅 Пример: ' + courseReminders[0].specificDate + ' для reminder ' + courseReminders[0].id);
+    } else {
+        log('❌ Нет курсовых напоминаний!');
+    }
+} else {
+    log('❌ reminders не загружены');
+}
 
-🌐 С сервера (API):
-   • Всего: ${apiTotal}
-   • Курсовых: ${apiCourseCount}
+// Проверяем курсы
+fetch('https://medicine-reminder-app-t3u9.onrender.com/api/courses/user/' + currentUser.id, {
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('med_token')}` }
+})
+.then(r => r.json())
+.then(courses => {
+    log('📚 Курсов найдено: ' + courses.length);
+    if (courses.length) {
+        courses.forEach(c => {
+            log(`   - ${c.name} (${c.startDate} – ${c.endDate})`);
+        });
+    } else {
+        log('❌ Нет курсов!');
+    }
+})
+.catch(e => log('❌ Ошибка курсов: ' + e.message));
 
-📅 Выбранная дата: ${selectedDay?.toISOString().split('T')[0] || 'не выбрана'}
-👤 Пользователь: ${currentUser?.firstName || 'не авторизован'}
-
-${courseCount === 0 && apiCourseCount > 0 ? '⚠️ Напоминания есть на сервере, но не загружены!' : ''}
-${apiCourseCount === 0 ? '❌ На сервере нет курсовых напоминаний!' : ''}
-        `);
-
-        // Если на сервере есть, а в памяти нет - принудительно загружаем
-        if (apiCourseCount > 0 && courseCount === 0) {
-            if (confirm('Напоминания есть на сервере. Загрузить их сейчас?')) {
-                await loadReminders(true);
-                if (selectedDay) {
-                    await loadHistoryForDate(selectedDay);
-                    renderGroupsForDate(selectedDay);
-                }
-                alert('✅ Напоминания загружены! Проверьте главный экран.');
-            }
-        }
-
-        // Если на сервере нет - предлагаем создать тестовый курс
-        if (apiCourseCount === 0 && currentUser) {
-            if (confirm('Курсовых напоминаний нет. Создать тестовый курс?')) {
-                // Создаём тестовый курс
-                const today = new Date();
-                const endDate = new Date();
-                endDate.setDate(today.getDate() + 7);
-
-                try {
-                    const course = await createCourse('Тестовый курс',
-                        today.toISOString().split('T')[0],
-                        endDate.toISOString().split('T')[0]);
-
-                    await addMedicationToCourse(course.id, {
-                        medicineName: 'Тестовый препарат',
-                        dosage: '1 таблетка',
-                        instructions: 'После еды',
-                        mealMode: 'AFTER_MEAL',
-                        timeOfDay: '09:00',
-                        scheduleType: 'EVERY_DAY',
-                        intervalDays: 1
-                    });
-
-                    await regenerateRemindersForCourse(course.id);
-
-                    alert('✅ Тестовый курс создан! Перейдите на главный экран и выберите дату.');
-                } catch(e) {
-                    alert('❌ Ошибка создания курса: ' + e.message);
-                }
-            }
-        }
-    };
-
-    document.body.appendChild(diagBtn);
-
-    // Текст с инструкцией
-    const hint = document.createElement('div');
-    hint.style.cssText = `
-        position: fixed;
-        bottom: 160px;
-        right: 20px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        z-index: 10000;
-        pointer-events: none;
-    `;
-    hint.innerHTML = 'Нажмите 🔍 для диагностики';
-    document.body.appendChild(hint);
-
-    setTimeout(() => hint.remove(), 5000);
-}, 2000);
+// Проверяем напоминания через API
+fetch('https://medicine-reminder-app-t3u9.onrender.com/api/reminders/user/' + currentUser.id, {
+    headers: { 'Authorization': `Bearer ${localStorage.getItem('med_token')}` }
+})
+.then(r => r.json())
+.then(reminders => {
+    const total = reminders.length;
+    const courseReminders = reminders.filter(r => r.specificDate);
+    log('🌐 API напоминаний: ' + total + ' шт');
+    log('🌐 API курсовых: ' + courseReminders.length);
+    if (total > 0 && courseReminders.length === 0) {
+        log('⚠️ ПРОБЛЕМА: Напоминания есть, но курсовых нет!');
+        log('   Пример обычного напоминания: ' + JSON.stringify(reminders[0]));
+    }
+    if (total === 0) {
+        log('❌ Нет ни одного напоминания!');
+    }
+})
+.catch(e => log('❌ Ошибка API: ' + e.message));
 })();
 
         let tapCount = 0;
@@ -6328,6 +6258,65 @@ window.getStatusForReminderOnDate = function(reminder, date) {
 
         console.log('✅ PILLO: Патч часового пояса применён');
     })();
+
+    (function fixCreateMedButton() {
+    const saveBtn = document.getElementById('saveCreateMed');
+    if (!saveBtn) {
+        console.warn('Кнопка saveCreateMed не найдена');
+        return;
+    }
+
+    // Удаляем старые обработчики, чтобы избежать дублирования
+    const newBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newBtn, saveBtn);
+
+    newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const name = document.getElementById('medName')?.value?.trim();
+        if (!name) {
+            alert('Введите название препарата');
+            return;
+        }
+
+        const dose = document.getElementById('medDose')?.value?.trim() || '1 таб.';
+        const time = document.getElementById('medTime')?.value;
+        if (!time) {
+            alert('Выберите время приёма');
+            return;
+        }
+        const food = document.getElementById('medFood')?.value || 'во время еды';
+
+        console.log('🔄 Создаём препарат:', { name, dose, time, food });
+
+        // Показываем индикатор загрузки
+        const originalText = newBtn.textContent;
+        newBtn.textContent = 'Создание...';
+        newBtn.disabled = true;
+
+        createMedicineAndReminder(name, dose, time, food)
+            .then(() => {
+                console.log('✅ Препарат создан успешно');
+                closeCreateSheet();
+                // Обновляем список препаратов на вкладке "Препараты"
+                if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
+                    loadAndRenderMedicines();
+                }
+            })
+            .catch(err => {
+                console.error('❌ Ошибка создания:', err);
+                alert('Ошибка: ' + (err.message || 'Неизвестная ошибка'));
+            })
+            .finally(() => {
+                newBtn.textContent = originalText;
+                newBtn.disabled = false;
+            });
+    });
+
+    console.log('✅ Обработчик для saveCreateMed установлен');
+})();
+
 </script>
 
 </body>
