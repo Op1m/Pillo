@@ -4549,38 +4549,31 @@ document.getElementById('saveCourseBtn').addEventListener('click', async () => {
     const name = document.getElementById('courseName').value.trim();
     const startDate = document.getElementById('courseStartDate').value;
     const endDate = document.getElementById('courseEndDate').value;
-    if (!name || !startDate || !endDate) return alert('Заполните все поля');
+
+    if (!name || !startDate || !endDate) {
+        return alert('Заполните все поля');
+    }
 
     const isNewCourse = !editingCourseId;
-
-    // Для редактирования закрываем sheet сразу
-    if (!isNewCourse) {
-        document.getElementById('courseSheet').style.display = 'none';
-    }
-
-    // Оптимистичное обновление для существующего курса
-    let originalCourse = null;
-    if (!isNewCourse) {
-        originalCourse = currentCourses.find(c => c.id == editingCourseId);
-        if (originalCourse) {
-            originalCourse.name = name;
-            originalCourse.startDate = startDate;
-            originalCourse.endDate = endDate;
-            if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
-                renderCoursesListOptimistic(currentCourses);
-            }
-        }
-    }
 
     try {
         let course;
         if (isNewCourse) {
             course = await createCourse(name, startDate, endDate);
+            // ✅ ВАЖНО: Устанавливаем ID созданного курса
             editingCourseId = course.id;
+            window.editingCourseId = course.id; // для глобального доступа
+
+            // Обновляем заголовок и показываем кнопку добавления препарата
             document.getElementById('courseSheetTitle').textContent = 'Редактировать курс';
             document.getElementById('addMedicationToCourseBtn').style.display = 'block';
+
+            // Загружаем список препаратов (пока пустой)
             loadCourseMedications(course.id);
+
             alert('Курс создан! Теперь добавьте препараты.');
+
+            // Добавляем в список курсов
             currentCourses.push(course);
             if (document.querySelector('.tab-btn.active')?.dataset.tab === 'courses') {
                 renderCoursesListOptimistic(currentCourses);
