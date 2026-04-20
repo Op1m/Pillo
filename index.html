@@ -4504,7 +4504,12 @@ async function loadAndRenderMedicines() {
 
     // Функции для sheets курсов
     function openCourseSheet(course = null) {
-    editingCourseId = course.id;
+    // ✅ Правильно: если course есть, берём его id, иначе null
+    editingCourseId = course?.id || null;
+    window.editingCourseId = editingCourseId; // синхронизируем глобальную переменную
+
+    console.log('📌 openCourseSheet: editingCourseId =', editingCourseId);
+
     document.getElementById('courseSheetTitle').textContent = course ? 'Редактировать курс' : 'Новый курс';
     document.getElementById('courseName').value = course?.name || '';
     document.getElementById('courseStartDate').value = course?.startDate || '';
@@ -4521,28 +4526,6 @@ async function loadAndRenderMedicines() {
     }
 
     document.getElementById('courseSheet').style.display = 'flex';
-}
-    async function loadCourseMedications(courseId) {
-    try {
-        const course = await apiFetch(`/courses/${courseId}`);
-        const meds = course.medications || [];
-        const listDiv = document.getElementById('courseMedicationsList');
-        listDiv.innerHTML = '';
-        meds.forEach(m => {
-            const item = document.createElement('div');
-            item.className = 'medication-item';
-            item.id = `med-${m.id}`;
-            item.innerHTML = `
-                <span>${escapeHtml(m.medicineName)} ${escapeHtml(m.dosage || '')} (${m.timeOfDay || ''})</span>
-                <button class="btn-icon-small edit-course-med" data-id="${m.id}">✎</button>
-                <button class="btn-icon-small delete-course-med" data-id="${m.id}">🗑</button>
-            `;
-            listDiv.appendChild(item);
-            attachMedicationItemEvents(item, m);
-        });
-    } catch (e) {
-        console.warn('Не удалось загрузить препараты курса', e);
-    }
 }
 
 async function optimisticDeleteMedicine(medicineId) {
