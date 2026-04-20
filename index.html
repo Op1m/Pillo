@@ -1866,8 +1866,8 @@
     <div class="week-row" id="weekRow"></div>
     <div class="divider-light" id="dividerLight"></div>
     <div id="dynamicContent">
-    <div class="content" id="content"></div>
-</div>
+        <div class="content" id="content"></div>
+    </div>
     <div class="bottom-nav">
         <div class="nav-items">
             <div class="nav-item active" id="navHome">
@@ -1941,228 +1941,228 @@
     </div>
 
     <!-- Sheet для добавления/редактирования препарата в курсе -->
-<div class="sheet-overlay" id="courseMedicationSheet">
-    <div class="bottom-sheet-detail create-sheet">
-        <div class="sheet-handle"></div>
-        <div class="sheet-header-buttons">
-            <div class="btn-icon" id="closeCourseMedSheet">
-                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
-            </div>
-            <div class="btn-icon" id="saveCourseMedBtn">
-                <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
-            </div>
-        </div>
-        <div class="sheet-detail-title">Препарат курса</div>
-        <!-- Выбор типа -->
-        <div class="input-group">
-            <label>Тип препарата</label>
-            <select id="courseMedType">
-                <option value="new">Новый препарат</option>
-                <option value="existing">Существующий препарат</option>
-            </select>
-        </div>
-        <!-- Блок для нового препарата -->
-        <div id="newMedFields">
-            <div class="input-group">
-                <label>Название</label>
-                <input type="text" id="courseMedName" placeholder="Название">
-            </div>
-            <div class="input-group">
-                <label>Дозировка</label>
-                <input type="text" id="courseMedDosage" placeholder="Дозировка">
-            </div>
-            <div class="input-group">
-                <label>Инструкция</label>
-                <input type="text" id="courseMedInstructions" placeholder="Инструкция">
-            </div>
-        </div>
-        <!-- Блок для существующего препарата -->
-        <div id="existingMedFields" style="display:none;">
-            <div class="input-group">
-                <label>Выберите препарат</label>
-                <select id="existingMedSelect"></select>
-            </div>
-        </div>
-        <!-- Общие поля -->
-        <div class="input-group">
-            <label>Приём пищи</label>
-            <select id="courseMedMealMode">
-                <option value="ANYTIME">Независимо</option>
-                <option value="BEFORE_MEAL">До еды</option>
-                <option value="DURING_MEAL">Во время еды</option>
-                <option value="AFTER_MEAL">После еды</option>
-            </select>
-        </div>
-        <div class="input-group time-group-ios">
-            <label>Время приёма</label>
-            <div class="time-input-wrapper">
-                <input type="time" id="courseMedTime" value="08:00">
-            </div>
-        </div>
-        <div class="input-group">
-            <label>Тип расписания</label>
-            <select id="courseMedScheduleType">
-                <option value="EVERY_DAY">Каждый день</option>
-                <option value="EVERY_N_DAYS">Через N дней</option>
-                <option value="CUSTOM_INTERVAL">Пользовательский интервал</option>
-            </select>
-        </div>
-        <div class="input-group" id="intervalDaysGroup">
-            <label>Интервал (дней)</label>
-            <input type="number" id="courseMedIntervalDays" value="1" min="1">
-        </div>
-    </div>
-</div>
-</div>
-    <div class="modal-sheet-overlay" id="takeAllSheet">
-        <div class="modal-sheet">
-            <div class="modal-card">
-                <div class="modal-title">Принять все препараты</div>
-                <div class="take-all-subtitle" id="takeAllSubtitle">Отметить 3 лекарства на 09:00</div>
-                <div class="modal-divider"></div>
-                <div class="modal-option-group">
-                    <div class="modal-option take-all-option" id="takeAllConfirm">Принять все</div>
-                    <div class="modal-option take-all-option" id="skipAllConfirm">Пропустить все</div>
-                    <div class="modal-option take-all-option" id="postponeAllConfirm">Перенести все</div>
-                </div>
-            </div>
-            <div class="modal-cancel-btn" id="cancelTakeAll">Отменить</div>
-        </div>
-    </div>
-    <div class="modal-sheet-overlay" id="addChoiceSheet">
-        <div class="modal-sheet">
-            <div class="modal-card">
-                <div class="modal-title">Что вы хотите добавить?</div>
-                <div class="modal-divider"></div>
-                <div class="modal-option-group">
-                    <div class="modal-option take-all-option" id="chooseNewMed">Новый препарат</div>
-                    <div class="modal-option take-all-option" id="chooseNewCourse">Новый курс</div>
-                </div>
-            </div>
-            <div class="modal-cancel-btn" id="cancelAddChoice">Отменить</div>
-        </div>
-    </div>
-    <div class="sheet-overlay" id="createMedSheet">
-        <div class="bottom-sheet-detail create-sheet" id="createSheetDetail">
+    <div class="sheet-overlay" id="courseMedicationSheet">
+        <div class="bottom-sheet-detail create-sheet">
             <div class="sheet-handle"></div>
             <div class="sheet-header-buttons">
-                <div class="btn-icon" id="closeCreateMed">
+                <div class="btn-icon" id="closeCourseMedSheet">
                     <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
                 </div>
-                <div class="btn-icon" id="infoCreateMed">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
-                    </svg>
+                <div class="btn-icon" id="saveCourseMedBtn">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
                 </div>
             </div>
-            <div class="pill-image-frame">
-                <svg viewBox="0 0 24 24">
-                    <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
-                </svg>
-            </div>
-            <div class="sheet-detail-title">Новый препарат</div>
+            <div class="sheet-detail-title">Препарат курса</div>
+            <!-- Выбор типа -->
             <div class="input-group">
-                <label>Название</label>
-                <input type="text" id="medName" placeholder="например, Парацетамол" value="Новый препарат">
+                <label>Тип препарата</label>
+                <select id="courseMedType">
+                    <option value="new">Новый препарат</option>
+                    <option value="existing">Существующий препарат</option>
+                </select>
             </div>
+            <!-- Блок для нового препарата -->
+            <div id="newMedFields">
+                <div class="input-group">
+                    <label>Название</label>
+                    <input type="text" id="courseMedName" placeholder="Название">
+                </div>
+                <div class="input-group">
+                    <label>Дозировка</label>
+                    <input type="text" id="courseMedDosage" placeholder="Дозировка">
+                </div>
+                <div class="input-group">
+                    <label>Инструкция</label>
+                    <input type="text" id="courseMedInstructions" placeholder="Инструкция">
+                </div>
+            </div>
+            <!-- Блок для существующего препарата -->
+            <div id="existingMedFields" style="display:none;">
+                <div class="input-group">
+                    <label>Выберите препарат</label>
+                    <select id="existingMedSelect"></select>
+                </div>
+            </div>
+            <!-- Общие поля -->
             <div class="input-group">
-                <label>Дозировка</label>
-                <input type="text" id="medDose" placeholder="например, 1 таб." value="1 таб.">
+                <label>Приём пищи</label>
+                <select id="courseMedMealMode">
+                    <option value="ANYTIME">Независимо</option>
+                    <option value="BEFORE_MEAL">До еды</option>
+                    <option value="DURING_MEAL">Во время еды</option>
+                    <option value="AFTER_MEAL">После еды</option>
+                </select>
             </div>
             <div class="input-group time-group-ios">
                 <label>Время приёма</label>
                 <div class="time-input-wrapper">
-                    <input type="time" id="medTime" value="08:30">
-                    <span class="time-placeholder">08:30</span>
+                    <input type="time" id="courseMedTime" value="08:00">
                 </div>
             </div>
             <div class="input-group">
-                <label>Приём пищи</label>
-                <select id="medFood">
-                    <option value="во время еды" selected>Во время еды</option>
-                    <option value="до еды">До еды</option>
-                    <option value="после еды">После еды</option>
-                    <option value="независимо">Независимо от еды</option>
+                <label>Тип расписания</label>
+                <select id="courseMedScheduleType">
+                    <option value="EVERY_DAY">Каждый день</option>
+                    <option value="EVERY_N_DAYS">Через N дней</option>
+                    <option value="CUSTOM_INTERVAL">Пользовательский интервал</option>
                 </select>
             </div>
-            <div class="action-row">
-                <button class="action-btn" id="cancelCreateMed">Отмена</button>
-                <button class="action-btn primary" id="saveCreateMed">Создать</button>
+            <div class="input-group" id="intervalDaysGroup">
+                <label>Интервал (дней)</label>
+                <input type="number" id="courseMedIntervalDays" value="1" min="1">
             </div>
         </div>
     </div>
-    <div class="sheet-overlay" id="userSwitchSheet">
-        <div class="bottom-sheet-detail user-switch-sheet">
-            <div class="sheet-handle"></div>
-            <div class="sheet-detail-title">Сменить пользователя</div>
-            <div id="userSwitchList" style="margin-top: 16px;"></div>
-        </div>
-    </div>
-    <div class="sheet-overlay" id="sheetOverlay">
-        <div class="bottom-sheet-detail" id="detailSheet">
-            <div class="sheet-handle"></div>
-            <div class="sheet-header-buttons">
-                <div class="btn-icon" id="btnBack">
-                    <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
-                </div>
-                <div class="btn-icon" id="btnInfo">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
-                    </svg>
-                </div>
+</div>
+<div class="modal-sheet-overlay" id="takeAllSheet">
+    <div class="modal-sheet">
+        <div class="modal-card">
+            <div class="modal-title">Принять все препараты</div>
+            <div class="take-all-subtitle" id="takeAllSubtitle">Отметить 3 лекарства на 09:00</div>
+            <div class="modal-divider"></div>
+            <div class="modal-option-group">
+                <div class="modal-option take-all-option" id="takeAllConfirm">Принять все</div>
+                <div class="modal-option take-all-option" id="skipAllConfirm">Пропустить все</div>
+                <div class="modal-option take-all-option" id="postponeAllConfirm">Перенести все</div>
             </div>
-            <div class="pill-image-frame">
+        </div>
+        <div class="modal-cancel-btn" id="cancelTakeAll">Отменить</div>
+    </div>
+</div>
+<div class="modal-sheet-overlay" id="addChoiceSheet">
+    <div class="modal-sheet">
+        <div class="modal-card">
+            <div class="modal-title">Что вы хотите добавить?</div>
+            <div class="modal-divider"></div>
+            <div class="modal-option-group">
+                <div class="modal-option take-all-option" id="chooseNewMed">Новый препарат</div>
+                <div class="modal-option take-all-option" id="chooseNewCourse">Новый курс</div>
+            </div>
+        </div>
+        <div class="modal-cancel-btn" id="cancelAddChoice">Отменить</div>
+    </div>
+</div>
+<div class="sheet-overlay" id="createMedSheet">
+    <div class="bottom-sheet-detail create-sheet" id="createSheetDetail">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header-buttons">
+            <div class="btn-icon" id="closeCreateMed">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </div>
+            <div class="btn-icon" id="infoCreateMed">
                 <svg viewBox="0 0 24 24">
-                    <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+                    <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
                 </svg>
             </div>
-            <div class="sheet-detail-title" id="sheetName">Бак-Сет Форте</div>
-            <div class="sheet-subtitle" id="sheetSub">Последний приём в 10:00 13 июля\nПринимают: Екатерина, Ольга</div>
-            <div class="progress-label" id="sheetProgressText">7/14 дней принято</div>
-            <div class="progress-bar-bg"><div class="progress-fill" id="sheetProgressFill" style="width:50%"></div></div>
-            <div class="info-card-blue">
-                <div>
-                    <div class="info-row">
-                        <svg viewBox="0 0 24 24"><path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/></svg>
-                        <span class="info-text" id="sheetDose">Дозировка: 2 таб.</span>
-                    </div>
-                    <div class="info-row">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 12C2 8.22876 2 6.34315 3.17157 5.17157C4.34315 4 6.22876 4 10 4H14C17.7712 4 19.6569 4 20.8284 5.17157C22 6.34315 22 8.22876 22 12V14C22 17.7712 22 19.6569 20.8284 20.8284C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.8284C2 19.6569 2 17.7712 2 14V12Z" stroke="currentColor" stroke-width="1.5"/>
-                            <path d="M7 4V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <path d="M17 4V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <path d="M2.5 9H21.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                        <span class="info-text" id="sheetDay">Сегодня</span>
-                    </div>
-                    <div class="info-row">
-                        <svg viewBox="0 -3.84 122.88 122.88" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M29.03,100.46l20.79-25.21l9.51,12.13L41,110.69C33.98,119.61,20.99,110.21,29.03,100.46L29.03,100.46z M53.31,43.05 c1.98-6.46,1.07-11.98-6.37-20.18L28.76,1c-2.58-3.03-8.66,1.42-6.12,5.09L37.18,24c2.75,3.34-2.36,7.76-5.2,4.32L16.94,9.8 c-2.8-3.21-8.59,1.03-5.66,4.7c4.24,5.1,10.8,13.43,15.04,18.53c2.94,2.99-1.53,7.42-4.43,3.69L6.96,18.32 c-2.19-2.38-5.77-0.9-6.72,1.88c-1.02,2.97,1.49,5.14,3.2,7.34L20.1,49.06c5.17,5.99,10.95,9.54,17.67,7.53 c1.03-0.31,2.29-0.94,3.64-1.77l44.76,57.78c2.41,3.11,7.06,3.44,10.08,0.93l0.69-0.57c3.4-2.83,3.95-8,1.04-11.34L50.58,47.16 C51.96,45.62,52.97,44.16,53.31,43.05L53.31,43.05z M65.98,55.65l7.37-8.94C63.87,23.21,99-8.11,116.03,6.29 C136.72,23.8,105.97,66,84.36,55.57l-8.73,11.09L65.98,55.65L65.98,55.65z"/>
-                        </svg>
-                        <span class="info-text" id="sheetWhen">Во время еды</span>
-                    </div>
+        </div>
+        <div class="pill-image-frame">
+            <svg viewBox="0 0 24 24">
+                <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+            </svg>
+        </div>
+        <div class="sheet-detail-title">Новый препарат</div>
+        <div class="input-group">
+            <label>Название</label>
+            <input type="text" id="medName" placeholder="например, Парацетамол" value="Новый препарат">
+        </div>
+        <div class="input-group">
+            <label>Дозировка</label>
+            <input type="text" id="medDose" placeholder="например, 1 таб." value="1 таб.">
+        </div>
+        <div class="input-group time-group-ios">
+            <label>Время приёма</label>
+            <div class="time-input-wrapper">
+                <input type="time" id="medTime" value="08:30">
+                <span class="time-placeholder">08:30</span>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Приём пищи</label>
+            <select id="medFood">
+                <option value="во время еды" selected>Во время еды</option>
+                <option value="до еды">До еды</option>
+                <option value="после еды">После еды</option>
+                <option value="независимо">Независимо от еды</option>
+            </select>
+        </div>
+        <div class="action-row">
+            <button class="action-btn" id="cancelCreateMed">Отмена</button>
+            <button class="action-btn primary" id="saveCreateMed">Создать</button>
+        </div>
+    </div>
+</div>
+<div class="sheet-overlay" id="userSwitchSheet">
+    <div class="bottom-sheet-detail user-switch-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-detail-title">Сменить пользователя</div>
+        <div id="userSwitchList" style="margin-top: 16px;"></div>
+    </div>
+</div>
+<div class="sheet-overlay" id="sheetOverlay">
+    <div class="bottom-sheet-detail" id="detailSheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header-buttons">
+            <div class="btn-icon" id="btnBack">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </div>
+            <div class="btn-icon" id="btnInfo">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 17v-6M12 7h.01"/>
+                </svg>
+            </div>
+        </div>
+        <div class="pill-image-frame">
+            <svg viewBox="0 0 24 24">
+                <path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/>
+            </svg>
+        </div>
+        <div class="sheet-detail-title" id="sheetName">Бак-Сет Форте</div>
+        <div class="sheet-subtitle" id="sheetSub">Последний приём в 10:00 13 июля\nПринимают: Екатерина, Ольга</div>
+        <div class="progress-label" id="sheetProgressText">7/14 дней принято</div>
+        <div class="progress-bar-bg"><div class="progress-fill" id="sheetProgressFill" style="width:50%"></div></div>
+        <div class="info-card-blue">
+            <div>
+                <div class="info-row">
+                    <svg viewBox="0 0 24 24"><path d="M2.6 6c.329-.728.792-1.411 1.391-2.009 2.654-2.655 6.957-2.655 9.611 0l6.408 6.407c1.019 1.02 1.647 2.283 1.883 3.602M2.107 10c.236 1.319.864 2.582 1.884 3.602l6.407 6.407c2.654 2.654 6.957 2.654 9.612 0 .598-.598 1.062-1.28 1.39-2.009M16.806 7.194s-.541 2.806-3.674 5.939-5.938 3.673-5.938 3.673"/></svg>
+                    <span class="info-text" id="sheetDose">Дозировка: 2 таб.</span>
                 </div>
-                <div class="edit-icon-btn" id="editMed">
-                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                <div class="info-row">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2 12C2 8.22876 2 6.34315 3.17157 5.17157C4.34315 4 6.22876 4 10 4H14C17.7712 4 19.6569 4 20.8284 5.17157C22 6.34315 22 8.22876 22 12V14C22 17.7712 22 19.6569 20.8284 20.8284C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.8284C2 19.6569 2 17.7712 2 14V12Z" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M7 4V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M17 4V2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <path d="M2.5 9H21.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <span class="info-text" id="sheetDay">Сегодня</span>
+                </div>
+                <div class="info-row">
+                    <svg viewBox="0 -3.84 122.88 122.88" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M29.03,100.46l20.79-25.21l9.51,12.13L41,110.69C33.98,119.61,20.99,110.21,29.03,100.46L29.03,100.46z M53.31,43.05 c1.98-6.46,1.07-11.98-6.37-20.18L28.76,1c-2.58-3.03-8.66,1.42-6.12,5.09L37.18,24c2.75,3.34-2.36,7.76-5.2,4.32L16.94,9.8 c-2.8-3.21-8.59,1.03-5.66,4.7c4.24,5.1,10.8,13.43,15.04,18.53c2.94,2.99-1.53,7.42-4.43,3.69L6.96,18.32 c-2.19-2.38-5.77-0.9-6.72,1.88c-1.02,2.97,1.49,5.14,3.2,7.34L20.1,49.06c5.17,5.99,10.95,9.54,17.67,7.53 c1.03-0.31,2.29-0.94,3.64-1.77l44.76,57.78c2.41,3.11,7.06,3.44,10.08,0.93l0.69-0.57c3.4-2.83,3.95-8,1.04-11.34L50.58,47.16 C51.96,45.62,52.97,44.16,53.31,43.05L53.31,43.05z M65.98,55.65l7.37-8.94C63.87,23.21,99-8.11,116.03,6.29 C136.72,23.8,105.97,66,84.36,55.57l-8.73,11.09L65.98,55.65L65.98,55.65z"/>
+                    </svg>
+                    <span class="info-text" id="sheetWhen">Во время еды</span>
                 </div>
             </div>
-            <div class="action-row">
-                <button class="action-btn" id="skipBtn">Пропустить</button>
-                <button class="action-btn primary" id="takeBtn">Принять</button>
+            <div class="edit-icon-btn" id="editMed">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
             </div>
-            <div class="bottom-bar">
-                <div class="bottom-bar-item" id="postponeBtn">
-                    <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
-                    <span class="text">Отложить</span>
-                </div>
-                <div class="divider-vertical"></div>
-                <div class="bottom-bar-item" id="deleteBtn">
-                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                    <span class="text delete-text">Удалить</span>
-                </div>
+        </div>
+        <div class="action-row">
+            <button class="action-btn" id="skipBtn">Пропустить</button>
+            <button class="action-btn primary" id="takeBtn">Принять</button>
+        </div>
+        <div class="bottom-bar">
+            <div class="bottom-bar-item" id="postponeBtn">
+                <svg viewBox="0 0 24 24"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 7v5l3 2"/></svg>
+                <span class="text">Отложить</span>
+            </div>
+            <div class="divider-vertical"></div>
+            <div class="bottom-bar-item" id="deleteBtn">
+                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                <span class="text delete-text">Удалить</span>
             </div>
         </div>
     </div>
+</div>
 </div>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
@@ -2343,76 +2343,6 @@
     let editingCourseMedication = null; // для редактирования препарата курса
     let currentCourseForMedications = null;
 
-    function attachDaySwipe() {
-    const el = contentDiv || document.body;
-    if (!el) return;
-
-    let startX = 0, startY = 0, tracking = false, moved = false, isPointer = false;
-
-    const onStart = (x, y) => {
-        startX = x;
-        startY = y;
-        tracking = true;
-        moved = false;
-    };
-
-    const onMove = (x, y) => {
-        if (!tracking) return;
-        const dx = Math.abs(x - startX);
-        const dy = Math.abs(y - startY);
-        if (dx > 8 || dy > 8) moved = true;
-    };
-
-    const onEnd = (endX, endY) => {
-        if (!tracking) return;
-        tracking = false;
-        if (!moved) return;
-        const dx = endX - startX;
-        const dy = endY - startY;
-        if (Math.abs(dx) > 50 && Math.abs(dy) < 30 && Math.abs(dx) > Math.abs(dy) * 2) {
-            const direction = dx < 0 ? 1 : -1;
-            const newDate = new Date(currentDate);
-            newDate.setDate(currentDate.getDate() + direction);
-            if (typeof changeDayWithAnimation === 'function') {
-                changeDayWithAnimation(newDate, direction);
-            }
-        }
-    };
-
-    el.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.med-card')) return;
-        isPointer = true;
-        onStart(e.clientX, e.clientY);
-    }, { passive: true });
-
-    el.addEventListener('pointermove', (e) => {
-        if (isPointer) onMove(e.clientX, e.clientY);
-    }, { passive: true });
-
-    el.addEventListener('pointerup', (e) => {
-        if (isPointer) {
-            onEnd(e.clientX, e.clientY);
-            isPointer = false;
-        }
-    }, { passive: true });
-
-    el.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.med-card')) return;
-        const t = e.touches[0];
-        onStart(t.clientX, t.clientY);
-    }, { passive: true });
-
-    el.addEventListener('touchmove', (e) => {
-        const t = e.touches[0];
-        onMove(t.clientX, t.clientY);
-    }, { passive: true });
-
-    el.addEventListener('touchend', (e) => {
-        const t = e.changedTouches[0];
-        onEnd(t.clientX, t.clientY);
-    }, { passive: true });
-}
-
         function hideSplash() {
             if (!splash) return;
             setTimeout(() => {
@@ -2478,8 +2408,6 @@ async function fetchCourses() {
             body: JSON.stringify({ userId: currentUser.id, name, startDate, endDate })
         });
     }
-
-
 
 async function updateCourse(courseId, name, startDate, endDate) {
     return await apiFetch(`/courses/${courseId}`, {
@@ -3022,76 +2950,6 @@ const serverPostponedTime = parseIsoSafe(data.scheduledTime);
         })
     }).catch(e => console.warn('Не удалось создать повторное уведомление для бота:', e));
 })
-}
-
-function attachDaySwipe() {
-    const el = contentDiv || document.body;
-    if (!el) return;
-
-    let startX = 0, startY = 0, tracking = false, moved = false, isPointer = false;
-
-    const onStart = (x, y) => {
-        startX = x;
-        startY = y;
-        tracking = true;
-        moved = false;
-    };
-
-    const onMove = (x, y) => {
-        if (!tracking) return;
-        const dx = Math.abs(x - startX);
-        const dy = Math.abs(y - startY);
-        if (dx > 8 || dy > 8) moved = true;
-    };
-
-    const onEnd = (endX, endY) => {
-        if (!tracking) return;
-        tracking = false;
-        if (!moved) return;
-        const dx = endX - startX;
-        const dy = endY - startY;
-        if (Math.abs(dx) > 50 && Math.abs(dy) < 30 && Math.abs(dx) > Math.abs(dy) * 2) {
-            const direction = dx < 0 ? 1 : -1;
-            const newDate = new Date(currentDate);
-            newDate.setDate(currentDate.getDate() + direction);
-            if (typeof changeDayWithAnimation === 'function') {
-                changeDayWithAnimation(newDate, direction);
-            }
-        }
-    };
-
-    el.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.med-card')) return;
-        isPointer = true;
-        onStart(e.clientX, e.clientY);
-    }, { passive: true });
-
-    el.addEventListener('pointermove', (e) => {
-        if (isPointer) onMove(e.clientX, e.clientY);
-    }, { passive: true });
-
-    el.addEventListener('pointerup', (e) => {
-        if (isPointer) {
-            onEnd(e.clientX, e.clientY);
-            isPointer = false;
-        }
-    }, { passive: true });
-
-    el.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.med-card')) return;
-        const t = e.touches[0];
-        onStart(t.clientX, t.clientY);
-    }, { passive: true });
-
-    el.addEventListener('touchmove', (e) => {
-        const t = e.touches[0];
-        onMove(t.clientX, t.clientY);
-    }, { passive: true });
-
-    el.addEventListener('touchend', (e) => {
-        const t = e.changedTouches[0];
-        onEnd(t.clientX, t.clientY);
-    }, { passive: true });
 }
 
         async function optimisticDeleteReminder(reminderId) {
@@ -5673,7 +5531,7 @@ document.getElementById('navHome')?.addEventListener('click', () => {
             return { open: openSheet, close: closeSheet };
         }
 
-        window.__perfHelpers = { pointerGesture, attachCardSwipe, attachSheetDrag };
+        window.__perfHelpers = { pointerGesture, attachCardSwipe, attachDaySwipe, attachSheetDrag };
     })();
 </script>
 
@@ -6777,7 +6635,7 @@ if (e.target.closest('#saveCreateMed')) {
 <script>
     (function() {
         console.log('🕒 PILLO: Устанавливаем единый UTC-ключ для всех дат');
-        
+
         const SERVER_OFFSET_HOURS = 7;
         const SERVER_OFFSET_MS = SERVER_OFFSET_HOURS * 60 * 60 * 1000;
 
@@ -6950,6 +6808,7 @@ window.getStatusForReminderOnDate = function(reminder, date) {
         } catch (e) {}
 
         console.log('✅ PILLO: Патч часового пояса применён');
+        }
     })();
 
 </script>
