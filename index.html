@@ -3316,25 +3316,52 @@ function calculateMedicationStats(reminderId) {
     if (sheetOverlay) sheetOverlay.style.display = 'flex';
 }
 
-        async function createMedicineAndReminder(name, dosage, time, food) {
-            if (!currentUser) return null;
-
+       async function createMedicineAndReminder(name, dosage, time, food) {
+    if (!currentUser) return null;
     try {
+        // 1. Создаём препарат
         const medicine = await apiFetch('/medicines', {
             method: 'POST',
             body: JSON.stringify({
-                name,
-                dosage,
+                name: name,
+                dosage: dosage,
                 description: '',
-                instructions
-            }),
+                instructions: food   // ← исправлено: используем food
+            })
         });
+        if (!medicine || !medicine.id) throw new Error('Не удалось создать препарат');
+
+        // 2. Создаём напоминание для этого препарата
+        const reminder = await apiFetch('/reminders', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: currentUser.id,
+                medicineId: medicine.id,
+                reminderTime: time,
+                daysOfWeek: 'everyday'
+            })
+        });
+
+        // 3. Обновляем локальные кэши
+        reminders.push(reminder);
+        remindersCache.data = reminders;
+        remindersCache.timestamp = Date.now();
+        currentMedicines.push(medicine);
+
+        // 4. Перерисовываем интерфейс
+        if (selectedDay) await loadHistoryForDate(selectedDay);
+        if (document.querySelector('.tab-btn.active')?.dataset.tab === 'medicines') {
+            renderMedicinesListOptimistic(currentMedicines);
+        }
+
+        alert('✅ Препарат и напоминание созданы!');
         return medicine;
     } catch (err) {
-        console.warn('Ошибка создания препарата', err);
+        console.error('Ошибка создания:', err);
+        alert('❌ Ошибка: ' + err.message);
         throw err;
     }
-        }
+}
 
         function getHistoryForReminder(reminder, date) {
             const dateKey = date.toISOString().split('T')[0];
@@ -4353,9 +4380,14 @@ function openCourseMedicationSheet(medication = null) {
     editingCourseMedication = medication;
     document.getElementById('courseMedicationSheet').style.display = 'flex';
 
-    // Убираем выбор типа (только существующий препарат)
-    document.getElementById('courseMedType').style.display = 'none';
-    document.getElementById('newMedFields').style.display = 'none';
+    // УБРАТЬ или ЗАКОММЕНТИРОВАТЬ эти три строки:
+    // document.getElementById('courseMedType').style.display = 'none';
+    // document.getElementById('newMedFields').style.display = 'none';
+    // document.getElementById('existingMedFields').style.display = 'block';
+
+    // Вместо этого показываем оба варианта:
+    document.getElementById('courseMedType').style.display = 'block';
+    document.getElementById('newMedFields').style.display = 'block';
     document.getElementById('existingMedFields').style.display = 'block';
 
     // Загружаем список существующих препаратов
@@ -4364,6 +4396,12 @@ function openCourseMedicationSheet(medication = null) {
     if (medication && medication.medicineId) {
         document.getElementById('existingMedSelect').value = medication.medicineId;
     }
+
+    document.getElementById('courseMedType').addEventListener('change', (e) => {
+    const isNew = e.target.value === 'new';
+    document.getElementById('newMedFields').style.display = isNew ? 'block' : 'none';
+    document.getElementById('existingMedFields').style.display = isNew ? 'none' : 'block';
+});
 
     // Заполняем остальные поля
     document.getElementById('courseMedMealMode').value = medication?.mealMode || 'ANYTIME';
